@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 const AppContext = createContext();
 
-const API_URL = import.meta.env.PROD
-  ? "https://server-crm-shine.vercel.app"
-  : "http://localhost:5000";
+const API_URL = "https://shine-crm-backend.vercel.app";
 
 export function AppProvider({ children }) {
   // State variables for the admin dashboard

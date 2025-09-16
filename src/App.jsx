@@ -21,12 +21,14 @@ import EditContract from "./pages/EditContract";
 import AddContract from "./pages/AddContract";
 // import PolicyAcceptance from "./pages/PolicyManagement";
 import InvoiceManagement from "./pages/InvoiceManagement";
+import DownloadContract from "./components/DownloadContract";
 import AddInvoice from "./pages/AddInvoice";
 import CreateInvoice from "./pages/CreateInvoice";
 import EmployeeAttendance from "./pages/EmployeeAttendance";
 import EmployeeTimesheet from "./pages/EmployeeTimesheet";
 import WorkHistory from "./pages/WorkHistory";
 import WorkSummary from "./pages/WorkSummary";
+import TasksManagement from "./pages/TasksManagement";
 // import EmployeeWorkHistory from "./pages/EmployeeWorkHistory";
 
 // 🔔 This component handles FCM registration using context
@@ -74,6 +76,7 @@ function AppRoutes() {
         <Route path="contracts/create" element={<EditContract />} />
         <Route path="contracts/create/:id" element={<AddContract />} />
         <Route path="contracts/edit/:id" element={<EditContract />} />
+        <Route path="contracts/download/:id" element={<DownloadContract />} />
         <Route path="invoices" element={<InvoiceManagement />} />
         <Route path="invoices/add" element={<AddInvoice />} />
         <Route path="/invoices/edit/:id" element={<AddInvoice />} />
@@ -82,6 +85,7 @@ function AppRoutes() {
         <Route path="timesheet" element={<EmployeeTimesheet />} />
         <Route path="/work-history" element={<WorkHistory />} />
         <Route path="/work-summary" element={<WorkSummary />} />
+        <Route path="tasks" element={<TasksManagement />} />
 
         {/* Policy */}
         {/* <Route path="employee/policies" element={<PolicyAcceptance />} /> */}

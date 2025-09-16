@@ -44,7 +44,7 @@ function WorkSummary() {
     }
   };
 
-  const loadWorkHistory = async (employeeList = employees) => {
+  const loadWorkHistory = (employeeList = employees) => {
     try {
       if (!currentUser?.id) {
         setLoading(false);
@@ -52,61 +52,49 @@ function WorkSummary() {
       }
 
       if (isAdmin) {
-        // Admin: Load all timesheets
-        const response = await fetch(`${API_URL}/api/timesheet`);
-        if (response.ok) {
-          const data = await response.json();
-          const records = data.timesheets || [];
-
-          // Add employee names to records
-          const recordsWithNames = records.map((record) => ({
-            ...record,
-            employee_name:
-              employeeList.find((emp) => emp._id === record.employee_id)
-                ?.name || "Unknown",
-          }));
-
-          setWorkHistory(recordsWithNames);
-        }
-      } else {
-        // Employee: Load own timesheets
-        const response = await fetch(`${API_URL}/api/timesheet`);
-        let employeeRecords = [];
-
-        if (response.ok) {
-          const data = await response.json();
-          const records = data.timesheets || [];
-          employeeRecords = records.filter(
-            (record) => record.employee_id === currentUser.id
+        // Admin: Load all localStorage timesheets for all employees
+        let allRecords = [];
+        employeeList.forEach((employee) => {
+          const localStorageKeys = Object.keys(localStorage).filter((key) =>
+            key.startsWith(`timesheet_${employee._id}_`)
           );
-        }
-
+          localStorageKeys.forEach((key) => {
+            try {
+              const data = JSON.parse(localStorage.getItem(key));
+              allRecords.push({
+                ...data,
+                employee_id: employee._id,
+                employee_name: employee.name,
+                status: "Pending",
+              });
+            } catch (e) {
+              console.warn(`Invalid localStorage data for key: ${key}`);
+            }
+          });
+        });
+        setWorkHistory(allRecords);
+      } else {
+        // Employee: Load own localStorage timesheets only
         const localStorageKeys = Object.keys(localStorage).filter((key) =>
           key.startsWith(`timesheet_${currentUser.id}_`)
         );
 
-        const localRecords = localStorageKeys.map((key) => {
-          const data = JSON.parse(localStorage.getItem(key));
-          return {
-            ...data,
-            status: "Pending",
-          };
-        });
-
-        const allRecords = [...employeeRecords];
-        localRecords.forEach((localRecord) => {
-          const exists = employeeRecords.some(
-            (apiRecord) =>
-              new Date(apiRecord.date).toDateString() ===
-              new Date(localRecord.date).toDateString()
-          );
-          if (!exists) {
-            allRecords.push(localRecord);
+        const localRecords = [];
+        localStorageKeys.forEach((key) => {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            localRecords.push({
+              ...data,
+              employee_id: currentUser.id,
+              status: "Pending",
+            });
+          } catch (e) {
+            console.warn(`Invalid localStorage data for key: ${key}`);
           }
         });
 
-        allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-        setWorkHistory(allRecords);
+        localRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setWorkHistory(localRecords);
       }
     } catch (error) {
       console.error("Error loading work history:", error);
@@ -274,11 +262,11 @@ function WorkSummary() {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                    Tasks Completed
+                    Attendance
                   </th>
                   {isAdmin && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                      Actions
+                      Status
                     </th>
                   )}
                 </tr>

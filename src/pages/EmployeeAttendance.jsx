@@ -24,17 +24,12 @@ function EmployeeAttendance() {
   const loadAttendanceRecords = async () => {
     setLoading(true);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
       if (isAdmin) {
         // For admin: load both attendance and employees
         const [attendanceResponse, employeeResponse] = await Promise.all([
-          fetch(`${API_URL}/api/attendance`, { signal: controller.signal }),
-          fetch(`${API_URL}/api/employees`, { signal: controller.signal }),
+          fetch(`${API_URL}/api/attendance`),
+          fetch(`${API_URL}/api/employees`),
         ]);
-
-        clearTimeout(timeoutId);
 
         if (attendanceResponse.ok) {
           const data = await attendanceResponse.json();
@@ -46,9 +41,7 @@ function EmployeeAttendance() {
 
             const recordsWithNames = records.map((record) => ({
               ...record,
-              employee_name:
-                employeeList.find((emp) => emp._id === record.employee_id)
-                  ?.name || "Unknown",
+              employee_name: record.employee_id?.name || "Unknown",
             }));
 
             setAttendanceRecords(recordsWithNames);
@@ -59,39 +52,27 @@ function EmployeeAttendance() {
       } else {
         // For employee: only load attendance
         const response = await fetch(
-          `${API_URL}/api/attendance?employee_id=${currentUser?.id}`,
-          {
-            signal: controller.signal,
-          }
+          `${API_URL}/api/attendance?employee_id=${currentUser?.id}`
         );
-
-        clearTimeout(timeoutId);
 
         if (response.ok) {
           const data = await response.json();
           const records = data.data || data || [];
-          const filteredRecords = records.filter(
-            (record) => record.employee_id === currentUser?.id
-          );
-
-          setAttendanceRecords(filteredRecords);
+          setAttendanceRecords(records);
 
           // Check if currently checked in
           const today = new Date().toDateString();
-          const todayRecord = filteredRecords.find(
+          const todayRecord = records.find(
             (record) =>
-              new Date(record.checkIn.date).toDateString() === today &&
-              !record.checkOut?.date
+              record.time_in && 
+              new Date(record.date).toDateString() === today &&
+              !record.time_out
           );
           setIsCheckedIn(!!todayRecord);
         }
       }
     } catch (error) {
-      if (error.name === "AbortError") {
-        console.log("Request timed out");
-      } else {
-        console.error("Error loading attendance records:", error);
-      }
+      console.error("Error loading attendance records:", error);
       setAttendanceRecords([]);
     } finally {
       setLoading(false);
@@ -121,36 +102,11 @@ function EmployeeAttendance() {
   const handleCheckIn = async () => {
     setLoading(true);
     try {
-      // Check if employee already checked in today
-      const today = new Date().toDateString();
-      const todayRecord = attendanceRecords.find(
-        (record) => new Date(record.checkIn.date).toDateString() === today
-      );
-
-      if (todayRecord) {
-        alert("You have already checked in today!");
-        setLoading(false);
-        return;
-      }
-
-      const location = await getCurrentLocation();
-      const now = new Date();
-
       const attendanceData = {
-        employee_id: currentUser.id,
-        checkIn: {
-          date: now,
-          time: now.toTimeString().split(" ")[0].substring(0, 5),
-          location: {
-            latitude: location.latitude,
-            longitude: location.longitude,
-          },
-        },
-        status: "Present",
-        notes: "",
+        employee_id: currentUser.id
       };
 
-      const response = await fetch(`${API_URL}/api/attendance`, {
+      const response = await fetch(`${API_URL}/api/attendance/time-in`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,18 +119,13 @@ function EmployeeAttendance() {
         loadAttendanceRecords();
         alert("Checked in successfully!");
       } else {
-        let errorMessage = "Failed to check in";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          errorMessage = `Server error (${response.status})`;
-        }
-        alert(errorMessage);
+        const errorText = await response.text();
+        console.error("Failed to check in:", response.status, errorText);
+        alert(`Failed to check in: ${response.status}`);
       }
     } catch (error) {
       console.error("Error checking in:", error);
-      alert("Failed to get location: " + error.message);
+      alert("Error checking in: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -190,8 +141,8 @@ function EmployeeAttendance() {
       const today = new Date().toDateString();
       const todayRecord = attendanceRecords.find(
         (record) =>
-          new Date(record.checkIn.date).toDateString() === today &&
-          !record.checkOut?.date
+          new Date(record.date).toDateString() === today &&
+          !record.time_out
       );
 
       if (!todayRecord) {
@@ -246,23 +197,13 @@ function EmployeeAttendance() {
   };
 
   const calculateWorkingHours = (record) => {
-    if (!record.checkOut) return "--";
+    if (!record.time_out || !record.time_in) return "--";
 
-    const checkInTime = new Date(`1970-01-01T${record.checkIn.time}`);
-    const checkOutTime = new Date(`1970-01-01T${record.checkOut.time}`);
-    const diff = (checkOutTime - checkInTime) / (1000 * 60 * 60);
+    const diff = (new Date(record.time_out) - new Date(record.time_in)) / (1000 * 60 * 60);
     return `${diff.toFixed(1)}h`;
   };
 
-  // Add this temporarily to clear old data
-  useEffect(() => {
-    // Remove all attendance localStorage entries
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith("attendance_")) {
-        localStorage.removeItem(key);
-      }
-    });
-  }, []);
+
 
   return (
     <div className="p-6">
@@ -322,7 +263,7 @@ function EmployeeAttendance() {
                     ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700"
                     : attendanceRecords.some(
                         (record) =>
-                          new Date(record.checkIn.date).toDateString() ===
+                          new Date(record.date).toDateString() ===
                           new Date().toDateString()
                       )
                     ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700"
@@ -335,7 +276,7 @@ function EmployeeAttendance() {
                       ? "bg-green-500 animate-pulse"
                       : attendanceRecords.some(
                           (record) =>
-                            new Date(record.checkIn.date).toDateString() ===
+                            new Date(record.date).toDateString() ===
                             new Date().toDateString()
                         )
                       ? "bg-blue-500"
@@ -362,7 +303,7 @@ function EmployeeAttendance() {
                 (!isCheckedIn &&
                   attendanceRecords.some(
                     (record) =>
-                      new Date(record.checkIn.date).toDateString() ===
+                      new Date(record.date).toDateString() ===
                       new Date().toDateString()
                   ))
               }
@@ -509,27 +450,31 @@ function EmployeeAttendance() {
                   >
                     {isAdmin && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {record.employee_name || "Unknown"}
+                        {record.employee_id?.name || record.employee_name || "Unknown"}
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {new Date(record.checkIn.date).toLocaleDateString()}
+                      {record.date ? new Date(record.date).toLocaleDateString() : '--'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-gray-900 dark:text-white">
-                          {record.checkIn.time}
-                        </span>
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                          In
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {record.checkOut ? (
+                      {record.time_in ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {record.checkOut.time}
+                            {new Date(record.time_in).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                          </span>
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                            In
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">--</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {record.time_out ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-gray-900 dark:text-white">
+                            {new Date(record.time_out).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                           </span>
                           <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
                             Out
@@ -547,25 +492,7 @@ function EmployeeAttendance() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {record.checkIn.location && (
-                        <div className="space-y-1">
-                          <button
-                            onClick={() =>
-                              window.open(
-                                `https://maps.google.com/?q=${record.checkIn.location.latitude},${record.checkIn.location.longitude}`,
-                                "_blank"
-                              )
-                            }
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline text-xs"
-                          >
-                            View on Map
-                          </button>
-                          {/* <div className="text-xs text-gray-400">
-                            {record.checkIn.location.latitude.toFixed(4)},{" "}
-                            {record.checkIn.location.longitude.toFixed(4)}
-                          </div> */}
-                        </div>
-                      )}
+                      --
                     </td>
                   </tr>
                 ))}

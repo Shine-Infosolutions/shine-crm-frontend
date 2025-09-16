@@ -6,9 +6,27 @@ const VAPID_KEY = "BOnE-4YZrJGAijICE9aOGB89f78TWYk_yxGlgbQKJVU4fQjgEiTuLJyUlSsGU
 
 export const registerFCM = async (API_URL) => {
   try {
-    const permission = await Notification.requestPermission();
+    // Check if notifications are supported
+    if (!('Notification' in window)) {
+      console.warn("🚫 This browser does not support notifications");
+      return;
+    }
+
+    // Check current permission status
+    let permission = Notification.permission;
+    
+    // Only request permission if it's default (not asked before)
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+    
+    if (permission === 'denied') {
+      console.warn("🚫 Notification permission blocked. To enable notifications, click the tune icon next to the URL and reset permissions.");
+      return;
+    }
+    
     if (permission !== "granted") {
-      console.warn("🚫 Notification permission denied");
+      console.warn("🚫 Notification permission not granted");
       return;
     }
 
