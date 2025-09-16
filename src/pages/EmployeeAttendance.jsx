@@ -135,44 +135,21 @@ function EmployeeAttendance() {
     setLoading(true);
     try {
       const location = await getCurrentLocation();
-      const now = new Date();
-
-      // Find today's attendance record
-      const today = new Date().toDateString();
-      const todayRecord = attendanceRecords.find(
-        (record) =>
-          new Date(record.date).toDateString() === today &&
-          !record.time_out
-      );
-
-      if (!todayRecord) {
-        alert("No check-in record found for today");
-        setLoading(false);
-        return;
-      }
-
       const attendanceData = {
         employee_id: currentUser.id,
-        checkOut: {
-          date: now,
-          time: now.toTimeString().split(" ")[0].substring(0, 5),
-          location: {
-            latitude: location.latitude,
-            longitude: location.longitude,
-          },
-        },
+        location: {
+          latitude: location.latitude,
+          longitude: location.longitude
+        }
       };
 
-      const response = await fetch(
-        `${API_URL}/api/attendance/${todayRecord._id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(attendanceData),
-        }
-      );
+      const response = await fetch(`${API_URL}/api/attendance/time-out`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(attendanceData),
+      });
 
       if (response.ok) {
         setIsCheckedIn(false);
@@ -261,12 +238,6 @@ function EmployeeAttendance() {
                 className={`inline-flex items-center px-6 py-3 rounded-full text-base font-medium border-2 ${
                   isCheckedIn
                     ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700"
-                    : attendanceRecords.some(
-                        (record) =>
-                          new Date(record.date).toDateString() ===
-                          new Date().toDateString()
-                      )
-                    ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700"
                     : "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-700/50 dark:text-gray-300 dark:border-gray-600"
                 }`}
               >
@@ -274,23 +245,11 @@ function EmployeeAttendance() {
                   className={`w-2 h-2 rounded-full mr-3 ${
                     isCheckedIn
                       ? "bg-green-500 animate-pulse"
-                      : attendanceRecords.some(
-                          (record) =>
-                            new Date(record.date).toDateString() ===
-                            new Date().toDateString()
-                        )
-                      ? "bg-blue-500"
                       : "bg-gray-400"
                   }`}
                 ></div>
                 {isCheckedIn
                   ? "Currently Checked In"
-                  : attendanceRecords.some(
-                      (record) =>
-                        new Date(record.checkIn.date).toDateString() ===
-                        new Date().toDateString()
-                    )
-                  ? "Already Checked In Today"
                   : "Ready to Check In"}
               </div>
             </div>
@@ -298,15 +257,7 @@ function EmployeeAttendance() {
             {/* Action Button */}
             <button
               onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
-              disabled={
-                loading ||
-                (!isCheckedIn &&
-                  attendanceRecords.some(
-                    (record) =>
-                      new Date(record.date).toDateString() ===
-                      new Date().toDateString()
-                  ))
-              }
+              disabled={loading}
               className={`inline-flex items-center px-10 py-4 rounded-xl font-semibold text-lg text-white transition-all duration-200 transform hover:scale-105 shadow-lg ${
                 isCheckedIn
                   ? "bg-red-600 hover:bg-red-700 hover:shadow-red-200 dark:hover:shadow-red-900/20 disabled:bg-red-400"

@@ -46,11 +46,13 @@ function TasksManagement() {
   const loadTasks = async () => {
     try {
       setLoading(true);
+      console.log("Loading tasks from:", `${API_URL}/api/tasks`);
       const response = await fetch(`${API_URL}/api/tasks`);
+      console.log("Tasks response status:", response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log("Tasks response:", data);
+        console.log("Tasks response data:", data);
         let taskList = [];
         if (Array.isArray(data)) {
           taskList = data;
@@ -59,6 +61,7 @@ function TasksManagement() {
         } else if (data.tasks && Array.isArray(data.tasks)) {
           taskList = data.tasks;
         }
+        console.log("Processed task list:", taskList);
         setTasks(taskList);
       } else {
         const errorText = await response.text();
