@@ -81,6 +81,16 @@ function Sidebar() {
                 </Link>
               </li>
             )}
+            {!isEmployee && (
+              <li>
+                <Link
+                  to="/tasks"
+                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                >
+                  Tasks Management
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 to="/attendance"
@@ -137,7 +147,7 @@ function Sidebar() {
                 Work History
               </Link>
             </li> */}
-            {!isEmployee && (
+            {/*!isEmployee && (
               <li>
                 <Link
                   to="/work-history"
@@ -146,7 +156,7 @@ function Sidebar() {
                   Employee Work History
                 </Link>
               </li>
-            )}
+            )*/}
             {!isEmployee && (
               <li>
                 <Link

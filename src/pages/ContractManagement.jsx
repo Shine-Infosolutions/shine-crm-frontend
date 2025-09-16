@@ -49,24 +49,8 @@ function ContractManagement() {
     window.open(`${API_URL}/api/employees/${id}/contract/preview`, "_blank");
   };
 
-  const handleDownload = async (id, name) => {
-    try {
-      const response = await axios.get(
-        `${API_URL}/api/employees/${id}/contract/download`,
-        {
-          responseType: "blob",
-        }
-      );
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${name}_contract.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error("Download failed:", error);
-    }
+  const handleDownload = (id, name) => {
+    navigate(`/contracts/download/${id}`);
   };
 
   const handleCreateForEmployee = (id) => {

@@ -8,7 +8,10 @@ function WorkHistory() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [filteredEntries, setFilteredEntries] = useState([]);
+  const [currentTasks, setCurrentTasks] = useState([]);
   const [error, setError] = useState("");
 
   const isAdmin = currentUser?.role !== "employee";
@@ -18,6 +21,14 @@ function WorkHistory() {
     if (currentUser === null) {
       return;
     }
+
+    // Set default date range to current month
+    const currentDate = new Date();
+    const defaultStartDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString().split('T')[0];
+    const defaultEndDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    if (!startDate) setStartDate(defaultStartDate);
+    if (!endDate) setEndDate(defaultEndDate);
 
     if (currentUser?.id) {
       if (isAdmin) {
@@ -81,8 +92,8 @@ function WorkHistory() {
         setFilteredEntries([]);
       }
     } else {
-      // Employee logic remains the same
-      if (selectedDate && workHistory.length > 0) {
+      // Employee logic - show entries for selected date or all if no date selected
+      if (selectedDate) {
         const selectedRecord = workHistory.find(
           (record) => formatDateForComparison(record.date) === selectedDate
         );
@@ -91,11 +102,24 @@ function WorkHistory() {
             entry.task_description?.trim()
           ) || []
         );
+      } else if (workHistory.length > 0) {
+        // Show all entries if no specific date selected
+        const allEntries = workHistory
+          .flatMap(
+            (record) =>
+              record.time_entries?.map((entry) => ({
+                ...entry,
+                date: record.date,
+                status: record.status,
+              })) || []
+          )
+          .filter((entry) => entry.task_description?.trim());
+        setFilteredEntries(allEntries);
       } else {
         setFilteredEntries([]);
       }
     }
-  }, [selectedDate, selectedEmployee, workHistory, isAdmin, currentUser]);
+  }, [selectedDate, selectedEmployee, workHistory, isAdmin]);
   // Helper function to format date for consistent comparison
   const formatDateForComparison = (dateString) => {
     const date = new Date(dateString);
@@ -111,7 +135,7 @@ function WorkHistory() {
       const employeeList = await loadEmployees();
 
       // Then load work history with the employee list
-      await loadWorkHistory(employeeList);
+      loadWorkHistory(employeeList);
     } catch (error) {
       console.error("Error loading data:", error);
       setError("Failed to load employee data");
@@ -159,67 +183,145 @@ function WorkHistory() {
         return;
       }
 
-      if (isAdmin) {
-        const response = await fetch(`${API_URL}/api/timesheet`);
-        if (response.ok) {
-          const data = await response.json();
-          const records = data.timesheets || [];
-
-          const recordsWithNames = records.map((record) => ({
-            ...record,
-            employee_name:
-              employeeList.find((emp) => emp._id === record.employee_id)
-                ?.name || "Unknown",
-          }));
-
-          // Sort by date descending
-          recordsWithNames.sort((a, b) => new Date(b.date) - new Date(a.date));
-          setWorkHistory(recordsWithNames);
+      // Try API first, fallback to localStorage
+      try {
+        const apiStartDate = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const apiEndDate = endDate || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+        
+        if (isAdmin) {
+          // Admin: Load tasks for all employees
+          const response = await fetch(`${API_URL}/api/tasks`);
+          if (response.ok) {
+            const apiData = await response.json();
+            if (apiData && Array.isArray(apiData)) {
+              // Group tasks by employee and date
+              const groupedTasks = {};
+              apiData.forEach(task => {
+                const taskDate = formatDateForComparison(task.created_at || task.date);
+                const key = `${task.employee_id}_${taskDate}`;
+                if (!groupedTasks[key]) {
+                  groupedTasks[key] = {
+                    date: taskDate,
+                    employee_id: task.employee_id,
+                    employee_name: employeeList.find(emp => emp._id === task.employee_id)?.name || 'Unknown',
+                    time_entries: [],
+                    status: task.status || 'Pending'
+                  };
+                }
+                groupedTasks[key].time_entries.push({
+                  task_description: task.description || task.title,
+                  start_time: task.start_time,
+                  end_time: task.end_time,
+                  hours_worked: task.hours || '0'
+                });
+              });
+              
+              const allApiRecords = Object.values(groupedTasks);
+              allApiRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+              setWorkHistory(allApiRecords);
+              return;
+            }
+          }
         } else {
-          throw new Error(`Failed to load timesheets: ${response.status}`);
+          // Employee: Load own tasks and set current tasks
+          const response = await fetch(`${API_URL}/api/tasks?employee_id=${currentUser.id}`);
+          
+          if (response.ok) {
+            const apiData = await response.json();
+            if (apiData && Array.isArray(apiData)) {
+              // Set current tasks for display
+              setCurrentTasks(apiData.map(task => ({
+                id: task._id || task.id,
+                title: task.title || task.name || 'Untitled Task',
+                description: task.description || '',
+                status: task.status || 'Pending',
+                assignedDate: task.created_at || task.assignedDate || new Date().toISOString(),
+                dueDate: task.dueDate || task.due_date || '',
+                priority: task.priority || 'Medium'
+              })));
+              
+              // Group tasks by date for work history
+              const groupedTasks = {};
+              apiData.forEach(task => {
+                const taskDate = formatDateForComparison(task.created_at || task.date);
+                if (!groupedTasks[taskDate]) {
+                  groupedTasks[taskDate] = {
+                    date: taskDate,
+                    employee_id: currentUser.id,
+                    time_entries: [],
+                    status: task.status || 'Pending'
+                  };
+                }
+                groupedTasks[taskDate].time_entries.push({
+                  task_description: task.description || task.title,
+                  start_time: task.start_time,
+                  end_time: task.end_time,
+                  hours_worked: task.hours || '0'
+                });
+              });
+              
+              const employeeRecords = Object.values(groupedTasks);
+              employeeRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+              setWorkHistory(employeeRecords);
+              if (employeeRecords.length > 0) {
+                setSelectedDate(formatDateForComparison(employeeRecords[0].date));
+              }
+              return;
+            }
+          }
         }
+      } catch (apiError) {
+        console.log("API not available, using localStorage:", apiError);
+      }
+
+      // Fallback to localStorage
+      if (isAdmin) {
+        let allRecords = [];
+        employeeList.forEach((employee) => {
+          const localStorageKeys = Object.keys(localStorage).filter((key) =>
+            key.startsWith(`timesheet_${employee._id}_`)
+          );
+          localStorageKeys.forEach((key) => {
+            try {
+              const data = JSON.parse(localStorage.getItem(key));
+              allRecords.push({
+                ...data,
+                employee_id: employee._id,
+                employee_name: employee.name,
+                status: "Pending",
+              });
+            } catch (e) {
+              console.warn(`Invalid localStorage data for key: ${key}`);
+            }
+          });
+        });
+        
+        allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setWorkHistory(allRecords);
       } else {
-        // Employee logic remains the same
         const localStorageKeys = Object.keys(localStorage).filter((key) =>
           key.startsWith(`timesheet_${currentUser.id}_`)
         );
 
-        const localRecords = localStorageKeys.map((key) => {
-          const data = JSON.parse(localStorage.getItem(key));
-          return {
-            ...data,
-            status: "Pending",
-          };
-        });
-
-        const response = await fetch(`${API_URL}/api/timesheet`);
-        let employeeRecords = [];
-
-        if (response.ok) {
-          const data = await response.json();
-          const records = data.timesheets || [];
-          employeeRecords = records.filter(
-            (record) => record.employee_id === currentUser.id
-          );
-        }
-
-        const allRecords = [...localRecords];
-        employeeRecords.forEach((apiRecord) => {
-          const exists = localRecords.some(
-            (localRecord) =>
-              formatDateForComparison(localRecord.date) ===
-              formatDateForComparison(apiRecord.date)
-          );
-          if (!exists) {
-            allRecords.push(apiRecord);
+        const localRecords = [];
+        localStorageKeys.forEach((key) => {
+          try {
+            const data = JSON.parse(localStorage.getItem(key));
+            localRecords.push({
+              ...data,
+              employee_id: currentUser.id,
+              status: "Pending",
+            });
+          } catch (e) {
+            console.warn(`Invalid localStorage data for key: ${key}`);
           }
         });
 
-        allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-        setWorkHistory(allRecords);
+        localRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setWorkHistory(localRecords);
 
-        if (allRecords.length > 0) {
-          setSelectedDate(formatDateForComparison(allRecords[0].date));
+        if (localRecords.length > 0) {
+          setSelectedDate(formatDateForComparison(localRecords[0].date));
         }
       }
     } catch (error) {
@@ -227,9 +329,7 @@ function WorkHistory() {
       setError("Failed to load work history");
       setWorkHistory([]);
     } finally {
-      if (!isAdmin) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -394,24 +494,63 @@ function WorkHistory() {
           )}
 
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Select Date:
+            Start Date:
           </label>
-          <select
-            value={selectedDate}
-            onChange={(e) => {
-              console.log("Date selected:", e.target.value);
-              setSelectedDate(e.target.value);
-            }}
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isAdmin && !selectedEmployee}
+          />
+          
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            End Date:
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              if (isAdmin) {
+                loadEmployeesAndHistory();
+              } else {
+                loadWorkHistory();
+              }
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Select Date</option>
-            {getAvailableDates().map((date) => (
-              <option key={date} value={date}>
-                {new Date(date).toLocaleDateString()}
-              </option>
-            ))}
-          </select>
+            Load Data
+          </button>
+
+          {workHistory.length > 0 && (
+            <>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Select Date:
+              </label>
+              <select
+                value={selectedDate}
+                onChange={(e) => {
+                  console.log("Date selected:", e.target.value);
+                  setSelectedDate(e.target.value);
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isAdmin && !selectedEmployee}
+              >
+                <option value="">Select Date</option>
+                {getAvailableDates().map((date) => (
+                  <option key={date} value={date}>
+                    {new Date(date).toLocaleDateString()}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
 
           {/* Add a clear button for admin */}
           {isAdmin && (selectedEmployee || selectedDate) && (
@@ -455,6 +594,44 @@ function WorkHistory() {
           )}
         </div>
       </div>
+
+      {/* Current Tasks Section for Employees */}
+      {!isAdmin && currentTasks.length > 0 && (
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            Current Assigned Tasks
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentTasks.map((task) => (
+              <div key={task.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                <div className="font-medium text-gray-900 dark:text-white mb-2">
+                  {task.title}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  {task.description}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    task.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {task.status}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {task.priority}
+                  </span>
+                </div>
+                {task.dueDate && (
+                  <div className="text-xs text-gray-500 mt-2">
+                    Due: {new Date(task.dueDate).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
