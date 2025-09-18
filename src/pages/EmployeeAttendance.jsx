@@ -4,6 +4,7 @@ import { useAppContext } from "../context/AppContext";
 function EmployeeAttendance() {
   const { currentUser, API_URL } = useAppContext();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -60,15 +61,19 @@ function EmployeeAttendance() {
           const records = data.data || data || [];
           setAttendanceRecords(records);
 
-          // Check if currently checked in
-          const today = new Date().toDateString();
-          const todayRecord = records.find(
-            (record) =>
-              record.time_in && 
-              new Date(record.date).toDateString() === today &&
-              !record.time_out
-          );
-          setIsCheckedIn(!!todayRecord);
+          // Check attendance status for today (backend uses date field set to start of day)
+          const today = new Date().setHours(0, 0, 0, 0);
+          const todayRecord = records.find((record) => {
+            const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+            return recordDate === today;
+          });
+          
+          // Simple logic: show checkout if checked in but not checked out
+          const hasCheckedIn = todayRecord && todayRecord.time_in;
+          const hasCheckedOut = todayRecord && todayRecord.checkout_time;
+          
+          setIsCheckedIn(hasCheckedIn && !hasCheckedOut);
+          setIsCompleted(hasCheckedOut);
         }
       }
     } catch (error) {
@@ -100,6 +105,22 @@ function EmployeeAttendance() {
   };
 
   const handleCheckIn = async () => {
+    // Frontend validation: prevent multiple check-ins
+    const today = new Date().setHours(0, 0, 0, 0);
+    const todayRecord = attendanceRecords.find((record) => {
+      const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+      return recordDate === today;
+    });
+    
+    if (todayRecord && todayRecord.time_in) {
+      if (todayRecord.checkout_time) {
+        alert("You have already completed attendance for today!");
+      } else {
+        alert("You are already checked in! Please check out first.");
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const attendanceData = {
@@ -114,14 +135,13 @@ function EmployeeAttendance() {
         body: JSON.stringify(attendanceData),
       });
 
+      const data = await response.json();
+      
       if (response.ok) {
-        setIsCheckedIn(true);
-        loadAttendanceRecords();
+        await loadAttendanceRecords();
         alert("Checked in successfully!");
       } else {
-        const errorText = await response.text();
-        console.error("Failed to check in:", response.status, errorText);
-        alert(`Failed to check in: ${response.status}`);
+        alert(data.message || "Failed to check in");
       }
     } catch (error) {
       console.error("Error checking in:", error);
@@ -134,16 +154,11 @@ function EmployeeAttendance() {
   const handleCheckOut = async () => {
     setLoading(true);
     try {
-      const location = await getCurrentLocation();
       const attendanceData = {
-        employee_id: currentUser.id,
-        location: {
-          latitude: location.latitude,
-          longitude: location.longitude
-        }
+        employee_id: currentUser.id
       };
 
-      const response = await fetch(`${API_URL}/api/attendance/time-out`, {
+      const response = await fetch(`${API_URL}/api/attendance/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -153,7 +168,7 @@ function EmployeeAttendance() {
 
       if (response.ok) {
         setIsCheckedIn(false);
-        loadAttendanceRecords();
+        await loadAttendanceRecords();
         alert("Checked out successfully!");
       } else {
         let errorMessage = "Failed to check out";
@@ -174,10 +189,18 @@ function EmployeeAttendance() {
   };
 
   const calculateWorkingHours = (record) => {
-    if (!record.time_out || !record.time_in) return "--";
+    return record.hours_worked || record.total_hours || "--";
+  };
 
-    const diff = (new Date(record.time_out) - new Date(record.time_in)) / (1000 * 60 * 60);
-    return `${diff.toFixed(1)}h`;
+  const getWorkingHoursNumber = (record) => {
+    if (!record.time_in) return 0;
+    const endTime = record.checkout_time || record.time_out;
+    if (!endTime) return 0;
+    return (new Date(endTime) - new Date(record.time_in)) / (1000 * 60 * 60);
+  };
+
+  const hasWorked7Hours = (record) => {
+    return getWorkingHoursNumber(record) >= 7;
   };
 
 
@@ -248,7 +271,9 @@ function EmployeeAttendance() {
                       : "bg-gray-400"
                   }`}
                 ></div>
-                {isCheckedIn
+                {isCompleted
+                  ? "Attendance Completed"
+                  : isCheckedIn
                   ? "Currently Checked In"
                   : "Ready to Check In"}
               </div>
@@ -256,8 +281,8 @@ function EmployeeAttendance() {
 
             {/* Action Button */}
             <button
-              onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
-              disabled={loading}
+              onClick={isCompleted ? null : (isCheckedIn ? handleCheckOut : handleCheckIn)}
+              disabled={loading || isCompleted}
               className={`inline-flex items-center px-10 py-4 rounded-xl font-semibold text-lg text-white transition-all duration-200 transform hover:scale-105 shadow-lg ${
                 isCheckedIn
                   ? "bg-red-600 hover:bg-red-700 hover:shadow-red-200 dark:hover:shadow-red-900/20 disabled:bg-red-400"
@@ -306,7 +331,7 @@ function EmployeeAttendance() {
                       }
                     />
                   </svg>
-                  {isCheckedIn ? "Check Out Now" : "Check In Now"}
+                  {isCompleted ? "Completed" : (isCheckedIn ? "Check Out Now" : "Check In Now")}
                 </>
               )}
             </button>
@@ -358,16 +383,16 @@ function EmployeeAttendance() {
         </div>
       )}
 
-      {/* Attendance Records */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      {/* Check In/Out Records Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            {isAdmin ? "All Employee Records" : "Attendance History"}
+            Check In/Out Records
           </h3>
         </div>
 
         <div className="overflow-x-auto">
-          {attendanceRecords.length > 0 ? (
+          {attendanceRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).length > 0 ? (
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -389,12 +414,12 @@ function EmployeeAttendance() {
                     Hours
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Location
+                    Status
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {attendanceRecords.map((record, index) => (
+                {attendanceRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).map((record, index) => (
                   <tr
                     key={index}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -422,10 +447,10 @@ function EmployeeAttendance() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {record.time_out ? (
+                      {record.checkout_time ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {new Date(record.time_out).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            {new Date(record.checkout_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                           </span>
                           <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
                             Out
@@ -439,11 +464,22 @@ function EmployeeAttendance() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="font-medium text-blue-600 dark:text-blue-400">
-                        {calculateWorkingHours(record)}
+                        {record.time_in && record.checkout_time ? 
+                          `${((new Date(record.checkout_time) - new Date(record.time_in)) / (1000 * 60 * 60)).toFixed(1)}h` : 
+                          "--"
+                        }
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      --
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {record.checkout_time ? (
+                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                          Complete
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                          In Progress
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -452,7 +488,111 @@ function EmployeeAttendance() {
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-500 dark:text-gray-400">
-                No attendance records found.
+                No check-in/out records found.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Timeout Records Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+            Timeout Records
+          </h3>
+        </div>
+
+        <div className="overflow-x-auto">
+          {attendanceRecords.filter(record => hasWorked7Hours(record)).length > 0 ? (
+            <table className="min-w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  {isAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Employee
+                    </th>
+                  )}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Check In
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Check Out
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Duration
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Reason
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                {attendanceRecords.filter(record => hasWorked7Hours(record)).map((record, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {record.employee_id?.name || record.employee_name || "Unknown"}
+                      </td>
+                    )}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {record.date ? new Date(record.date).toLocaleDateString() : '--'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {record.time_in ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-gray-900 dark:text-white">
+                            {new Date(record.time_in).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                          </span>
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                            In
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">--</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {record.checkout_time ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-gray-900 dark:text-white">
+                            {new Date(record.checkout_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                          </span>
+                          <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
+                            Out
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">
+                          Active
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className="font-medium text-blue-600 dark:text-blue-400">
+                        {record.time_in && record.checkout_time ? 
+                          `${((new Date(record.checkout_time) - new Date(record.time_in)) / (1000 * 60 * 60)).toFixed(1)}h` : 
+                          "--"
+                        }
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {record.timeout_reason || 'Break'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">
+                No timeout records found.
               </p>
             </div>
           )}

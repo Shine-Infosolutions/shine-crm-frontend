@@ -102,6 +102,16 @@ function Sidebar() {
             {isEmployee && (
               <li>
                 <Link
+                  to="/tasks"
+                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                >
+                  My Tasks
+                </Link>
+              </li>
+            )}
+            {isEmployee && (
+              <li>
+                <Link
                   to="/timesheet"
                   className="block py-2 px-4 rounded hover:bg-gray-700"
                 >

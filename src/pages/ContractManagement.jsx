@@ -50,7 +50,7 @@ function ContractManagement() {
   };
 
   const handleDownload = (id, name) => {
-    navigate(`/contracts/download/${id}`);
+    window.open(`${API_URL}/api/employees/${id}/contract/preview?download=1`, '_blank');
   };
 
   const handleCreateForEmployee = (id) => {
