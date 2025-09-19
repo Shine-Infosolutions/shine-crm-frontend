@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAppContext } from "../context/AppContext";
+import { motion } from "framer-motion";
 
 function AddProject() {
   const navigate = useNavigate();
@@ -106,27 +107,42 @@ function AddProject() {
     }
   };
 
-  // Function to validate handover date (must be today or in the past)
-  // const validateHandoverDate = (date) => {
-  //   if (!date) return true; // Empty date is valid (not set yet)
-
-  //   const selectedDate = new Date(date);
-  //   const today = new Date();
-
-  //   // Reset time part for comparison
-  //   today.setHours(0, 0, 0, 0);
-  //   selectedDate.setHours(0, 0, 0, 0);
-
-  //   // Return true if date is today or in the past
-  //   return selectedDate <= today;
-  // };
+  const formFields = [
+    { label: "Project Name", name: "projectName", type: "text", required: true },
+    { label: "Project Type", name: "projectType", type: "text" },
+    { label: "Project Amount", name: "projectAmount", type: "number" },
+    { label: "Advance Amount", name: "advanceAmount", type: "number" },
+    { label: "Client Name", name: "clientName", type: "text", required: true },
+    { label: "Client Contact", name: "clientContact", type: "text", maxLength: 10 },
+    { label: "Start Date", name: "startDate", type: "date", required: true },
+    { label: "Deadline", name: "deadline", type: "date" },
+    { label: "Handover Date", name: "handoverDate", type: "date" },
+    { label: "Commission To", name: "commissionTo", type: "text" },
+    { label: "Commission Amount", name: "commissionAmount", type: "number" },
+    { label: "Domain", name: "domain", type: "text" },
+    { label: "Domain Purchase Date", name: "domainPurchaseDate", type: "date" },
+    { label: "Domain Cost", name: "domainCost", type: "number" },
+    { label: "Domain Expiry Date", name: "domainExpiryDate", type: "date" },
+    { label: "Renewal Date", name: "renewalDate", type: "date" },
+    { label: "Project Link", name: "projectLink", type: "url" },
+    { label: "Source Code Link", name: "sourceCodeLink", type: "url" },
+    { label: "Email", name: "email", type: "email" },
+    { label: "Password", name: "password", type: "password" },
+  ];
 
   return (
-    <div className="p-6">
-      <div className="flex items-center mb-6">
-        <button
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center mb-6"
+      >
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => navigate("/projects")}
-          className="mr-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+          className="mr-4 p-2 rounded-full bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 hover:bg-white/90 dark:hover:bg-gray-700/90 shadow-lg"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -142,282 +158,86 @@ function AddProject() {
               d="M10 19l-7-7m0 0l7-7m-7 7h18"
             />
           </svg>
-        </button>
-        <h2 className="text-2xl font-bold">Add New Project</h2>
-      </div>
+        </motion.button>
+        <motion.h2 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="text-2xl font-bold text-gray-900 dark:text-white"
+        >
+          {isEditing ? "Edit Project" : "Add New Project"}
+        </motion.h2>
+      </motion.div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      {error && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-red-100/80 text-red-700 rounded-lg backdrop-blur-xl border border-red-200/50"
+        >
+          {error}
+        </motion.div>
+      )}
+
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6"
+      >
         <form className="space-y-6" onSubmit={saveProject}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Project Info */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Project Name
-              </label>
-              <input
-                type="text"
-                name="projectName"
-                value={formData.projectName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Project Type
-              </label>
-              <input
-                type="text"
-                name="projectType"
-                value={formData.projectType}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Project Amount
-              </label>
-              <input
-                type="number"
-                name="projectAmount"
-                value={formData.projectAmount}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Advance Amount
-              </label>
-              <input
-                type="number"
-                name="advanceAmount"
-                value={formData.advanceAmount}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-
-            {/* Client Info */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Client Name
-              </label>
-              <input
-                type="text"
-                name="clientName"
-                value={formData.clientName}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Client Contact
-              </label>
-              <input
-                type="text"
-                name="clientContact"
-                value={formData.clientContact}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-
-            {/* Timeline */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Deadline
-              </label>
-              <input
-                type="date"
-                name="deadline"
-                value={formData.deadline}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Handover Date
-              </label>
-              <input
-                type="date"
-                name="handoverDate"
-                value={formData.handoverDate}
-                onChange={handleChange}
-                max={new Date().toISOString().split("T")[0]} // Restricts to today or earlier
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-
-            {/* Commission */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Commission To
-              </label>
-              <input
-                type="text"
-                name="commissionTo"
-                value={formData.commissionTo}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Commission Amount
-              </label>
-              <input
-                type="number"
-                name="commissionAmount"
-                value={formData.commissionAmount}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-
-            {/* Domain */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Domain
-              </label>
-              <input
-                type="text"
-                name="domain"
-                value={formData.domain}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Domain Purchase Date
-              </label>
-              <input
-                type="date"
-                name="domainPurchaseDate"
-                value={formData.domainPurchaseDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Domain Cost
-              </label>
-              <input
-                type="number"
-                name="domainCost"
-                value={formData.domainCost}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Domain Expiry Date
-              </label>
-              <input
-                type="date"
-                name="domainExpiryDate"
-                value={formData.domainExpiryDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Renewal Date
-              </label>
-              <input
-                type="date"
-                name="renewalDate"
-                value={formData.renewalDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-
-            {/* Links and Access */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Project Link
-              </label>
-              <input
-                type="url"
-                name="projectLink"
-                value={formData.projectLink}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Source Code Link
-              </label>
-              <input
-                type="url"
-                name="sourceCodeLink"
-                value={formData.sourceCodeLink}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
+            {formFields.map((field, index) => (
+              <motion.div
+                key={field.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
+              >
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {field.label}
+                </label>
+                <motion.input
+                  whileFocus={{ scale: 1.02 }}
+                  type={field.type}
+                  name={field.name}
+                  value={formData[field.name]}
+                  onChange={field.name === "clientContact" ? (e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData(prev => ({ ...prev, clientContact: value }));
+                  } : handleChange}
+                  pattern={field.name === "clientContact" ? "[0-9]{10}" : undefined}
+                  maxLength={field.maxLength}
+                  max={field.name === "handoverDate" ? formData.deadline || undefined : undefined}
+                  placeholder={field.name === "clientContact" ? "Enter 10-digit phone number" : undefined}
+                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+                  required={field.required}
+                />
+              </motion.div>
+            ))}
           </div>
 
-          <div className="flex justify-end">
-            <button
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.5 }}
+            className="flex justify-end gap-3"
+          >
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => navigate("/projects")}
-              className="px-4 py-2 mr-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="px-4 py-2 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 hover:bg-white/90 dark:hover:bg-gray-600/90 transition-all duration-0.3"
               disabled={isSubmitting}
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
-              className="px-4 py-2 border  bg-gray-800 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
+              className="px-4 py-2 border bg-gray-800/90 text-white rounded-lg hover:bg-gray-700/90 disabled:opacity-50 backdrop-blur-xl transition-all duration-0.3"
               disabled={isSubmitting}
             >
               {isSubmitting
@@ -426,11 +246,11 @@ function AddProject() {
                   : "Saving..."
                 : isEditing
                 ? "Update Project"
-                : "Save Project"}{" "}
-            </button>
-          </div>
+                : "Save Project"}
+            </motion.button>
+          </motion.div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

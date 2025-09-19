@@ -1,577 +1,590 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAppContext } from '../context/AppContext';
+
 function Dashboard() {
+  const { API_URL, navigate } = useAppContext();
+  const [totalLeads, setTotalLeads] = useState(0);
+  const [activeProjects, setActiveProjects] = useState(0);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch leads data
+        const leadsResponse = await fetch(`${API_URL}/api/leads`);
+        if (leadsResponse.ok) {
+          const leadsData = await leadsResponse.json();
+          setTotalLeads(leadsData.length || 0);
+        }
+
+        // Fetch projects data
+        const projectsResponse = await fetch(`${API_URL}/api/projects`);
+        if (projectsResponse.ok) {
+          const projectsData = await projectsResponse.json();
+          // Count active projects (not completed)
+          const activeCount = projectsData.filter(project => {
+            return !project.handoverDate || project.handoverDate.trim() === "";
+          }).length;
+          setActiveProjects(activeCount);
+          
+          // Calculate total revenue from all projects
+          const revenue = projectsData.reduce((sum, project) => {
+            const amount = parseFloat(project.projectAmount) || 0;
+            return sum + amount;
+          }, 0);
+          setTotalRevenue(revenue);
+        }
+
+        // Fetch employees data
+        const employeesResponse = await fetch(`${API_URL}/api/employees`);
+        if (employeesResponse.ok) {
+          const employeesData = await employeesResponse.json();
+          if (employeesData?.success) {
+            const data = employeesData.data;
+            const employeeArray = Array.isArray(data) ? data : data.employees || [];
+            setEmployees(employeeArray.slice(0, 4)); // Show first 4 employees
+            setTotalEmployees(employeeArray.length || 0);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [API_URL]);
+
   return (
-    <div className="p-6 bg-gray-50 dark:bg-[#101828] min-h-screen">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Dashboard Overview
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Monitor your business performance and key metrics
-        </p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-slate-600 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">
-                Total Leads
-              </h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                1,234
-              </p>
-              <div className="flex items-center mt-3">
-                <div className="flex items-center text-slate-700 dark:text-slate-300">
-                  <svg
-                    className="h-4 w-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 17l9.2-9.2M17 17V7H7"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium">+12%</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
-                  vs last month
-                </span>
-              </div>
-            </div>
-            <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-full">
-              <svg
-                className="h-8 w-8 text-slate-600 dark:text-slate-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-zinc-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">
-                Active Projects
-              </h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                56
-              </p>
-              <div className="flex items-center mt-3">
-                <div className="flex items-center text-zinc-700 dark:text-zinc-300">
-                  <svg
-                    className="h-4 w-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 17l9.2-9.2M17 17V7H7"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium">+8%</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
-                  vs last month
-                </span>
-              </div>
-            </div>
-            <div className="bg-zinc-100 dark:bg-zinc-700 p-4 rounded-full">
-              <svg
-                className="h-8 w-8 text-zinc-600 dark:text-zinc-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-blue-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">
-                Revenue
-              </h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                $12,345
-              </p>
-              <div className="flex items-center mt-3">
-                <div className="flex items-center text-blue-800 dark:text-blue-300">
-                  <svg
-                    className="h-4 w-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 17l9.2-9.2M17 17V7H7"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium">+15%</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
-                  vs last month
-                </span>
-              </div>
-            </div>
-            <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-full">
-              <svg
-                className="h-8 w-8 text-blue-800 dark:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border-l-4 border-gray-900 dark:border-gray-300 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-gray-500 dark:text-gray-400 text-sm font-semibold uppercase tracking-wider">
-                Conversion Rate
-              </h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                24%
-              </p>
-              <div className="flex items-center mt-3">
-                <div className="flex items-center text-gray-800 dark:text-gray-300">
-                  <svg
-                    className="h-4 w-4 mr-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 7l-9.2 9.2M7 7v10h10"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium">-2%</span>
-                </div>
-                <span className="text-gray-500 dark:text-gray-400 text-sm ml-2">
-                  vs last month
-                </span>
-              </div>
-            </div>
-            <div className="bg-gray-200 dark:bg-gray-700 p-4 rounded-full">
-              <svg
-                className="h-8 w-8 text-gray-800 dark:text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-              <svg
-                className="h-6 w-6 mr-2 text-slate-600 dark:text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              Recent Activity
-            </h3>
-            <button className="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              View All
-            </button>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-lg border-l-4 border-slate-600">
-              <div className="bg-slate-600 dark:bg-slate-400 p-2 rounded-full">
-                <svg
-                  className="h-5 w-5 text-white dark:text-slate-900"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  New lead converted successfully
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  John Doe from Tech Corp - 2 hours ago
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border-l-4 border-blue-800">
-              <div className="bg-blue-800 dark:bg-blue-600 p-2 rounded-full">
-                <svg
-                  className="h-5 w-5 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  Project milestone completed
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Website redesign phase 2 - Jane Smith - 3 hours ago
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4 p-4 bg-gradient-to-r from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-700 rounded-lg border-l-4 border-zinc-700">
-              <div className="bg-zinc-700 dark:bg-zinc-400 p-2 rounded-full">
-                <svg
-                  className="h-5 w-5 text-white dark:text-zinc-900"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  Payment received
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  $5,000 from Mike Johnson - 5 hours ago
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Performers */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <svg
-              className="h-5 w-5 mr-2 text-zinc-600 dark:text-zinc-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="p-6"
+      >
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="flex items-center justify-between mb-8"
+        >
+          <div>
+            <motion.h1 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="text-2xl font-bold text-gray-900 dark:text-white"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-              />
-            </svg>
-            Top Performers
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-slate-300 dark:bg-slate-600 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                    JS
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    John Smith
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Sales Manager
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900 dark:text-white">$45K</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  This month
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-zinc-300 dark:bg-zinc-600 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                    AD
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    Alice Davis
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Lead Developer
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900 dark:text-white">$38K</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  This month
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-bold text-blue-800 dark:text-blue-300">
-                    MJ
-                  </span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    Mike Johnson
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Project Manager
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-gray-900 dark:text-white">$32K</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  This month
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Project Status */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <svg
-              className="h-5 w-5 mr-2 text-blue-800 dark:text-blue-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              Dashboard Overview
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
+              className="text-gray-600 dark:text-gray-400 mt-1"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
-            </svg>
-            Project Status
-          </h3>
-          <div className="space-y-4">
+              Monitor your business performance and key metrics
+            </motion.p>
+          </div>
+          
+          {/* Team Avatars */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="flex items-center space-x-2"
+          >
+            <div className="flex -space-x-2">
+              {employees.map((employee, index) => {
+                const initials = employee.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
+                const colors = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500'];
+                return (
+                  <motion.div 
+                    key={employee._id || index}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}
+                    whileHover={{ scale: 1.15, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedEmployee(employee)}
+                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${colors[index % colors.length]} border-2 border-white/50 backdrop-blur-sm shadow-lg flex items-center justify-center text-white text-sm font-medium cursor-pointer`}
+                  >
+                    {initials}
+                  </motion.div>
+                );
+              })}
+              {totalEmployees > 4 && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.35 }}
+                  className="w-10 h-10 rounded-full bg-gray-500/80 backdrop-blur-sm border-2 border-white/50 shadow-lg flex items-center justify-center text-white text-xs font-medium"
+                >
+                  +{totalEmployees - 4}
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Key Metrics Cards */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Website Redesign
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Due: Dec 15, 2024
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Leads</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {loading ? '...' : totalLeads.toLocaleString()}
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-20 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div
-                    className="bg-slate-600 dark:bg-slate-400 h-2 rounded-full"
-                    style={{ width: "75%" }}
-                  ></div>
-                </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  75%
-                </span>
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 616 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
               </div>
             </div>
+          </motion.div>
 
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.25 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  E-commerce Platform
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Due: Jan 20, 2025
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Projects</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {loading ? '...' : activeProjects}
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-20 bg-blue-200 dark:bg-blue-900/30 rounded-full h-2">
-                  <div
-                    className="bg-blue-800 dark:bg-blue-600 h-2 rounded-full"
-                    style={{ width: "45%" }}
-                  ></div>
-                </div>
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                  45%
-                </span>
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
               </div>
             </div>
+          </motion.div>
 
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  CRM Integration
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Due: Feb 10, 2025
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {loading ? '...' : `₹${totalRevenue.toLocaleString()}`}
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-20 bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                  <div
-                    className="bg-zinc-800 dark:bg-zinc-400 h-2 rounded-full"
-                    style={{ width: "90%" }}
-                  ></div>
-                </div>
-                <span className="text-sm font-medium text-zinc-800 dark:text-zinc-300">
-                  90%
-                </span>
+              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
 
-        {/* Upcoming Tasks */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-            <svg
-              className="h-5 w-5 mr-2 text-slate-600 dark:text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.35 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Employees</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {loading ? '...' : totalEmployees}
+                </p>
+              </div>
+              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 515 0z" />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Main Kanban Board - Project Workflow */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+          className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8"
+        >
+          {/* Lead Generation */}
+          <motion.div 
+            whileHover={{ y: -3 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Lead Generation</h3>
+              <span className="bg-blue-100/80 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">3</span>
+            </div>
+            
+            <div className="space-y-4">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="bg-blue-50/80 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500 backdrop-blur-sm"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                    TS
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Website Redesign</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Tech Solutions Inc.</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg backdrop-blur-sm"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-medium">
+                    SC
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Mobile App</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">StartUp Co.</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* In Progress */}
+          <motion.div 
+            whileHover={{ y: -3 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white">In Progress</h3>
+              <span className="bg-yellow-100/80 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">2</span>
+            </div>
+            
+            <div className="space-y-4">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-yellow-500 backdrop-blur-sm"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                    RC
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">E-commerce Platform</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Retail Corp</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Completed */}
+          <motion.div 
+            whileHover={{ y: -3 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Completed</h3>
+              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">4</span>
+            </div>
+            
+            <div className="space-y-4">
+              <motion.div 
+                whileHover={{ scale: 1.02 }}
+                className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-green-500 backdrop-blur-sm"
+              >
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-medium">
+                    BL
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">CRM System</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Business Ltd</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div 
+            whileHover={{ y: -3 }}
+            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <motion.button 
+                whileHover={{ scale: 1.02, x: 5 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate('/leads/add')}
+                className="w-full text-left p-3 rounded-lg bg-blue-50/80 dark:bg-blue-900/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/30 transition-colors backdrop-blur-sm"
+              >
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-500 rounded-lg mr-3">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Add New Lead</span>
+                </div>
+              </motion.button>
+              <motion.button 
+                whileHover={{ scale: 1.02, x: 5 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate('/projects/add')}
+                className="w-full text-left p-3 rounded-lg bg-green-50/80 dark:bg-green-900/20 hover:bg-green-100/80 dark:hover:bg-green-900/30 transition-colors backdrop-blur-sm"
+              >
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-500 rounded-lg mr-3">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Create Project</span>
+                </div>
+              </motion.button>
+              <motion.button 
+                whileHover={{ scale: 1.02, x: 5 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate('/invoices')}
+                className="w-full text-left p-3 rounded-lg bg-purple-50/80 dark:bg-purple-900/20 hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors backdrop-blur-sm"
+              >
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-500 rounded-lg mr-3">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Generate Invoice</span>
+                </div>
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Bottom Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+        >
+          {/* Recent Tasks */}
+          <motion.div 
+            whileHover={{ y: -3 }}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Tasks</h3>
+                <motion.button 
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  className="p-2 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-lg backdrop-blur-sm"
+                >
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </motion.button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                <motion.div 
+                  whileHover={{ x: 5 }}
+                  className="flex items-center space-x-3"
+                >
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Client meeting completed</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</p>
+                  </div>
+                </motion.div>
+                <motion.div 
+                  whileHover={{ x: 5 }}
+                  className="flex items-center space-x-3"
+                >
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">New lead assigned</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">4 hours ago</p>
+                  </div>
+                </motion.div>
+                <motion.div 
+                  whileHover={{ x: 5 }}
+                  className="flex items-center space-x-3"
+                >
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Project milestone reached</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">1 day ago</p>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Performance Overview */}
+          <motion.div 
+            whileHover={{ y: -3 }}
+            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50"
+          >
+            <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance Overview</h3>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="flex items-center justify-center space-x-8">
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="text-center"
+                >
+                  <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
+                    85%
+                  </div>
+                  <p className="text-sm font-medium text-blue-600">Conversion Rate</p>
+                </motion.div>
+                
+                <motion.div 
+                  whileHover={{ scale: 1.05 }}
+                  className="text-center"
+                >
+                  <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
+                    92%
+                  </div>
+                  <p className="text-sm font-medium text-green-600">Customer Satisfaction</p>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+
+      {/* Employee Details Modal */}
+      <AnimatePresence>
+        {selectedEmployee && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedEmployee(null)}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              transition={{ duration: 0.3, type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white/20 dark:border-gray-700/50"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Upcoming Tasks
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-slate-300 dark:border-slate-600"
-              />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Review client proposals
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Today, 2:00 PM
-                </p>
+              <div className="flex items-center justify-between mb-4">
+                <motion.h3 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-lg font-semibold text-gray-900 dark:text-white"
+                >
+                  Employee Details
+                </motion.h3>
+                <motion.button 
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setSelectedEmployee(null)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100/50 dark:hover:bg-gray-700/50"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </motion.button>
               </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-lg">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-zinc-300 dark:border-zinc-600"
-              />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Team standup meeting
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Tomorrow, 9:00 AM
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-blue-300 dark:border-blue-600"
-              />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Update project documentation
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Dec 12, 2024
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-gray-300 dark:border-gray-600"
-              />
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">
-                  Client presentation prep
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Dec 14, 2024
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+              
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-4"
+              >
+                {[
+                  { label: 'Name', value: selectedEmployee.name },
+                  { label: 'Email', value: selectedEmployee.email },
+                  { label: 'Contact', value: selectedEmployee.contact1 },
+                  { label: 'Employee ID', value: selectedEmployee.employee_id }
+                ].map((field, index) => (
+                  <motion.div 
+                    key={field.label}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                    className="group"
+                  >
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{field.label}</p>
+                    <p className="font-medium text-gray-900 dark:text-white bg-gray-50/50 dark:bg-gray-700/50 rounded-lg px-3 py-2 backdrop-blur-sm">
+                      {field.value || 'N/A'}
+                    </p>
+                  </motion.div>
+                ))}
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                  <motion.span 
+                    whileHover={{ scale: 1.05 }}
+                    className={`inline-block px-3 py-2 rounded-lg text-xs font-medium backdrop-blur-sm ${
+                      selectedEmployee.employee_status === 'Active' 
+                        ? 'bg-green-100/80 text-green-800 border border-green-200/50' 
+                        : 'bg-red-100/80 text-red-800 border border-red-200/50'
+                    }`}
+                  >
+                    {selectedEmployee.employee_status || 'N/A'}
+                  </motion.span>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  );
-}
+  )
+};
 
 export default Dashboard;

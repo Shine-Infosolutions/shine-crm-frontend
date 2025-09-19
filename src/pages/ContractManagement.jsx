@@ -3,6 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import axios from "axios";
 import Loader from "../components/Loader";
 import DigitalSignature from "../components/DigitalSignature";
+import { motion, AnimatePresence } from "framer-motion";
 
 function ContractManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +47,40 @@ function ContractManagement() {
   );
 
   const handlePreview = (id) => {
-    window.open(`${API_URL}/api/employees/${id}/contract/preview`, "_blank");
+    const previewWindow = window.open('', '_blank');
+    previewWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Contract Preview</title>
+        <style>
+          body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+          .print-btn { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            background: #2563eb; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 14px; 
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          }
+          .print-btn:hover { background: #1d4ed8; }
+          @media print { .print-btn { display: none !important; } }
+          iframe { width: 100%; height: calc(100vh - 80px); border: none; }
+        </style>
+      </head>
+      <body>
+        <button class="print-btn" onclick="window.print()">🖨️ Print Contract</button>
+        <iframe src="${API_URL}/api/employees/${id}/contract/preview"></iframe>
+      </body>
+      </html>
+    `);
+    previewWindow.document.close();
   };
 
   const handleDownload = (id, name) => {
@@ -122,15 +156,23 @@ function ContractManagement() {
   if (isEmployee && filteredContracts.length > 0) {
     const employeeContract = filteredContracts[0];
     return (
-      <div className="p-6">
-        <iframe
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
+        <motion.iframe
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
           src={`${API_URL}/api/employees/${employeeContract._id}/contract/preview`}
-          className="w-full h-screen border-0 rounded-lg"
+          className="w-full h-screen border-0 rounded-xl shadow-xl bg-white/80 backdrop-blur-xl"
           title="Contract Preview"
         />
 
         {employeeContract.signature && (
-          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="mt-4 p-4 bg-green-50/80 border border-green-200/50 rounded-xl backdrop-blur-xl"
+          >
             <p className="text-green-800 mb-2">
               ✅ Signature saved successfully!
             </p>
@@ -139,29 +181,43 @@ function ContractManagement() {
               alt="Saved signature"
               className="h-16 border rounded"
             />
-          </div>
+          </motion.div>
         )}
 
         {!employeeContract.signature && (
-          <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="mt-6 p-4 bg-yellow-50/80 dark:bg-yellow-900/80 rounded-xl backdrop-blur-xl border border-yellow-200/50 dark:border-yellow-700/50"
+          >
             <p className="text-yellow-800 dark:text-yellow-200 mb-3">
               Please sign your contract to complete the agreement.
             </p>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowSignature(true)}
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+              className="bg-blue-600/90 text-white px-6 py-2 rounded-lg hover:bg-blue-700/90 backdrop-blur-xl transition-all duration-0.3"
             >
               Sign Contract
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         )}
 
-        <div className="mt-6">
-          <button
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+          className="mt-6"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() =>
               handleDownload(employeeContract._id, employeeContract.name)
             }
-            className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 flex items-center"
+            className="bg-green-600/90 text-white px-6 py-2 rounded-lg hover:bg-green-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -176,40 +232,53 @@ function ContractManagement() {
               />
             </svg>
             Download Contract
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        {showSignature && (
-          <DigitalSignature
-            onSave={handleSaveSignature}
-            onCancel={() => setShowSignature(false)}
-            employeeName={employeeContract.name}
-          />
-        )}
+        <AnimatePresence>
+          {showSignature && (
+            <DigitalSignature
+              onSave={handleSaveSignature}
+              onCancel={() => setShowSignature(false)}
+              employeeName={employeeContract.name}
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-        <input
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4"
+      >
+        <motion.input
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          whileFocus={{ scale: 1.02 }}
           type="text"
           placeholder="Search contracts by employee name..."
-          className="w-full md:w-1/2 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          className="w-full md:w-1/2 px-4 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:text-white transition-all duration-0.3"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
         {!isEmployee && (
           <div className="relative">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowDropdown(!showDropdown)}
-              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center"
+              className="bg-gray-800/90 text-white px-4 py-2 rounded-lg hover:bg-gray-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
             >
               + Create Contract
               <svg
-                className={`ml-2 w-4 h-4 transition-transform ${
+                className={`ml-2 w-4 h-4 transition-transform duration-0.3 ${
                   showDropdown ? "rotate-180" : ""
                 }`}
                 fill="none"
@@ -224,38 +293,54 @@ function ContractManagement() {
                   d="M19 9l-7 7-7-7"
                 ></path>
               </svg>
-            </button>
+            </motion.button>
 
-            {showDropdown && (
-              <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600">
-                <div className="p-2 text-sm text-gray-500 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600">
-                  Select an employee:
-                </div>
-                {contracts.map((emp) => (
-                  <div
-                    key={emp._id}
-                    onClick={() => handleCreateForEmployee(emp._id)}
-                    className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer flex justify-between items-center"
-                  >
-                    <span className="text-gray-900 dark:text-white">
-                      {emp.name}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {emp.employee_id}
-                    </span>
+            <AnimatePresence>
+              {showDropdown && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 mt-2 w-60 bg-white/80 dark:bg-gray-700/80 backdrop-blur-xl rounded-lg shadow-xl z-10 max-h-60 overflow-y-auto border border-white/20 dark:border-gray-600/50"
+                >
+                  <div className="p-2 text-sm text-gray-500 dark:text-gray-300 border-b border-gray-200/50 dark:border-gray-600/50">
+                    Select an employee:
                   </div>
-                ))}
-              </div>
-            )}
+                  {contracts.map((emp, index) => (
+                    <motion.div
+                      key={emp._id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: index * 0.05 }}
+                      onClick={() => handleCreateForEmployee(emp._id)}
+                      className="px-4 py-2 hover:bg-gray-100/50 dark:hover:bg-gray-600/50 cursor-pointer flex justify-between items-center transition-colors duration-0.3"
+                    >
+                      <span className="text-gray-900 dark:text-white">
+                        {emp.name}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {emp.employee_id}
+                      </span>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
-      </div>
+      </motion.div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md w-full">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50 w-full"
+      >
         {filteredContracts.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full table-auto">
-              <thead className="bg-gray-100 dark:bg-gray-700">
+              <thead className="bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-xl">
                 <tr>
                   <th className="px-12 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
                     Name
@@ -271,11 +356,15 @@ function ContractManagement() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {filteredContracts.map((emp) => (
-                  <tr
+              <tbody className="divide-y divide-gray-200/50 dark:divide-gray-600/50">
+                {filteredContracts.map((emp, index) => (
+                  <motion.tr
                     key={emp._id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.3 + index * 0.1 }}
+                    whileHover={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+                    className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors duration-0.3"
                   >
                     <td
                       className="px-6 py-4 whitespace-nowrap text-blue-600 hover:underline cursor-pointer"
@@ -305,30 +394,39 @@ function ContractManagement() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap space-x-2">
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handlePreview(emp._id)}
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline transition-colors duration-0.3"
                       >
                         Preview
-                      </button>
-                      <button
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => handleDownload(emp._id, emp.name)}
-                        className="text-green-600 hover:underline"
+                        className="text-green-600 hover:underline transition-colors duration-0.3"
                       >
                         Download
-                      </button>
+                      </motion.button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+            className="text-center py-6 text-gray-500 dark:text-gray-400"
+          >
             {isEmployee ? "No contract found." : "No contracts found."}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

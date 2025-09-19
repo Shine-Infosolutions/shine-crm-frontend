@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Link } from "react-router-dom";
 import { FaChevronDown } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
 function Sidebar() {
   const { sidebarOpen, toggleSidebar, currentUser } = useAppContext();
@@ -10,220 +11,309 @@ function Sidebar() {
   const isEmployee = currentUser?.role === "employee";
 
   return (
-    <div
-      className={`bg-gray-800 text-white h-screen fixed top-0 left-0 z-10 w-64 transition-transform duration-300 transform ${
-        sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-      }`}
+    <motion.div
+      initial={{ x: -256 }}
+      animate={{ x: sidebarOpen ? 0 : -256 }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      className="bg-slate-300/80 dark:bg-gray-800/80 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 w-64 shadow-2xl"
     >
       <div className="p-4 relative">
-        {/* Close button */}
-        <button
-          onClick={toggleSidebar}
-          className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-700 md:hidden"
-          aria-label="Close sidebar"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
+        {/* Hamburger/Close button */}
+        <div className="flex items-center justify-between mb-6">
+          <motion.h2 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
           >
-            <path
-              fillRule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-
-        <h2 className="text-2xl font-bold mb-6">Shine CRM</h2>
+            Shine CRM
+          </motion.h2>
+          <motion.button
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleSidebar}
+            className="p-1 rounded-full hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+            aria-label="Toggle sidebar"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </motion.button>
+        </div>
 
         <nav>
           <ul className="space-y-2">
             {/* Dashboard - Admin only */}
             {!isEmployee && (
               <li>
-                <Link
-                  to="/"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Dashboard
-                </Link>
+                  <Link
+                    to="/"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Dashboard
+                  </Link>
+                </motion.div>
               </li>
             )}
             {!isEmployee && (
               <li>
-                <Link
-                  to="/leads"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Lead Management
-                </Link>
+                  <Link
+                    to="/leads"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Lead Management
+                  </Link>
+                </motion.div>
               </li>
             )}
             {!isEmployee && (
               <li>
-                <Link
-                  to="/projects"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Project Management
-                </Link>
+                  <Link
+                    to="/projects"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Project Management
+                  </Link>
+                </motion.div>
               </li>
             )}
             {!isEmployee && (
               <li>
-                <Link
-                  to="/invoices"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Invoice Management
-                </Link>
+                  <Link
+                    to="/invoices"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Invoice Management
+                  </Link>
+                </motion.div>
               </li>
             )}
             {!isEmployee && (
               <li>
-                <Link
-                  to="/tasks"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Tasks Management
-                </Link>
+                  <Link
+                    to="/tasks"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Tasks Management
+                  </Link>
+                </motion.div>
               </li>
             )}
             <li>
-              <Link
-                to="/attendance"
-                className="block py-2 px-4 rounded hover:bg-gray-700"
+              <motion.div
+                whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-lg"
               >
-                Employee Attendance
-              </Link>
+                <Link
+                  to="/attendance"
+                  className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                >
+                  Employee Attendance
+                </Link>
+              </motion.div>
             </li>
             {isEmployee && (
               <li>
-                <Link
-                  to="/tasks"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  My Tasks
-                </Link>
+                  <Link
+                    to="/tasks"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    My Tasks
+                  </Link>
+                </motion.div>
               </li>
             )}
             {isEmployee && (
               <li>
-                <Link
-                  to="/timesheet"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Employee Timesheet
-                </Link>
+                  <Link
+                    to="/timesheet"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Employee Timesheet
+                  </Link>
+                </motion.div>
               </li>
             )}
             {isEmployee && (
               <li>
-                <Link
-                  to="/contracts"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Contract Agreement
-                </Link>
+                  <Link
+                    to="/contracts"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Contract Agreement
+                  </Link>
+                </motion.div>
               </li>
             )}
             {isEmployee && (
               <li>
-                <Link
-                  to="/work-history"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Work History
-                </Link>
+                  <Link
+                    to="/work-history"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Work History
+                  </Link>
+                </motion.div>
               </li>
             )}
             {isEmployee && (
               <li>
-                <Link
-                  to="/work-summary"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Work Summary
-                </Link>
+                  <Link
+                    to="/work-summary"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Work Summary
+                  </Link>
+                </motion.div>
               </li>
             )}
-            {/* <li>
-              <Link
-                to="/work-history"
-                className="block py-2 px-4 rounded hover:bg-gray-700"
-              >
-                Work History
-              </Link>
-            </li> */}
-            {/*!isEmployee && (
-              <li>
-                <Link
-                  to="/work-history"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
-                >
-                  Employee Work History
-                </Link>
-              </li>
-            )*/}
             {!isEmployee && (
               <li>
-                <Link
-                  to="/work-summary"
-                  className="block py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  Employee Work Summary
-                </Link>
+                  <Link
+                    to="/work-summary"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Employee Work Summary
+                  </Link>
+                </motion.div>
               </li>
             )}
             {!isEmployee && (
               <li>
-                <button
-                  onClick={() => setEmployeeDropdownOpen(!employeeDropdownOpen)}
-                  className="flex items-center justify-between w-full py-2 px-4 rounded hover:bg-gray-700"
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
                 >
-                  <span>Employee Management</span>
-                  <FaChevronDown
-                    className={`transition-transform ${
-                      employeeDropdownOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
+                  <button
+                    onClick={() => setEmployeeDropdownOpen(!employeeDropdownOpen)}
+                    className="flex items-center justify-between w-full py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    <span>Employee Management</span>
+                    <FaChevronDown
+                      className={`transition-transform ${
+                        employeeDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                </motion.div>
                 {employeeDropdownOpen && (
                   <ul className="ml-6 mt-1 space-y-1">
                     <li>
-                      <Link
-                        to="/employees"
-                        className="block text-md text-orange-400 hover:text-white"
+                      <motion.div
+                        whileHover={{ scale: 1.02, x: 5 }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        • Employee List
-                      </Link>
+                        <Link
+                          to="/employees"
+                          className="block text-md text-orange-400 hover:text-white"
+                        >
+                          • Employee List
+                        </Link>
+                      </motion.div>
                     </li>
                     <li>
-                      <Link
-                        to="/contracts"
-                        className="block text-md text-orange-400 hover:text-white"
+                      <motion.div
+                        whileHover={{ scale: 1.02, x: 5 }}
+                        whileTap={{ scale: 0.98 }}
                       >
-                        • Contract Agreement
-                      </Link>
+                        <Link
+                          to="/contracts"
+                          className="block text-md text-orange-400 hover:text-white"
+                        >
+                          • Contract Agreement
+                        </Link>
+                      </motion.div>
                     </li>
                   </ul>
                 )}
               </li>
             )}
             <li>
-              <Link
-                to="/settings"
-                className="block py-2 px-4 rounded hover:bg-gray-700"
+              <motion.div
+                whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                whileTap={{ scale: 0.98 }}
+                className="rounded-lg"
               >
-                Settings
-              </Link>
+                <Link
+                  to="/settings"
+                  className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                >
+                  Settings
+                </Link>
+              </motion.div>
             </li>
           </ul>
         </nav>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

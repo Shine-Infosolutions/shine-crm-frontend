@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { motion } from "framer-motion";
 
 const AddInvoice = () => {
   const { id } = useParams();
@@ -200,18 +201,41 @@ const AddInvoice = () => {
   const totalAmount = formData.amountDetails.totalAmount || 0;
 
   return (
-    <div className="p-6">
-      <div className="flex items-center mb-6">
-        <button onClick={() => navigate("/invoices")} className="mr-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center mb-6"
+      >
+        <motion.button 
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => navigate("/invoices")} 
+          className="mr-4 p-2 rounded-full bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 hover:bg-white/90 dark:hover:bg-gray-700/90 shadow-lg"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none"
             viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
-        </button>
-        <h2 className="text-2xl font-bold">{id ? "Update Invoice" : "Add New Invoice"}</h2>
-      </div>
+        </motion.button>
+        <motion.h2 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="text-2xl font-bold text-gray-900 dark:text-white"
+        >
+          {id ? "Update Invoice" : "Add New Invoice"}
+        </motion.h2>
+      </motion.div>
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <motion.form 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        onSubmit={handleSubmit} 
+        className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             ["Invoice Date", "invoiceDate", "date"],
@@ -224,90 +248,132 @@ const AddInvoice = () => {
             ["Dispatch Through", "dispatchThrough", "text"],
             ["Customer GSTIN", "customerGST", "text"],
             ["Customer Aadhar", "customerAadhar", "text"],
-          ].map(([label, name, type]) => (
-            <div key={name}>
+          ].map(([label, name, type], index) => (
+            <motion.div 
+              key={name}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
+            >
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
                 type={type}
                 name={name}
                 value={formData[name]}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white ${formErrors[name] ? "border-red-500" : ""}`}
+                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3 ${
+                  formErrors[name] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
+                }`}
               />
-            </div>
+            </motion.div>
           ))}
         </div>
 
-        <h3 className="text-md font-semibold mb-2 text-blue-600 mt-8">Product Details</h3>
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full table-auto border text-sm text-left">
-            <thead className="bg-gray-100 dark:bg-gray-700 dark:text-gray-300">
+        <motion.h3 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.8 }}
+          className="text-md font-semibold mb-2 text-blue-600 mt-8"
+        >
+          Product Details
+        </motion.h3>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.9 }}
+          className="overflow-x-auto mb-4"
+        >
+          <table className="w-full table-auto border text-sm text-left bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg">
+            <thead className="bg-gray-100/80 dark:bg-gray-700/80 dark:text-gray-300 backdrop-blur-xl">
               <tr>
                 {["Description", "Unit", "Qty", "Price", "Discount %", "Amount", "Action"].map((head) => (
-                  <th key={head} className="border px-3 py-2">{head}</th>
+                  <th key={head} className="border border-white/20 dark:border-gray-700/50 px-3 py-2">{head}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="dark:bg-gray-800">
+            <tbody className="dark:bg-gray-800/80">
               {rows.map((row, i) => (
-                <tr key={i}>
-                  <td className="border px-3 py-2">
-                    <input
+                <motion.tr 
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: 1.0 + i * 0.1 }}
+                >
+                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2">
+                    <motion.input
+                      whileFocus={{ scale: 1.02 }}
                       type="text"
                       value={row.description}
                       onChange={(e) => handleRowChange(i, "description", e.target.value)}
-                      className={`w-full px-2 py-1 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white ${rowErrors[i]?.description ? "border-red-500" : ""}`}
+                      className={`w-full px-2 py-1 border rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
+                        rowErrors[i]?.description ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
+                      }`}
                     />
                   </td>
-                  <td className="border px-3 py-2">
-                    <select
+                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2">
+                    <motion.select
+                      whileFocus={{ scale: 1.02 }}
                       value={row.unit}
                       onChange={(e) => handleRowChange(i, "unit", e.target.value)}
-                      className="w-full px-2 py-1 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      className="w-full px-2 py-1 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3"
                     >
                       {["Unit", "Pieces", "Kilograms", "Liters", "Pack", "Dozen"].map((u) => (
                         <option key={u}>{u}</option>
                       ))}
-                    </select>
+                    </motion.select>
                   </td>
                   {["quantity", "price", "discountPercentage"].map((field) => (
-                    <td key={field} className="border px-3 py-2">
-                      <input
+                    <td key={field} className="border border-white/20 dark:border-gray-700/50 px-3 py-2">
+                      <motion.input
+                        whileFocus={{ scale: 1.02 }}
                         type="number"
                         value={row[field]}
                         onChange={(e) => handleRowChange(i, field, e.target.value)}
-                        className={`w-full px-2 py-1 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white ${rowErrors[i]?.[field] ? "border-red-500" : ""}`}
+                        className={`w-full px-2 py-1 border rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
+                          rowErrors[i]?.[field] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
+                        }`}
                       />
                     </td>
                   ))}
-                  <td className="border px-3 py-2 text-gray-800 dark:text-white">₹{row.amount}</td>
-                  <td className="border px-3 py-2 text-center">
-                    <button
+                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2 text-gray-800 dark:text-white">₹{row.amount}</td>
+                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2 text-center">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
                       type="button"
                       onClick={() => removeRow(i)}
-                      className="text-red-600 hover:text-red-800 font-medium"
+                      className="text-red-600 hover:text-red-800 font-medium transition-colors duration-0.3"
                     >
                       Remove
-                    </button>
+                    </motion.button>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </motion.div>
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
           type="button"
           onClick={addRow}
-          className="mt-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
+          className="mt-3 bg-gray-200/80 hover:bg-gray-300/80 text-gray-800 font-medium py-2 px-4 rounded-lg backdrop-blur-xl dark:bg-gray-700/80 dark:hover:bg-gray-600/80 dark:text-white transition-all duration-0.3"
         >
           + Add Item
-        </button>
+        </motion.button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 1.2 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
+        >
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GST Percentage</label>
-            <input
+            <motion.input
+              whileFocus={{ scale: 1.02 }}
               type="number"
               value={formData.amountDetails.gstPercentage}
               onChange={(e) =>
@@ -316,32 +382,46 @@ const AddInvoice = () => {
                   amountDetails: { ...formData.amountDetails, gstPercentage: e.target.value },
                 })
               }
-              className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
             />
             <p className="text-xs mt-1 text-gray-500">CGST: {cgst}%, SGST: {sgst}%</p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="mt-6 text-right text-lg font-semibold dark:text-white">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 1.3 }}
+          className="mt-6 text-right text-lg font-semibold dark:text-white"
+        >
           Total Amount: ₹{totalAmount}
-        </div>
+        </motion.div>
 
-        <div className="mt-6 flex justify-end">
-          <button
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 1.4 }}
+          className="mt-6 flex justify-end gap-3"
+        >
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={() => navigate("/invoices")}
-            className="px-4 py-2 mr-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="px-4 py-2 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 hover:bg-white/90 dark:hover:bg-gray-600/90 transition-all duration-0.3"
           >
             Cancel
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
             type="submit"
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-800 hover:bg-gray-700"
+            className="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gray-800/90 hover:bg-gray-700/90 backdrop-blur-xl transition-all duration-0.3"
           >
             {id ? "Update Invoice" : "Create Invoice"}
-          </button>
-        </div>
-      </form>
+          </motion.button>
+        </motion.div>
+      </motion.form>
     </div>
   );
 };

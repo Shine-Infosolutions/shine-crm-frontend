@@ -5,6 +5,7 @@ import { toWords } from "number-to-words";
 import { useReactToPrint } from "react-to-print";
 import { useAppContext } from "../context/AppContext";
 import Loader from "../components/Loader";
+import { motion } from "framer-motion";
 
 const CreateInvoice = () => {
   const { id } = useParams();
@@ -54,7 +55,7 @@ const CreateInvoice = () => {
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
-    contentRef: componentRef,                 // ← add this
+    contentRef: componentRef,
     documentTitle: `Invoice-${invoice?.invoiceNumber || "Invoice"}`,
     removeAfterPrint: true,
     onAfterPrint: () => console.log("🖨️ Printed successfully"),
@@ -69,35 +70,79 @@ const CreateInvoice = () => {
   });
 
   if (loading) return <Loader />;
-  if (error) return <div>{error}</div>;
-  if (!invoice) return <div>No invoice data found</div>;
+  if (error) return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-red-100/80 text-red-700 p-6 rounded-xl backdrop-blur-xl border border-red-200/50"
+      >
+        {error}
+      </motion.div>
+    </div>
+  );
+  if (!invoice) return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-gray-100/80 text-gray-700 p-6 rounded-xl backdrop-blur-xl border border-gray-200/50"
+      >
+        No invoice data found
+      </motion.div>
+    </div>
+  );
 
   return (
-    <div className="bg-white p-2 sm:p-6 md:p-10 text-xs sm:text-sm">
-      <div className="mb-4 text-right">
-      <button
-          className="no-print bg-blue-600 text-white px-4 py-2 rounded text-xs sm:text-sm"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-2 sm:p-6 md:p-10 text-xs sm:text-sm">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-4 text-right"
+      >
+        <motion.button
+          whileHover={{ scale: 1.05, y: -2 }}
+          whileTap={{ scale: 0.95 }}
+          className="no-print bg-blue-600/90 text-white px-4 py-2 rounded-lg text-xs sm:text-sm backdrop-blur-xl hover:bg-blue-700/90 transition-all duration-0.3"
           disabled={!invoice}
           onClick={handlePrint}
         >
           🖨️ Print Invoice
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      <div ref={componentRef} id="print-root" className="overflow-x-auto">
-        <div className="border-2 border-black max-w-full md:max-w-5xl mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        ref={componentRef} 
+        id="print-root" 
+        className="overflow-x-auto"
+      >
+        <div className="border-2 border-black max-w-full md:max-w-5xl mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white/90 backdrop-blur-xl rounded-lg">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-center py-2 border-b-2 border-black p-2 sm:p-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="flex flex-col sm:flex-row justify-between items-center py-2 border-b-2 border-black p-2 sm:p-4"
+          >
             <h1 className="text-base sm:text-xl text-blue-600 font-bold">
               T A X&nbsp;I N V O I C E
             </h1>
             <span className="text-xs sm:text-base font-semibold text-gray-800">
               ORIGINAL FOR RECIPIENT
             </span>
-          </div>
+          </motion.div>
 
           {/* Company & Invoice Info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 border-b-2 border-black">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+            className="grid grid-cols-1 sm:grid-cols-2 border-b-2 border-black"
+          >
             <div className="flex items-start gap-2 p-2">
               <img src="/icon.png" alt="Logo" className="w-20 h-16 object-contain" />
               <div>
@@ -127,19 +172,29 @@ const CreateInvoice = () => {
                 <p className="font-bold">{new Date(invoice.dueDate).toLocaleDateString()}</p>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Customer Info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+            className="grid grid-cols-1 sm:grid-cols-2"
+          >
             <div className="border-black p-2 text-gray-800">
               <p><strong>Customer Details:</strong></p>
               <p>GSTIN: {invoice.customerGST}</p>
               <p>Billing Address: {invoice.customerAddress}</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Items Table */}
-          <div className="overflow-x-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.6 }}
+            className="overflow-x-auto"
+          >
             <table className="min-w-[600px] w-full border-2 border-black text-gray-800">
               <thead>
                 <tr>
@@ -150,7 +205,6 @@ const CreateInvoice = () => {
                   <th className="border px-2 py-1">Qty</th>
                   <th className="border px-2 py-1">Value</th>
                   {hasAnyDiscount && <th className="border px-2 py-1">Discount</th>}
-                  {/* <th className="border px-2 py-1">Tax</th> */}
                   <th className="border px-2 py-1">Amount</th>
                 </tr>
               </thead>
@@ -165,7 +219,12 @@ const CreateInvoice = () => {
                   const taxAmount = taxableValue * (gstRate / 100);
 
                   return (
-                    <tr key={i}>
+                    <motion.tr 
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.7 + i * 0.1 }}
+                    >
                       <td className="border px-2 py-1 text-center">{i + 1}</td>
                       <td className="border px-2 py-1">{p.description}</td>
                       <td className="border px-2 py-1">{p.unit}</td>
@@ -175,40 +234,64 @@ const CreateInvoice = () => {
                       {hasAnyDiscount && (
                         <td className="border px-2 py-1">₹{discountAmount.toFixed(2)}</td>
                       )}
-                      {/* <td className="border px-2 py-1">₹{taxAmount.toFixed(2)}</td> */}
                       <td className="border px-2 py-1">₹{p.amount}</td>
-                    </tr>
+                    </motion.tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
+          </motion.div>
 
           {/* Totals */}
-          <div className="p-2 text-xs font-bold text-gray-800">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.8 }}
+            className="p-2 text-xs font-bold text-gray-800"
+          >
             Total Items / Qty: {invoice.productDetails.length} / {totalQty}
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-black p-1 text-gray-800">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.9 }}
+            className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-black p-1 text-gray-800"
+          >
             <div />
             <div className="text-center">
               <p><strong>Taxable Amount: ₹</strong> {baseAmount.toFixed(2)}</p>
               <p><strong>CGST {gstRate / 2}%: ₹</strong> {cgstAmount}</p>
               <p><strong>SGST {gstRate / 2}%: ₹</strong> {sgstAmount}</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-black text-gray-800">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.0 }}
+            className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-black text-gray-800"
+          >
             <div />
             <h2 className="font-bold p-2 text-right">TOTAL: ₹{totalAmount}</h2>
-          </div>
+          </motion.div>
 
-          <div className="p-2 border-t-2 border-black text-right text-gray-800">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.1 }}
+            className="p-2 border-t-2 border-black text-right text-gray-800"
+          >
             <strong>Total amount (in words):</strong> INR {capitalizeWords(toWords(totalAmount))} only
-          </div>
+          </motion.div>
 
           {/* Bank Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 border-t border-black text-gray-800">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.2 }}
+            className="grid grid-cols-1 sm:grid-cols-2 border-t border-black text-gray-800"
+          >
             <div className="p-4">
               <p className="font-bold mb-1">Bank Details:</p>
               <p><strong>Bank:</strong> HDFC Bank</p>
@@ -216,9 +299,9 @@ const CreateInvoice = () => {
               <p><strong>IFSC Code:</strong> HDFC0004331</p>
               <p><strong>Branch:</strong> GEETA PRESS</p>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
