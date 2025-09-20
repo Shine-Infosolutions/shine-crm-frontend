@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 function TasksManagement() {
   const { currentUser, API_URL } = useAppContext();
@@ -249,7 +250,7 @@ function TasksManagement() {
 
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {isAdmin ? "Tasks Management" : "My Tasks"}
@@ -265,20 +266,27 @@ function TasksManagement() {
       </div>
 
       {isAdmin && showForm && (
-        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <div className="mb-6 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md p-6 border border-white/20 dark:border-gray-700/50">
           <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
             {editingTask ? "Edit Task" : "Assign New Task"}
           </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <motion.form 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            onSubmit={handleSubmit} 
+            className="space-y-4"
+          >
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Task Title
               </label>
-              <input
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 required
               />
             </div>
@@ -287,10 +295,11 @@ function TasksManagement() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
               </label>
-              <textarea
+              <motion.textarea
+                whileFocus={{ scale: 1.02 }}
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 rows="3"
                 required
               />
@@ -304,7 +313,7 @@ function TasksManagement() {
                 <select
                   value={formData.assigned_to}
                   onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 >
                   <option value="">Select Employee</option>
@@ -323,7 +332,7 @@ function TasksManagement() {
                 <select
                   value={formData.priority}
                   onChange={(e) => setFormData({...formData, priority: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
@@ -339,7 +348,7 @@ function TasksManagement() {
                   type="date"
                   value={formData.due_date}
                   onChange={(e) => setFormData({...formData, due_date: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
                 />
               </div>
@@ -352,11 +361,11 @@ function TasksManagement() {
             >
               {loading ? (editingTask ? "Updating..." : "Assigning...") : (editingTask ? "Update Task" : "Assign Task")}
             </button>
-          </form>
+          </motion.form>
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
         <div className="p-4 border-b">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {isAdmin ? "All Tasks" : "My Assigned Tasks"}
@@ -435,7 +444,7 @@ function TasksManagement() {
       {/* Task Detail Modal - For Employees */}
       {selectedTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border border-white/20 dark:border-gray-700/50">
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import axios from "axios";
+import { motion } from "framer-motion";
 
 const ContractFormPage = () => {
   const { id } = useParams();
@@ -48,18 +49,8 @@ const ContractFormPage = () => {
     if (!dateString) return "Unknown date";
     const date = new Date(dateString);
     const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
     const day = String(date.getDate()).padStart(2, "0");
     const month = months[date.getMonth()];
@@ -189,16 +180,31 @@ const ContractFormPage = () => {
   };
 
   if (loading)
-    return <div className="p-6 text-center">Loading employee data...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+        <div className="p-6 text-center text-gray-700 dark:text-gray-300">Loading employee data...</div>
+      </div>
+    );
   if (!employee)
-    return <div className="p-6 text-center">Employee not found</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+        <div className="p-6 text-center text-gray-700 dark:text-gray-300">Employee not found</div>
+      </div>
+    );
 
   return (
-    <div className="p-6">
-      <div className="flex items-center mb-6">
-        <button
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex items-center mb-6"
+      >
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => navigate("/contracts")}
-          className="mr-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+          className="mr-4 p-2 rounded-full bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 hover:bg-white/90 dark:hover:bg-gray-700/90 shadow-lg"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -214,38 +220,64 @@ const ContractFormPage = () => {
               d="M10 19l-7-7m0 0l7-7m-7 7h18"
             />
           </svg>
-        </button>
-        <h2 className="text-2xl font-bold">Employee Contract</h2>
-      </div>
+        </motion.button>
+        <motion.h2 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="text-2xl font-bold text-gray-900 dark:text-white"
+        >
+          Employee Contract
+        </motion.h2>
+      </motion.div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-red-100/80 text-red-700 rounded-lg backdrop-blur-xl border border-red-200/50"
+        >
           {error}
-        </div>
+        </motion.div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6"
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
-            <h3 className="text-lg font-medium mb-2">Employee Information</h3>
-            <p className="mb-1">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="p-4 bg-gray-50/80 dark:bg-gray-700/80 backdrop-blur-xl rounded-lg border border-white/20 dark:border-gray-700/50"
+          >
+            <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Employee Information</h3>
+            <p className="mb-1 text-gray-700 dark:text-gray-300">
               <span className="font-medium">Name:</span> {employee.name}
             </p>
-            <p className="mb-1">
+            <p className="mb-1 text-gray-700 dark:text-gray-300">
               <span className="font-medium">ID:</span> {employee.employee_id}
             </p>
-            <p className="mb-1">
+            <p className="mb-1 text-gray-700 dark:text-gray-300">
               <span className="font-medium">Designation:</span>{" "}
               {employee.designation}
             </p>
-            <p>
+            <p className="text-gray-700 dark:text-gray-300">
               <span className="font-medium">Employment Type:</span>{" "}
               {employee.employment_type}
             </p>
-          </div>
+          </motion.div>
 
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md">
-            <h3 className="text-lg font-medium mb-2">Contract Status</h3>
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+            className="p-4 bg-gray-50/80 dark:bg-gray-700/80 backdrop-blur-xl rounded-lg border border-white/20 dark:border-gray-700/50"
+          >
+            <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Contract Status</h3>
             {contract.acceptance?.accepted ? (
               <div className="text-green-600 flex items-center">
                 <svg
@@ -282,208 +314,223 @@ const ContractFormPage = () => {
                 Pending acceptance
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Contract Type & Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Job Title
-              </label>
-              <input
-                type="text"
-                name="job_title"
-                value={contract.job_title || ""}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Contract Type
-              </label>
-              <select
-                name="contract_type"
-                value={contract.contract_type || ""}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                required
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.5 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+            {[
+              { label: "Job Title", name: "job_title", type: "text", value: contract.job_title },
+              { label: "Contract Type", name: "contract_type", type: "select", value: contract.contract_type },
+              { label: "Start Date", name: "start_date", type: "date", value: contract.start_date }
+            ].map((field, index) => (
+              <motion.div
+                key={field.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
               >
-                <option value="Full Time">Full Time</option>
-                <option value="Part Time">Part Time</option>
-                <option value="Intern">Intern</option>
-                <option value="Freelance">Freelance</option>
-                <option value="Consultant">Consultant</option>
-                <option value="Contract">Contract</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                name="start_date"
-                value={contract.start_date || ""}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                required
-              />
-            </div>
-          </div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {field.label}
+                </label>
+                {field.type === "select" ? (
+                  <motion.select
+                    whileFocus={{ scale: 1.02 }}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+                    required
+                  >
+                    <option value="Full Time">Full Time</option>
+                    <option value="Part Time">Part Time</option>
+                    <option value="Intern">Intern</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Consultant">Consultant</option>
+                    <option value="Contract">Contract</option>
+                  </motion.select>
+                ) : (
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type={field.type}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+                    required
+                  />
+                )}
+              </motion.div>
+            ))}
+          </motion.div>
 
           {/* End Date (conditional) */}
-          {["Intern", "Freelance", "Contract"].includes(
-            contract.contract_type
-          ) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {["Intern", "Freelance", "Contract"].includes(contract.contract_type) && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   End Date
                 </label>
-                <input
+                <motion.input
+                  whileFocus={{ scale: 1.02 }}
                   type="date"
                   name="end_date"
                   value={contract.end_date || ""}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
                   required
                 />
               </div>
-            </div>
+            </motion.div>
           )}
 
           {/* Working Hours */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.7 }}
+            className="border-t border-gray-200/50 dark:border-gray-700/50 pt-4"
+          >
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Working Hours & Location
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Working Hours
-                </label>
-                <input
-                  type="text"
-                  name="working_hours.timing"
-                  value={contract.working_hours?.timing || ""}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Days per Week
-                </label>
-                <input
-                  type="number"
-                  name="working_hours.days_per_week"
-                  value={contract.working_hours?.days_per_week || 5}
-                  onChange={handleChange}
-                  min="1"
-                  max="7"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Work Location
-                </label>
-                <input
-                  type="text"
-                  name="working_hours.location"
-                  value={contract.working_hours?.location || ""}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
+              {[
+                { label: "Working Hours", name: "working_hours.timing", value: contract.working_hours?.timing },
+                { label: "Days per Week", name: "working_hours.days_per_week", type: "number", value: contract.working_hours?.days_per_week, min: 1, max: 7 },
+                { label: "Work Location", name: "working_hours.location", value: contract.working_hours?.location }
+              ].map((field, index) => (
+                <motion.div
+                  key={field.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.8 + index * 0.1 }}
+                >
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {field.label}
+                  </label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type={field.type || "text"}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={handleChange}
+                    min={field.min}
+                    max={field.max}
+                    className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+                    required
+                  />
+                </motion.div>
+              ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Compensation */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.9 }}
+            className="border-t border-gray-200/50 dark:border-gray-700/50 pt-4"
+          >
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Compensation
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Monthly Salary (₹)
-                </label>
-                <input
-                  type="number"
-                  name="compensation.monthly_salary"
-                  value={contract.compensation?.monthly_salary || ""}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Salary Payment Date
-                </label>
-                <input
-                  type="text"
-                  name="compensation.salary_date"
-                  value={contract.compensation?.salary_date || ""}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  placeholder="e.g. 5th of each month"
-                  required
-                />
-              </div>
+              {[
+                { label: "Monthly Salary (₹)", name: "compensation.monthly_salary", type: "number", value: contract.compensation?.monthly_salary, min: 0 },
+                { label: "Salary Payment Date", name: "compensation.salary_date", value: contract.compensation?.salary_date, placeholder: "e.g. 5th of each month" }
+              ].map((field, index) => (
+                <motion.div
+                  key={field.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 1.0 + index * 0.1 }}
+                >
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {field.label}
+                  </label>
+                  <motion.input
+                    whileFocus={{ scale: 1.02 }}
+                    type={field.type || "text"}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={handleChange}
+                    min={field.min}
+                    placeholder={field.placeholder}
+                    className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+                    required
+                  />
+                </motion.div>
+              ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Termination */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.1 }}
+            className="border-t border-gray-200/50 dark:border-gray-700/50 pt-4"
+          >
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Termination
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 1.2 }}
+              >
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Notice Period (days)
                 </label>
-                <input
+                <motion.input
+                  whileFocus={{ scale: 1.02 }}
                   type="number"
                   name="termination.notice_period_days"
                   value={contract.termination?.notice_period_days || 30}
                   onChange={handleChange}
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
                   required
                 />
-              </div>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <button
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.3 }}
+            className="flex justify-end space-x-3 pt-6 border-t border-gray-200/50 dark:border-gray-700/50"
+          >
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={() => navigate("/contracts")}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-gray-700/80 backdrop-blur-xl hover:bg-white/90 dark:hover:bg-gray-600/90 transition-all duration-0.3"
             >
               Cancel
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={handlePreview}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className="px-4 py-2 bg-blue-600/90 text-white rounded-lg hover:bg-blue-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -498,20 +545,24 @@ const ContractFormPage = () => {
                 />
               </svg>
               Preview
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
               onClick={handleDownload}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              className="px-4 py-2 bg-blue-600/90 text-white rounded-lg hover:bg-blue-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
             >
               Download Contract
-            </button>
+            </motion.button>
 
             {!contract.acceptance?.accepted && (
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={handleAccept}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
+                className="px-4 py-2 bg-purple-600/90 text-white rounded-lg hover:bg-purple-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -526,13 +577,15 @@ const ContractFormPage = () => {
                   />
                 </svg>
                 Mark as Accepted
-              </button>
+              </motion.button>
             )}
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center"
+              className="px-4 py-2 bg-gray-800/90 text-white rounded-lg hover:bg-gray-700/90 disabled:opacity-50 backdrop-blur-xl flex items-center transition-all duration-0.3"
             >
               {saving ? (
                 <>
@@ -575,10 +628,10 @@ const ContractFormPage = () => {
                   Save Contract
                 </>
               )}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 };

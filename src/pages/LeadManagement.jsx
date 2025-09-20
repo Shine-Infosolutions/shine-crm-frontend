@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import axios from "axios";
 import Loader from "../components/Loader";
@@ -38,19 +39,37 @@ function LeadManagement() {
   );
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Lead Management</h2>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="p-6"
+      >
+        <motion.h2 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="text-2xl font-bold mb-6 text-gray-900 dark:text-white"
+        >
+          Lead Management
+        </motion.h2>
 
-      {/* Search Bar and Add Button */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-grow">
-          <input
-            type="text"
-            placeholder="Search leads by name, email or phone..."
-            className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        {/* Search Bar and Add Button */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="flex flex-col md:flex-row gap-4 mb-6"
+        >
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="Search leads by name, email or phone..."
+              className="w-full px-4 py-2 pl-10 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg
               className="h-5 w-5 text-gray-400"
@@ -69,23 +88,30 @@ function LeadManagement() {
           </div>
         </div>
 
-        <button
-          onClick={() => navigate("/leads/add")}
-          className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 whitespace-nowrap"
-        >
-          Add New Lead
-        </button>
-      </div>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/leads/add")}
+            className="bg-gray-800/80 backdrop-blur-md text-white px-4 py-2 rounded-lg hover:bg-gray-700/80 whitespace-nowrap shadow-lg border border-white/10"
+          >
+            Add New Lead
+          </motion.button>
+        </motion.div>
 
-      {/* Loader or Lead Table */}
-      {loading ? (
-        <Loader message="Fetching leads..." />
-      ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md w-full">
+        {/* Loader or Lead Table */}
+        {loading ? (
+          <Loader message="Fetching leads..." />
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+            className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl w-full border border-white/20 dark:border-gray-700/50"
+          >
           {filteredLeads.length > 0 ? (
             <div className="overflow-x-auto w-full">
               <table className="min-w-full table-auto">
-                <thead className="bg-gray-100 dark:bg-gray-700">
+                <thead className="bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Name
@@ -111,10 +137,14 @@ function LeadManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                  {filteredLeads.map((lead) => (
-                    <tr
+                  {filteredLeads.map((lead, index) => (
+                    <motion.tr
                       key={lead._id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
+                      whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)", scale: 1.01 }}
+                      className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer backdrop-blur-sm"
                       onClick={() => navigate(`/leads/add?id=${lead._id}`)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">{lead.name}</td>
@@ -159,18 +189,24 @@ function LeadManagement() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {lead.meetingDate || "Not Scheduled"}
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No leads found matching your search.</p>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="text-center py-8"
+            >
+              <p className="text-gray-500 dark:text-gray-400">No leads found matching your search.</p>
+            </motion.div>
           )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }

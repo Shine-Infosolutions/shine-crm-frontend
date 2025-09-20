@@ -258,7 +258,7 @@ function EmployeeTimesheet() {
       )}
 
       {/* Controls Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-100 dark:border-gray-700">
+      <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md p-6 mb-6 border border-white/20 dark:border-gray-700/50">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -331,7 +331,7 @@ function EmployeeTimesheet() {
       </div>
 
       {/* Time Entries */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-100 dark:border-gray-700">
+      <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             Time Entries -{" "}
@@ -349,7 +349,7 @@ function EmployeeTimesheet() {
             {timeEntries.map((entry, index) => (
               <div
                 key={index}
-                className="group bg-white dark:bg-gray-800 border-2 rounded-xl p-5 transition-all duration-200 hover:shadow-lg border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600"
+                className="group bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-2 rounded-xl p-5 transition-all duration-200 hover:shadow-lg border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600"
               >
                 <div className="flex items-start gap-4">
                   {/* Time Badge */}

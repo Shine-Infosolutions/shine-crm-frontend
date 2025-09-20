@@ -213,7 +213,7 @@ function EmployeeAttendance() {
 
       {/* Check In/Out Card - Only for Employees */}
       {!isAdmin && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 p-8 mb-6">
+        <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 dark:border-gray-700/50 p-8 mb-6">
           <div className="text-center">
             {/* Clock Icon */}
             <div className="mb-6">
@@ -384,7 +384,7 @@ function EmployeeAttendance() {
       )}
 
       {/* Check In/Out Records Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md mb-6">
+      <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md mb-6 border border-white/20 dark:border-gray-700/50">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             Check In/Out Records
@@ -496,7 +496,7 @@ function EmployeeAttendance() {
       </div>
 
       {/* Timeout Records Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             Timeout Records
