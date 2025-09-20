@@ -60,7 +60,7 @@ const CreateInvoice = () => {
     removeAfterPrint: true,
     onAfterPrint: () => console.log("🖨️ Printed successfully"),
     pageStyle: `
-      @page { size: A4; margin: 5mm; }
+      @page { size: A4 portrait; margin: 5mm; }
       @media print {
         html, body { margin:0; padding:24px; -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
         #print-root, #root { box-sizing:border-box; }
@@ -120,72 +120,74 @@ const CreateInvoice = () => {
         id="print-root" 
         className="overflow-x-auto"
       >
-        <div className="border-2 border-black max-w-full md:max-w-5xl mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white/90 backdrop-blur-xl rounded-lg">
+        <div className="border-2 border-black max-w-full md:max-w-5xl mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white/90 backdrop-blur-xl">
           {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
-            className="flex flex-col sm:flex-row justify-between items-center py-2 border-b-2 border-black p-2 sm:p-4"
+            className="flex justify-between items-center py-2 border-b-2 border-black p-2 sm:p-4"
           >
-            <h1 className="text-base sm:text-xl text-blue-600 font-bold">
-              T A X&nbsp;I N V O I C E
+            <div className="flex-1"></div>
+            <h1 className="text-base sm:text-xl font-bold text-center">
+              TAX INVOICE
             </h1>
-            <span className="text-xs sm:text-base font-semibold text-gray-800">
-              ORIGINAL FOR RECIPIENT
-            </span>
+            <div className="flex-1 text-right">
+              <span className="text-xs sm:text-sm font-semibold">
+                ORIGINAL FOR RECIPIENT
+              </span>
+            </div>
           </motion.div>
 
-          {/* Company & Invoice Info */}
+          {/* Company Info & Invoice Details */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.4 }}
-            className="grid grid-cols-1 sm:grid-cols-2 border-b-2 border-black"
+            className="grid grid-cols-2 border-b-2 border-black"
           >
-            <div className="flex items-start gap-2 p-2">
-              <img src="/icon.png" alt="Logo" className="w-20 h-16 object-contain" />
+            <div className="flex items-start gap-2 p-3 border-r-2 border-black">
+              <img src="/icon.png" alt="Logo" className="w-16 h-12 object-contain" />
               <div>
-                <p className="text-base sm:text-lg font-bold text-gray-900">SHINE INFOSOLUTIONS</p>
-                <p className="text-gray-800">GSTIN: <strong>09FTJPS4577P1ZD</strong></p>
-                <p className="text-gray-800">87a, Bankati chak, Raiganj road, Near Chhoti Masjid, Gorakhpur</p>
-                <p className="text-gray-800">Gorakhpur, UTTAR PRADESH, 273001</p>
-                <p className="text-gray-800"><strong>Mobile:</strong> +91 7054284786, 9140427414</p>
-                <p className="text-gray-800"><strong>Email:</strong> info@shineinfosolutions.in</p>
+                <p className="text-sm font-bold">SHINE INFOSOLUTIONS</p>
+                <p className="text-xs">GSTIN: 09FTJPS4577P1ZD</p>
+                <p className="text-xs">87a, Bankati chak, Raiganj road,Near Chhoti</p>
+                <p className="text-xs">Masjid, Gorakhpur</p>
+                <p className="text-xs">Gorakhpur, UTTAR PRADESH, 273001</p>
+                <p className="text-xs">Mobile: +91 7054284786, 9140427414</p>
+                <p className="text-xs">Email: info@shineinfosolutions.in</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 border border-black text-xs sm:text-sm font-semibold text-gray-800">
-              <div className="border-r border-b border-black p-2">
-                <p>Invoice #:</p>
-                <p className="font-bold">{invoice.invoiceNumber}</p>
+            <div className="grid grid-cols-2">
+              <div className="border-r-2 border-b-2 border-black p-2">
+                <p className="text-xs font-semibold">Invoice #:</p>
+                <p className="text-xs font-bold">{invoice.invoiceNumber}</p>
               </div>
-              <div className="border-b border-black p-2">
-                <p>Invoice Date:</p>
-                <p className="font-bold">{invoice.invoiceDate?.split("T")[0]}</p>
+              <div className="border-b-2 border-black p-2">
+                <p className="text-xs font-semibold">Invoice Date:</p>
+                <p className="text-xs font-bold">{new Date(invoice.invoiceDate).toLocaleDateString('en-GB')}</p>
               </div>
-              <div className="border-r border-black p-2">
-                <p>Place of Supply:</p>
-                <p className="font-bold">{invoice.customerAddress}</p>
+              <div className="border-r-2 border-black p-2">
+                <p className="text-xs font-semibold">Place of Supply:</p>
+                <p className="text-xs font-bold">{invoice.customerAddress}</p>
               </div>
               <div className="p-2">
-                <p>Due Date:</p>
-                <p className="font-bold">{new Date(invoice.dueDate).toLocaleDateString()}</p>
+                <p className="text-xs font-semibold">Due Date:</p>
+                <p className="text-xs font-bold">{new Date(invoice.dueDate).toLocaleDateString('en-GB')}</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Customer Info */}
+          {/* Customer Details */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.5 }}
-            className="grid grid-cols-1 sm:grid-cols-2"
+            className="border-b-2 border-black p-3"
           >
-            <div className="border-black p-2 text-gray-800">
-              <p><strong>Customer Details:</strong></p>
-              <p>GSTIN: {invoice.customerGST}</p>
-              <p>Billing Address: {invoice.customerAddress}</p>
-            </div>
+            <p className="text-xs font-semibold mb-1">Customer Details:</p>
+            <p className="text-xs">GSTIN: {invoice.customerGST}</p>
+            <p className="text-xs">Billing Address: {invoice.customerAddress}</p>
           </motion.div>
 
           {/* Items Table */}
@@ -195,17 +197,17 @@ const CreateInvoice = () => {
             transition={{ duration: 0.3, delay: 0.6 }}
             className="overflow-x-auto"
           >
-            <table className="min-w-[600px] w-full border-2 border-black text-gray-800">
+            <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
-                  <th className="border px-2 py-1">#</th>
-                  <th className="border px-2 py-1">Item</th>
-                  <th className="border px-2 py-1">HSN/ SAC</th>
-                  <th className="border px-2 py-1">Rate / Item</th>
-                  <th className="border px-2 py-1">Qty</th>
-                  <th className="border px-2 py-1">Value</th>
-                  {hasAnyDiscount && <th className="border px-2 py-1">Discount</th>}
-                  <th className="border px-2 py-1">Amount</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">#</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Item</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">HSN/SAC</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Rate/Item</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Qty</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Taxable Value</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Tax Amount</th>
+                  <th className="border-b-2 px-1 py-2 text-center font-semibold">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -225,16 +227,14 @@ const CreateInvoice = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.3, delay: 0.7 + i * 0.1 }}
                     >
-                      <td className="border px-2 py-1 text-center">{i + 1}</td>
-                      <td className="border px-2 py-1">{p.description}</td>
-                      <td className="border px-2 py-1">{p.unit}</td>
-                      <td className="border px-2 py-1">₹{price.toFixed(2)}</td>
-                      <td className="border px-2 py-1">{qty}</td>
-                      <td className="border px-2 py-1">₹{originalValue.toFixed(2)}</td>
-                      {hasAnyDiscount && (
-                        <td className="border px-2 py-1">₹{discountAmount.toFixed(2)}</td>
-                      )}
-                      <td className="border px-2 py-1">₹{p.amount}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{i + 1}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{p.description}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{p.unit}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{price.toFixed(2)}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{qty}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{taxableValue.toFixed(2)}</td>
+                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{taxAmount.toFixed(2)}</td>
+                      <td className="border-b-2 px-1 py-2 text-center">₹{p.amount}</td>
                     </motion.tr>
                   );
                 })}
@@ -242,62 +242,50 @@ const CreateInvoice = () => {
             </table>
           </motion.div>
 
-          {/* Totals */}
+          {/* Tax Summary */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.8 }}
-            className="p-2 text-xs font-bold text-gray-800"
+            className="border-b-2 border-black p-2 text-right"
           >
-            Total Items / Qty: {invoice.productDetails.length} / {totalQty}
+            <p className="text-xs"><strong>Taxable Amount: ₹{baseAmount.toFixed(2)}</strong></p>
+            <p className="text-xs"><strong>CGST {gstRate / 2}%: ₹{cgstAmount}</strong></p>
+            <p className="text-xs"><strong>SGST {gstRate / 2}%: ₹{sgstAmount}</strong></p>
+            <p className="text-sm font-bold mt-1"><strong>Total: ₹{totalAmount}</strong></p>
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.9 }}
-            className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-black p-1 text-gray-800"
-          >
-            <div />
-            <div className="text-center">
-              <p><strong>Taxable Amount: ₹</strong> {baseAmount.toFixed(2)}</p>
-              <p><strong>CGST {gstRate / 2}%: ₹</strong> {cgstAmount}</p>
-              <p><strong>SGST {gstRate / 2}%: ₹</strong> {sgstAmount}</p>
-            </div>
-          </motion.div>
-
+          {/* Amount in Words */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 1.0 }}
-            className="grid grid-cols-1 sm:grid-cols-2 border-t-2 border-black text-gray-800"
+            className="border-b-2 border-black p-2"
           >
-            <div />
-            <h2 className="font-bold p-2 text-right">TOTAL: ₹{totalAmount}</h2>
+            <p className="text-xs text-right"><strong>Total amount (in words):</strong> INR {capitalizeWords(toWords(totalAmount))} Only</p>
           </motion.div>
 
+          {/* Payment Terms & Signature */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 1.1 }}
-            className="p-2 border-t-2 border-black text-right text-gray-800"
+            className="grid grid-cols-2"
           >
-            <strong>Total amount (in words):</strong> INR {capitalizeWords(toWords(totalAmount))} only
-          </motion.div>
-
-          {/* Bank Details */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 1.2 }}
-            className="grid grid-cols-1 sm:grid-cols-2 border-t border-black text-gray-800"
-          >
-            <div className="p-4">
-              <p className="font-bold mb-1">Bank Details:</p>
-              <p><strong>Bank:</strong> HDFC Bank</p>
-              <p><strong>Account #:</strong> 50200068337918</p>
-              <p><strong>IFSC Code:</strong> HDFC0004331</p>
-              <p><strong>Branch:</strong> GEETA PRESS</p>
+            <div className="border-r-2 border-black p-3">
+              <p className="text-xs font-semibold mb-2">Bank Details:</p>
+              <p className="text-xs"><strong>Bank:</strong> HDFC Bank</p>
+              <p className="text-xs"><strong>Account #:</strong> 50200068337918</p>
+              <p className="text-xs"><strong>IFSC Code:</strong> HDFC0004331</p>
+              <p className="text-xs"><strong>Branch:</strong> GEETA PRESS</p>
+            </div>
+            <div className="p-3 text-right">
+              <p className="text-xs mb-8"><strong>Amount Payable:</strong></p>
+              <p className="text-xs mt-8">For SHINE INFOSOLUTIONS</p>
+              <div className="mt-8 mb-2">
+                <div className="w-24 h-12 border-b border-black ml-auto"></div>
+              </div>
+              <p className="text-xs">Authorised Signatory</p>
             </div>
           </motion.div>
         </div>

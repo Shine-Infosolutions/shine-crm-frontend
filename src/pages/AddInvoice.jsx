@@ -284,11 +284,11 @@ const AddInvoice = () => {
           transition={{ duration: 0.3, delay: 0.9 }}
           className="overflow-x-auto mb-4"
         >
-          <table className="w-full table-auto border text-sm text-left bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg">
+          <table className="w-full table-auto border-2 border-collapse text-sm text-left bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg">
             <thead className="bg-gray-100/80 dark:bg-gray-700/80 dark:text-gray-300 backdrop-blur-xl">
               <tr>
                 {["Description", "Unit", "Qty", "Price", "Discount %", "Amount", "Action"].map((head) => (
-                  <th key={head} className="border border-white/20 dark:border-gray-700/50 px-3 py-2">{head}</th>
+                  <th key={head} className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2">{head}</th>
                 ))}
               </tr>
             </thead>
@@ -300,23 +300,23 @@ const AddInvoice = () => {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: 1.0 + i * 0.1 }}
                 >
-                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2">
+                  <td className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2">
                     <motion.input
                       whileFocus={{ scale: 1.02 }}
                       type="text"
                       value={row.description}
                       onChange={(e) => handleRowChange(i, "description", e.target.value)}
-                      className={`w-full px-2 py-1 border rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
+                      className={`w-full px-2 py-1 border-2 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
                         rowErrors[i]?.description ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
                       }`}
                     />
                   </td>
-                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2">
+                  <td className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2">
                     <motion.select
                       whileFocus={{ scale: 1.02 }}
                       value={row.unit}
                       onChange={(e) => handleRowChange(i, "unit", e.target.value)}
-                      className="w-full px-2 py-1 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3"
+                      className="w-full px-2 py-1 border-2 border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3"
                     >
                       {["Unit", "Pieces", "Kilograms", "Liters", "Pack", "Dozen"].map((u) => (
                         <option key={u}>{u}</option>
@@ -324,20 +324,20 @@ const AddInvoice = () => {
                     </motion.select>
                   </td>
                   {["quantity", "price", "discountPercentage"].map((field) => (
-                    <td key={field} className="border border-white/20 dark:border-gray-700/50 px-3 py-2">
+                    <td key={field} className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2">
                       <motion.input
                         whileFocus={{ scale: 1.02 }}
                         type="number"
                         value={row[field]}
                         onChange={(e) => handleRowChange(i, field, e.target.value)}
-                        className={`w-full px-2 py-1 border rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
+                        className={`w-full px-2 py-1 border-2 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
                           rowErrors[i]?.[field] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
                         }`}
                       />
                     </td>
                   ))}
-                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2 text-gray-800 dark:text-white">₹{row.amount}</td>
-                  <td className="border border-white/20 dark:border-gray-700/50 px-3 py-2 text-center">
+                  <td className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2 text-gray-800 dark:text-white">₹{row.amount}</td>
+                  <td className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2 text-center">
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}

@@ -122,7 +122,7 @@ const InvoiceManagement = () => {
             <thead className="bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
               <tr>
                 {["Invoice #", "Customer", "Date","Due Date", "Amount", "Actions"].map((heading) => (
-                  <th key={heading} className="px-6 py-3 text-left">{heading}</th>
+                  <th key={heading} className="px-6 py-3 text-left border-2 border-b-2">{heading}</th>
                 ))}
               </tr>
             </thead>
@@ -137,13 +137,13 @@ const InvoiceManagement = () => {
                   className="hover:bg-gray-100/50 dark:hover:bg-gray-700/50 cursor-pointer backdrop-blur-sm"
                   onClick={() => navigate(`/invoices/edit/${inv._id}`)}
                 >
-                  <td className="px-6 py-4">{inv.invoiceNumber}</td>
-                  <td className="px-6 py-4">{inv.customerName}</td>
-                  <td className="px-6 py-4">{new Date(inv.invoiceDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">{new Date(inv.dueDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 font-semibold">₹ {inv.amountDetails.totalAmount}</td>
+                  <td className="px-6 py-4 border-2 border-b-2">{inv.invoiceNumber}</td>
+                  <td className="px-6 py-4 border-2 border-b-2">{inv.customerName}</td>
+                  <td className="px-6 py-4 border-2 border-b-2">{new Date(inv.invoiceDate).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 border-2 border-b-2">{new Date(inv.dueDate).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 font-semibold border-2 border-b-2">₹ {inv.amountDetails.totalAmount}</td>
                   <td
-                    className="px-6 py-4 flex gap-3 text-sm"
+                    className="px-6 py-4 flex gap-3 text-sm border-2 border-b-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <motion.div
@@ -170,7 +170,7 @@ const InvoiceManagement = () => {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center p-6 text-gray-500 dark:text-gray-400">
+                  <td colSpan="6" className="text-center p-6 text-gray-500 dark:text-gray-400 border-2 border-b-2">
                     No invoices found
                   </td>
                 </tr>
