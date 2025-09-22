@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
 
 function EmployeeAttendance() {
@@ -6,8 +6,13 @@ function EmployeeAttendance() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [filteredRecords, setFilteredRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [autoCheckoutTimer, setAutoCheckoutTimer] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const dateInputRef = useRef(null);
 
   const isAdmin = currentUser?.role !== "employee";
 
@@ -16,9 +21,28 @@ function EmployeeAttendance() {
     return () => clearInterval(timer);
   }, []);
 
+  // Auto checkout after 9 hours
+  useEffect(() => {
+    if (!isAdmin && isCheckedIn && !isCompleted) {
+      checkAutoCheckout();
+      const interval = setInterval(checkAutoCheckout, 60000); // Check every minute
+      return () => clearInterval(interval);
+    }
+  }, [isCheckedIn, isCompleted, attendanceRecords, isAdmin]);
+
   useEffect(() => {
     loadAttendanceRecords();
   }, [currentUser, isAdmin]);
+
+  useEffect(() => {
+    filterRecords();
+  }, [attendanceRecords, selectedDate, selectedEmployee]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadEmployees();
+    }
+  }, [isAdmin]);
 
   const [employees, setEmployees] = useState([]);
 
@@ -199,6 +223,80 @@ function EmployeeAttendance() {
     return (new Date(endTime) - new Date(record.time_in)) / (1000 * 60 * 60);
   };
 
+  const getCurrentWorkingHours = (record) => {
+    if (!record.time_in) return 0;
+    const now = new Date();
+    return (now - new Date(record.time_in)) / (1000 * 60 * 60);
+  };
+
+  const checkAutoCheckout = async () => {
+    if (!currentUser?.id || isCompleted) return;
+    
+    const today = new Date().setHours(0, 0, 0, 0);
+    const todayRecord = attendanceRecords.find((record) => {
+      const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+      return recordDate === today && record.employee_id === currentUser.id;
+    });
+    
+    if (todayRecord && todayRecord.time_in && !todayRecord.checkout_time) {
+      const currentHours = getCurrentWorkingHours(todayRecord);
+      
+      if (currentHours >= 9) {
+        try {
+          const response = await fetch(`${API_URL}/api/attendance/checkout`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ employee_id: currentUser.id }),
+          });
+          
+          if (response.ok) {
+            setIsCheckedIn(false);
+            setIsCompleted(true);
+            await loadAttendanceRecords();
+            alert("You have been automatically checked out after 9 hours of work!");
+          }
+        } catch (error) {
+          console.error("Auto checkout error:", error);
+        }
+      }
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/employees`);
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.data || data || []);
+      }
+    } catch (error) {
+      console.error("Error loading employees:", error);
+    }
+  };
+
+  const filterRecords = () => {
+    let filtered = [...attendanceRecords];
+    
+    if (selectedDate) {
+      const filterDate = new Date(selectedDate).setHours(0, 0, 0, 0);
+      filtered = filtered.filter(record => {
+        const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+        return recordDate === filterDate;
+      });
+    }
+    
+    if (selectedEmployee) {
+      filtered = filtered.filter(record => {
+        const employeeId = record.employee_id?._id || record.employee_id;
+        return employeeId === selectedEmployee;
+      });
+    }
+    
+    setFilteredRecords(filtered);
+  };
+
   const hasWorked7Hours = (record) => {
     return getWorkingHoursNumber(record) >= 7;
   };
@@ -207,9 +305,61 @@ function EmployeeAttendance() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-        {isAdmin ? "All Employee Attendance" : "Employee Attendance"}
-      </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-0">
+          {isAdmin ? "All Employee Attendance" : "Employee Attendance"}
+        </h2>
+        
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="flex gap-3 items-center">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Filter:</label>
+            <div className="relative">
+              <input
+                ref={dateInputRef}
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+              />
+              <div className="flex items-center justify-center px-2 py-2 sm:px-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm hover:bg-gray-100 dark:hover:bg-gray-600 pointer-events-none">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          {isAdmin && (
+            <div className="flex gap-3 items-center">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Employee:</label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="">All Employees</option>
+                {employees.map((employee) => (
+                  <option key={employee._id} value={employee._id}>
+                    {employee.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {(selectedDate || selectedEmployee) && (
+            <button
+              onClick={() => {
+                setSelectedDate('');
+                setSelectedEmployee('');
+              }}
+              className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Check In/Out Card - Only for Employees */}
       {!isAdmin && (
@@ -392,7 +542,7 @@ function EmployeeAttendance() {
         </div>
 
         <div className="overflow-x-auto">
-          {attendanceRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).length > 0 ? (
+          {filteredRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).length > 0 ? (
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -419,7 +569,7 @@ function EmployeeAttendance() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {attendanceRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).map((record, index) => (
+                {filteredRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).map((record, index) => (
                   <tr
                     key={index}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -504,7 +654,7 @@ function EmployeeAttendance() {
         </div>
 
         <div className="overflow-x-auto">
-          {attendanceRecords.filter(record => hasWorked7Hours(record)).length > 0 ? (
+          {filteredRecords.filter(record => hasWorked7Hours(record)).length > 0 ? (
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -531,7 +681,7 @@ function EmployeeAttendance() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {attendanceRecords.filter(record => hasWorked7Hours(record)).map((record, index) => (
+                {filteredRecords.filter(record => hasWorked7Hours(record)).map((record, index) => (
                   <tr
                     key={index}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"

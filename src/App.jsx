@@ -29,6 +29,7 @@ import EmployeeTimesheet from "./pages/EmployeeTimesheet";
 import WorkHistory from "./pages/WorkHistory";
 import WorkSummary from "./pages/WorkSummary";
 import TasksManagement from "./pages/TasksManagement";
+import Settings from "./pages/Settings";
 // import EmployeeWorkHistory from "./pages/EmployeeWorkHistory";
 
 // 🔔 This component handles FCM registration using context
@@ -86,6 +87,7 @@ function AppRoutes() {
         <Route path="/work-history" element={<WorkHistory />} />
         <Route path="/work-summary" element={<WorkSummary />} />
         <Route path="tasks" element={<TasksManagement />} />
+        <Route path="settings" element={<Settings />} />
 
         {/* Policy */}
         {/* <Route path="employee/policies" element={<PolicyAcceptance />} /> */}
