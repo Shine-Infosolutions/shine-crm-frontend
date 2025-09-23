@@ -301,6 +301,10 @@ function EmployeeAttendance() {
     return getWorkingHoursNumber(record) >= 7;
   };
 
+  const hasWorked9Hours = (record) => {
+    return getWorkingHoursNumber(record) >= 9;
+  };
+
 
 
   return (
@@ -733,7 +737,10 @@ function EmployeeAttendance() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {record.timeout_reason || 'Break'}
+                      {getWorkingHoursNumber(record) >= 9 && record.checkout_time ? 
+                        `Auto checkout at ${new Date(record.checkout_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` : 
+                        (record.timeout_reason || 'Extended work session')
+                      }
                     </td>
                   </tr>
                 ))}
