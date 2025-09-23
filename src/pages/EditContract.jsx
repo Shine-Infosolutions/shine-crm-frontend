@@ -33,6 +33,9 @@ const ContractFormPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableContent, setEditableContent] = useState('');
+  const [savingContent, setSavingContent] = useState(false);
 
   // Format date to YYYY-MM-DD for input fields
   const formatDateForInput = (dateString) => {
@@ -154,6 +157,104 @@ const ContractFormPage = () => {
 
   const handlePreview = () => {
     window.open(`${API_URL}/api/employees/${id}/contract/preview`, "_blank");
+  };
+
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      // Load contract content for editing
+      fetch(`${API_URL}/api/employees/${id}/contract/content`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setEditableContent(data.content || generateContractHTML());
+          } else {
+            setEditableContent(generateContractHTML());
+          }
+        })
+        .catch(() => setEditableContent(generateContractHTML()));
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const generateContractHTML = () => {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #2563eb; margin-bottom: 10px;">EMPLOYMENT CONTRACT</h1>
+          <p style="color: #666;">SHINE INFOSOLUTIONS</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Employee Information</h3>
+          <p><strong>Name:</strong> ${employee?.name || 'N/A'}</p>
+          <p><strong>Employee ID:</strong> ${employee?.employee_id || 'N/A'}</p>
+          <p><strong>Designation:</strong> ${employee?.designation || 'N/A'}</p>
+          <p><strong>Job Title:</strong> ${contract.job_title || 'N/A'}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Contract Details</h3>
+          <p><strong>Contract Type:</strong> ${contract.contract_type}</p>
+          <p><strong>Start Date:</strong> ${contract.start_date ? formatDateForDisplay(contract.start_date) : 'N/A'}</p>
+          ${contract.end_date ? `<p><strong>End Date:</strong> ${formatDateForDisplay(contract.end_date)}</p>` : ''}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Working Hours & Location</h3>
+          <p><strong>Working Hours:</strong> ${contract.working_hours?.timing || 'N/A'}</p>
+          <p><strong>Days per Week:</strong> ${contract.working_hours?.days_per_week || 'N/A'}</p>
+          <p><strong>Work Location:</strong> ${contract.working_hours?.location || 'N/A'}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Compensation</h3>
+          <p><strong>Monthly Salary:</strong> ₹${contract.compensation?.monthly_salary || 0}</p>
+          <p><strong>Salary Payment Date:</strong> ${contract.compensation?.salary_date || 'N/A'}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 5px;">Terms & Conditions</h3>
+          <p><strong>Notice Period:</strong> ${contract.termination?.notice_period_days || 30} days</p>
+          <p>This contract is governed by the laws of India and any disputes shall be resolved through appropriate legal channels.</p>
+        </div>
+        
+        <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+          <div>
+            <p><strong>Employee Signature:</strong></p>
+            <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 20px;"></div>
+            <p style="margin-top: 5px;">Date: ___________</p>
+          </div>
+          <div>
+            <p><strong>Company Representative:</strong></p>
+            <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 20px;"></div>
+            <p style="margin-top: 5px;">Date: ___________</p>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const saveEditedContent = async () => {
+    setSavingContent(true);
+    try {
+      const response = await fetch(`${API_URL}/api/employees/${id}/contract/content`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ editedContent: editableContent }),
+      });
+      
+      if (response.ok) {
+        alert('Contract content saved successfully!');
+      } else {
+        alert('Failed to save contract content');
+      }
+    } catch (error) {
+      console.error('Error saving content:', error);
+      alert('Error saving contract content');
+    }
+    setSavingContent(false);
   };
 
   const handleAccept = async () => {
@@ -529,6 +630,29 @@ const ContractFormPage = () => {
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               type="button"
+              onClick={handleEditToggle}
+              className="px-4 py-2 bg-green-600/90 text-white rounded-lg hover:bg-green-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
+            >
+              {isEditing ? '📝 Exit Edit' : '✏️ Edit Content'}
+            </motion.button>
+            
+            {isEditing && (
+              <motion.button
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                type="button"
+                onClick={saveEditedContent}
+                disabled={savingContent}
+                className="px-4 py-2 bg-purple-600/90 text-white rounded-lg hover:bg-purple-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
+              >
+                {savingContent ? '💾 Saving...' : '💾 Save Content'}
+              </motion.button>
+            )}
+            
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              type="button"
               onClick={handlePreview}
               className="px-4 py-2 bg-blue-600/90 text-white rounded-lg hover:bg-blue-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
             >
@@ -632,6 +756,72 @@ const ContractFormPage = () => {
           </motion.div>
         </form>
       </motion.div>
+      
+      {/* Rich Text Editor Modal */}
+      {isEditing && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        >
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+          >
+            <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Edit Contract Content</h3>
+                <button
+                  onClick={handleEditToggle}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-4 flex gap-2 border-b pb-2">
+                <button onClick={() => document.execCommand('bold')} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">B</button>
+                <button onClick={() => document.execCommand('italic')} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">I</button>
+                <button onClick={() => document.execCommand('underline')} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">U</button>
+                <button onClick={() => document.execCommand('justifyLeft')} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">Left</button>
+                <button onClick={() => document.execCommand('justifyCenter')} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">Center</button>
+                <button onClick={() => document.execCommand('justifyRight')} className="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">Right</button>
+              </div>
+              
+              <div
+                contentEditable
+                className="min-h-[500px] max-h-[60vh] overflow-y-auto p-4 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white"
+                dangerouslySetInnerHTML={{ __html: editableContent }}
+                onInput={(e) => setEditableContent(e.target.innerHTML)}
+                style={{ fontFamily: 'Arial, sans-serif', fontSize: '14px' }}
+              />
+              
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  onClick={handleEditToggle}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEditedContent}
+                  disabled={savingContent}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {savingContent ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 };

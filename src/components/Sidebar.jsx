@@ -127,10 +127,26 @@ function Sidebar() {
                   className="rounded-lg"
                 >
                   <Link
-                    to="/tasks"
+                    to="/task-assignment"
                     className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
                   >
-                    Tasks Management
+                    Task Assignment
+                  </Link>
+                </motion.div>
+              </li>
+            )}
+            {!isEmployee && (
+              <li>
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
+                >
+                  <Link
+                    to="/timesheet"
+                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  >
+                    Employee Timesheets
                   </Link>
                 </motion.div>
               </li>
@@ -157,7 +173,7 @@ function Sidebar() {
                   className="rounded-lg"
                 >
                   <Link
-                    to="/tasks"
+                    to="/task-management"
                     className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
                   >
                     My Tasks

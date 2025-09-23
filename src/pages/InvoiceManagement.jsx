@@ -60,125 +60,104 @@ const InvoiceManagement = () => {
   if (loading) return <Loader message="Loading invoices..." />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="p-6 overflow-x-hidden"
-      >
-        {/* Search + Add */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.05 }}
-          className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Invoice Management
+        </h2>
+        <button
+          onClick={() => navigate("/invoices/add")}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
-          <div className="relative w-full md:w-1/2">
-            <input
-              type="text"
-              placeholder="Search by invoice number or customer name..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-2 pl-10 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
+          + New Invoice
+        </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md p-6 border border-white/20 dark:border-gray-700/50">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search by invoice number or customer name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-3 py-2 pl-10 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate("/invoices/add")}
-            className="bg-gray-800/80 backdrop-blur-md text-white px-4 py-2 rounded-lg hover:bg-gray-700/80 shadow-lg border border-white/10"
-          >
-            + New Invoice
-          </motion.button>
-        </motion.div>
+        </div>
+      </div>
 
-        <AnimatePresence>
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-4 text-red-700 bg-red-100/80 backdrop-blur-sm rounded-lg border border-red-200/50"
-            >
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {error && (
+        <div className="mb-6 p-4 text-red-700 bg-red-100 rounded-lg border border-red-200">
+          {error}
+        </div>
+      )}
 
-        {/* Table */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="overflow-x-auto bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50"
-        >
-          <table className="min-w-[900px] w-full table-auto">
-            <thead className="bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">
-              <tr>
-                {["Invoice #", "Customer", "Date","Due Date", "Amount", "Actions"].map((heading) => (
-                  <th key={heading} className="px-6 py-3 text-left border-2 border-b-2">{heading}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-gray-200/50 dark:divide-gray-600/50">
-              {filtered.map((inv, index) => (
-                <motion.tr
-                  key={inv._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: 0.15 + index * 0.03 }}
-                  whileHover={{ backgroundColor: "rgba(59, 130, 246, 0.1)", scale: 1.01 }}
-                  className="hover:bg-gray-100/50 dark:hover:bg-gray-700/50 cursor-pointer backdrop-blur-sm"
-                  onClick={() => navigate(`/invoices/edit/${inv._id}`)}
-                >
-                  <td className="px-6 py-4 border-2 border-b-2">{inv.invoiceNumber}</td>
-                  <td className="px-6 py-4 border-2 border-b-2">{inv.customerName}</td>
-                  <td className="px-6 py-4 border-2 border-b-2">{new Date(inv.invoiceDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 border-2 border-b-2">{new Date(inv.dueDate).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 font-semibold border-2 border-b-2">₹ {inv.amountDetails.totalAmount}</td>
-                  <td
-                    className="px-6 py-4 flex gap-3 text-sm border-2 border-b-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <motion.div
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Link
-                        to={`/invoices/view/${inv._id}`}
-                        className="text-green-600 underline hover:text-green-800"
-                      >
-                        View
-                      </Link>
-                    </motion.div>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleDelete(inv._id)}
-                      className="text-red-600 underline hover:text-red-800"
-                    >
-                      Delete
-                    </motion.button>
-                  </td>
-                </motion.tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="text-center p-6 text-gray-500 dark:text-gray-400 border-2 border-b-2">
-                    No invoices found
-                  </td>
+      <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
+        <div className="p-4 border-b">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            All Invoices
+          </h3>
+        </div>
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="p-6 text-center">Loading...</div>
+          ) : filtered.length > 0 ? (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50 dark:bg-gray-700">
+                  {["Invoice #", "Customer", "Date", "Due Date", "Amount", "Actions"].map((heading) => (
+                    <th key={heading} className="text-left py-3 px-4">{heading}</th>
+                  ))}
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </motion.div>
-      </motion.div>
+              </thead>
+              <tbody>
+                {filtered.map((inv) => (
+                  <tr key={inv._id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                      {inv.invoiceNumber}
+                    </td>
+                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                      {inv.customerName}
+                    </td>
+                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                      {new Date(inv.invoiceDate).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                      {new Date(inv.dueDate).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-4 font-semibold cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                      ₹ {inv.amountDetails.totalAmount}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/invoices/view/${inv._id}`}
+                          className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                        >
+                          View
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(inv._id)}
+                          className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-6 text-center text-gray-500">No invoices found</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
