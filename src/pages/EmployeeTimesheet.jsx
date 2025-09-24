@@ -97,18 +97,26 @@ function EmployeeTimesheet() {
     if (!currentUser?.id) return;
     
     try {
+      // Load available tasks
       const availableResponse = await fetch(`${API_URL}/api/tasks/available`);
       if (availableResponse.ok) {
         const availableData = await availableResponse.json();
         const availableList = availableData?.data || availableData?.tasks || [];
         setAvailableTasks(Array.isArray(availableList) ? availableList : []);
+      } else {
+        console.error('Failed to load available tasks:', availableResponse.status);
+        setAvailableTasks([]);
       }
 
+      // Load assigned tasks
       const assignedResponse = await fetch(`${API_URL}/api/tasks/employee/${currentUser.id}`);
       if (assignedResponse.ok) {
         const assignedData = await assignedResponse.json();
         const assignedList = assignedData?.data || assignedData?.tasks || [];
         setAssignedTasks(Array.isArray(assignedList) ? assignedList : []);
+      } else {
+        console.error('Failed to load assigned tasks:', assignedResponse.status);
+        setAssignedTasks([]);
       }
     } catch (error) {
       console.error("Error loading tasks:", error);
@@ -127,13 +135,24 @@ function EmployeeTimesheet() {
       const response = await fetch(`${API_URL}/api/tasks/${taskId}/take`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employee_id: currentUser.id })
+        body: JSON.stringify({ 
+          employee_id: currentUser.id,
+          employee_name: currentUser.name || currentUser.email,
+          status: "In Progress",
+          taken_at: new Date().toISOString()
+        })
       });
       
       if (response.ok) {
-        toast.success("Task taken successfully");
-        loadTasks();
+        const responseData = await response.json();
+        toast.success("Task taken successfully and assigned to you");
+        
+        // Reload tasks to update both available and assigned lists
+        await loadTasks();
         setShowTaskModal(false);
+        
+        // Log for admin visibility
+        console.log(`Task ${taskId} taken by employee ${currentUser.name || currentUser.email}`);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || "Failed to take task");
@@ -361,6 +380,7 @@ function EmployeeTimesheet() {
                             <button
                               onClick={() => {
                                 setSelectedTaskIndex(index);
+                                loadTasks(); // Refresh tasks when opening modal
                                 setShowTaskModal(true);
                               }}
                               className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"

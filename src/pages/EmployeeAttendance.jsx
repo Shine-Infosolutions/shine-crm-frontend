@@ -12,6 +12,8 @@ function EmployeeAttendance() {
   const [autoCheckoutTimer, setAutoCheckoutTimer] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [isManualCheckout, setIsManualCheckout] = useState(false);
+  const [customCheckoutTime, setCustomCheckoutTime] = useState('');
   const dateInputRef = useRef(null);
 
   const isAdmin = currentUser?.role !== "employee";
@@ -85,16 +87,21 @@ function EmployeeAttendance() {
           const records = data.data || data || [];
           setAttendanceRecords(records);
 
-          // Check attendance status for today (backend uses date field set to start of day)
-          const today = new Date().setHours(0, 0, 0, 0);
+          // Check attendance status for today
+          const today = new Date().toDateString();
           const todayRecord = records.find((record) => {
-            const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+            if (!record.date) return false;
+            const recordDate = new Date(record.date).toDateString();
             return recordDate === today;
           });
           
+          console.log('Today:', today);
+          console.log('Records:', records);
+          console.log('Today record:', todayRecord);
+          
           // Simple logic: show checkout if checked in but not checked out
           const hasCheckedIn = todayRecord && todayRecord.time_in;
-          const hasCheckedOut = todayRecord && todayRecord.checkout_time;
+          const hasCheckedOut = todayRecord && (todayRecord.checkout_time || todayRecord.time_out);
           
           setIsCheckedIn(hasCheckedIn && !hasCheckedOut);
           setIsCompleted(hasCheckedOut);
@@ -130,9 +137,10 @@ function EmployeeAttendance() {
 
   const handleCheckIn = async () => {
     // Frontend validation: prevent multiple check-ins
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = new Date().toDateString();
     const todayRecord = attendanceRecords.find((record) => {
-      const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+      if (!record.date) return false;
+      const recordDate = new Date(record.date).toDateString();
       return recordDate === today;
     });
     
@@ -175,38 +183,75 @@ function EmployeeAttendance() {
     }
   };
 
+  const validateCheckoutTime = (checkoutTime, checkinTime) => {
+    const checkout = new Date(checkoutTime);
+    const checkin = new Date(checkinTime);
+    const now = new Date();
+    
+    if (checkout <= checkin) {
+      return "Checkout time must be after check-in time";
+    }
+    if (checkout > now) {
+      return "Checkout time cannot be in the future";
+    }
+    return null;
+  };
+
   const handleCheckOut = async () => {
     setLoading(true);
     try {
-      const attendanceData = {
+      const today = new Date().toDateString();
+      const todayRecord = attendanceRecords.find((record) => {
+        if (!record.date) return false;
+        const recordDate = new Date(record.date).toDateString();
+        return recordDate === today;
+      });
+
+      const requestBody = {
         employee_id: currentUser.id
       };
+
+      if (isManualCheckout && customCheckoutTime) {
+        const checkoutDateTime = new Date(`${new Date().toDateString()} ${customCheckoutTime}`).toISOString();
+        
+        if (todayRecord?.time_in) {
+          const validationError = validateCheckoutTime(checkoutDateTime, todayRecord.time_in);
+          if (validationError) {
+            alert(validationError);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        requestBody.checkout_time = checkoutDateTime;
+      }
 
       const response = await fetch(`${API_URL}/api/attendance/checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(attendanceData),
+        body: JSON.stringify(requestBody),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
         setIsCheckedIn(false);
+        setIsCompleted(true);
         await loadAttendanceRecords();
-        alert("Checked out successfully!");
+        
+        const checkoutType = data.data?.is_manual_checkout ? "manual" : "automatic";
+        alert(`Checked out successfully! (${checkoutType} checkout)`);
+        
+        setIsManualCheckout(false);
+        setCustomCheckoutTime('');
       } else {
-        let errorMessage = "Failed to check out";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          errorMessage = `Server error (${response.status})`;
-        }
-        alert(errorMessage);
+        alert(data.message || "Failed to check out");
       }
     } catch (error) {
       console.error("Error checking out:", error);
-      alert("Failed to get location: " + error.message);
+      alert("Error checking out: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -232,13 +277,14 @@ function EmployeeAttendance() {
   const checkAutoCheckout = async () => {
     if (!currentUser?.id || isCompleted) return;
     
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = new Date().toDateString();
     const todayRecord = attendanceRecords.find((record) => {
-      const recordDate = record.date ? new Date(record.date).setHours(0, 0, 0, 0) : null;
+      if (!record.date) return false;
+      const recordDate = new Date(record.date).toDateString();
       return recordDate === today && record.employee_id === currentUser.id;
     });
     
-    if (todayRecord && todayRecord.time_in && !todayRecord.checkout_time) {
+    if (todayRecord && todayRecord.time_in && !(todayRecord.checkout_time || todayRecord.time_out)) {
       const currentHours = getCurrentWorkingHours(todayRecord);
       
       if (currentHours >= 9) {
@@ -298,6 +344,13 @@ function EmployeeAttendance() {
   };
 
   const hasWorked7Hours = (record) => {
+    if (!record.time_in) return false;
+    const endTime = record.checkout_time || record.time_out;
+    if (!endTime) {
+      // For active sessions, check current working hours
+      const currentHours = getCurrentWorkingHours(record);
+      return currentHours >= 7;
+    }
     return getWorkingHoursNumber(record) >= 7;
   };
 
@@ -433,10 +486,48 @@ function EmployeeAttendance() {
               </div>
             </div>
 
+            {/* Manual Checkout Controls - Only show when checked in */}
+            {isCheckedIn && !isCompleted && (
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center justify-center mb-4">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isManualCheckout}
+                      onChange={(e) => setIsManualCheckout(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`relative w-11 h-6 rounded-full transition-colors ${
+                      isManualCheckout ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        isManualCheckout ? 'translate-x-5' : 'translate-x-0'
+                      }`}></div>
+                    </div>
+                    <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Manual Checkout Time
+                    </span>
+                  </label>
+                </div>
+                
+                {isManualCheckout && (
+                  <div className="flex justify-center">
+                    <input
+                      type="time"
+                      value={customCheckoutTime}
+                      onChange={(e) => setCustomCheckoutTime(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required={isManualCheckout}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Action Button */}
             <button
               onClick={isCompleted ? null : (isCheckedIn ? handleCheckOut : handleCheckIn)}
-              disabled={loading || isCompleted}
+              disabled={loading || isCompleted || (isCheckedIn && isManualCheckout && !customCheckoutTime)}
               className={`inline-flex items-center px-10 py-4 rounded-xl font-semibold text-lg text-white transition-all duration-200 transform hover:scale-105 shadow-lg ${
                 isCheckedIn
                   ? "bg-red-600 hover:bg-red-700 hover:shadow-red-200 dark:hover:shadow-red-900/20 disabled:bg-red-400"
@@ -568,6 +659,9 @@ function EmployeeAttendance() {
                     Hours
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
@@ -601,34 +695,64 @@ function EmployeeAttendance() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {record.checkout_time ? (
+                      {(record.checkout_time || record.time_out) ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {new Date(record.checkout_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            {new Date(record.checkout_time || record.time_out).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
                           </span>
                           <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
                             Out
                           </span>
                         </div>
                       ) : (
-                        <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">
-                          Active
-                        </span>
+                        <span className="text-gray-500">--</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="font-medium text-blue-600 dark:text-blue-400">
-                        {record.time_in && record.checkout_time ? 
-                          `${((new Date(record.checkout_time) - new Date(record.time_in)) / (1000 * 60 * 60)).toFixed(1)}h` : 
+                        {record.time_in && (record.checkout_time || record.time_out) ? 
+                          `${((new Date(record.checkout_time || record.time_out) - new Date(record.time_in)) / (1000 * 60 * 60)).toFixed(1)}h` : 
                           "--"
                         }
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {record.checkout_time ? (
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
-                          Complete
+                      {(record.checkout_time || record.time_out) ? (
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          record.is_manual_checkout 
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                        }`}>
+                          {record.is_manual_checkout ? 'Manual' : 'Auto'}
                         </span>
+                      ) : (
+                        <span className="text-gray-400">--</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {(record.checkout_time || record.time_out) ? (
+                        (() => {
+                          const hours = getWorkingHoursNumber(record);
+                          if (hours >= 8) {
+                            return (
+                              <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                                Full Day
+                              </span>
+                            );
+                          } else if (hours >= 4) {
+                            return (
+                              <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full">
+                                Half Day
+                              </span>
+                            );
+                          } else {
+                            return (
+                              <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
+                                Short Day
+                              </span>
+                            );
+                          }
+                        })()
                       ) : (
                         <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
                           In Progress
