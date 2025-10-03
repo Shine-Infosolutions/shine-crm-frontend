@@ -48,6 +48,11 @@ function EmployeeAttendance() {
 
   const [employees, setEmployees] = useState([]);
 
+  const formatTime = (dateString) => {
+    if (!dateString) return '--';
+    return new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  };
+
   const loadAttendanceRecords = async () => {
     setLoading(true);
     try {
@@ -684,7 +689,7 @@ function EmployeeAttendance() {
                       {record.time_in ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {new Date(record.time_in).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            {formatTime(record.time_in)}
                           </span>
                           <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
                             In
@@ -698,7 +703,7 @@ function EmployeeAttendance() {
                       {(record.checkout_time || record.time_out) ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {new Date(record.checkout_time || record.time_out).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            {formatTime(record.checkout_time || record.time_out)}
                           </span>
                           <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
                             Out
@@ -826,7 +831,7 @@ function EmployeeAttendance() {
                       {record.time_in ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {new Date(record.time_in).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            {formatTime(record.time_in)}
                           </span>
                           <span className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
                             In
@@ -840,7 +845,7 @@ function EmployeeAttendance() {
                       {record.checkout_time ? (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-900 dark:text-white">
-                            {new Date(record.checkout_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            {formatTime(record.checkout_time)}
                           </span>
                           <span className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">
                             Out
@@ -862,7 +867,7 @@ function EmployeeAttendance() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                       {getWorkingHoursNumber(record) >= 9 && record.checkout_time ? 
-                        `Auto checkout at ${new Date(record.checkout_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` : 
+                        `Auto checkout at ${formatTime(record.checkout_time)}` : 
                         (record.timeout_reason || 'Extended work session')
                       }
                     </td>

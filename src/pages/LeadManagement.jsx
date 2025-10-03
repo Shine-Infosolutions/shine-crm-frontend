@@ -26,7 +26,7 @@ function LeadManagement() {
         setLoading(false);
       }
     };
-  
+    
     fetchLeads();
   }, [API_URL]);
   
@@ -109,30 +109,21 @@ function LeadManagement() {
             className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl w-full border border-white/20 dark:border-gray-700/50"
           >
           {filteredLeads.length > 0 ? (
-            <div className="overflow-x-auto w-full">
-              <table className="min-w-full table-auto">
+            <div className="w-full">
+              <table className="w-full table-auto">
                 <thead className="bg-gray-100/80 dark:bg-gray-700/80 backdrop-blur-sm">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Contact
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Address
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">
                       Follow Up
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
-                      Interested
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Meeting Date
                     </th>
                   </tr>
                 </thead>
@@ -147,17 +138,22 @@ function LeadManagement() {
                       className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 cursor-pointer backdrop-blur-sm"
                       onClick={() => navigate(`/leads/add?id=${lead._id}`)}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">{lead.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>{lead.number}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {lead.email}
+                      <td className="px-3 py-4">
+                        <div className="font-medium">{lead.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 md:hidden">
+                          {lead.status} • {lead.isInterested ? 'Interested' : 'Not Interested'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 max-w-xs truncate">
-                        {lead.address}
+                      <td className="px-3 py-4">
+                        <div className="text-sm">{lead.number}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[150px]">
+                          {lead.email}
+                        </div>
+                        <div className="text-xs text-gray-400 lg:hidden mt-1">
+                          {lead.followUpDate && `Follow up: ${lead.followUpDate}`}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 hidden md:table-cell">
                         <span
                           className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                           ${
@@ -172,22 +168,22 @@ function LeadManagement() {
                         >
                           {lead.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>{lead.followUpDate}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {lead.followUpStatus}
+                        <div className="text-xs mt-1">
+                          {lead.isInterested ? (
+                            <span className="text-green-600">Interested</span>
+                          ) : (
+                            <span className="text-red-600">Not Interested</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {lead.isInterested ? (
-                          <span className="text-green-600">Yes</span>
-                        ) : (
-                          <span className="text-red-600">No</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {lead.meetingDate || "Not Scheduled"}
+                      <td className="px-3 py-4 hidden lg:table-cell">
+                        <div className="text-sm">{lead.followUpDate || 'Not set'}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {lead.followUpStatus}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Meeting: {lead.meetingDate || "Not Scheduled"}
+                        </div>
                       </td>
                     </motion.tr>
                   ))}
