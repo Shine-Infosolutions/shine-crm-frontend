@@ -6,13 +6,12 @@ function Header() {
 
   return (
     <header className="bg-white shadow-md dark:bg-gray-900 dark:text-white">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div className={`mx-auto py-3 flex justify-between items-center ${!sidebarOpen ? 'px-0' : 'px-4'}`}>
         <div className="flex items-center">
-          {/* Show hamburger button when sidebar is collapsed or on mobile */}
-          {(!sidebarOpen || window.innerWidth < 768) && (
+          {!sidebarOpen && (
             <button
               onClick={toggleSidebar}
-              className="mr-4 text-gray-600 dark:text-gray-200"
+              className="px-4 text-gray-600 dark:text-gray-200"
               title="Toggle Sidebar"
             >
               <svg
@@ -38,7 +37,7 @@ function Header() {
           </h1>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className={`flex items-center space-x-4 ${!sidebarOpen ? 'px-4' : ''}`}>
           {/* Toggle Dark Mode Button */}
           <button
             onClick={toggleDarkMode}

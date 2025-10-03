@@ -6,7 +6,7 @@ import { useReactToPrint } from "react-to-print";
 import { useAppContext } from "../context/AppContext";
 import Loader from "../components/Loader";
 import { motion } from "framer-motion";
-// Removed TinyMCE import to avoid API key issues
+
 
 const CreateInvoice = () => {
   const { id } = useParams();
@@ -14,11 +14,13 @@ const CreateInvoice = () => {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editableContent, setEditableContent] = useState('');
+  const [showNotesEditor, setShowNotesEditor] = useState(false);
+  const [showNotesInInvoice, setShowNotesInInvoice] = useState(false);
+  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
   const componentRef = useRef(null);
-  const editorRef = useRef(null);
+
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -27,7 +29,8 @@ const CreateInvoice = () => {
         const data = await response.json();
         if (data.success) {
           setInvoice(data.data);
-          setEditableContent(generateInvoiceHTML(data.data));
+          setNotes(data.data.notes || '');
+
         } else {
           setError("Invoice not found");
         }
@@ -40,153 +43,9 @@ const CreateInvoice = () => {
     fetchInvoice();
   }, [id, API_URL]);
 
-  const generateInvoiceHTML = (invoiceData) => {
-    const gstRate = Number(invoiceData?.amountDetails?.gstPercentage || 0);
-    const totalAmount = Number(invoiceData?.amountDetails?.totalAmount || 0);
-    const baseAmount = totalAmount / (1 + gstRate / 100);
-    const cgstAmount = (baseAmount * (gstRate / 2 / 100)).toFixed(2);
-    const sgstAmount = (baseAmount * (gstRate / 2 / 100)).toFixed(2);
-    
-    return `
-      <div style="border: 2px solid black; font-size: 12px; background: white;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 2px solid black;">
-          <div></div>
-          <h1 style="font-size: 20px; font-weight: bold; text-align: center;">TAX INVOICE</h1>
-          <div style="text-align: right;"><span style="font-size: 14px; font-weight: bold;">ORIGINAL FOR RECIPIENT</span></div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid black;">
-          <div style="display: flex; gap: 8px; padding: 12px; border-right: 2px solid black;">
-            <img src="/icon.png" alt="Logo" style="width: 64px; height: 48px; object-fit: contain;" />
-            <div>
-              <p style="font-size: 14px; font-weight: bold;">SHINE INFOSOLUTIONS</p>
-              <p>GSTIN: 09FTJPS4577P1ZD</p>
-              <p>87a, Bankati chak, Raiganj road,Near Chhoti</p>
-              <p>Masjid, Gorakhpur</p>
-              <p>Gorakhpur, UTTAR PRADESH, 273001</p>
-              <p>Mobile: +91 7054284786, 9140427414</p>
-              <p>Email: info@shineinfosolutions.in</p>
-            </div>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr;">
-            <div style="border-right: 2px solid black; border-bottom: 2px solid black; padding: 8px;">
-              <p style="font-weight: bold;">Invoice #:</p>
-              <p style="font-weight: bold;">${invoiceData.invoiceNumber}</p>
-            </div>
-            <div style="border-bottom: 2px solid black; padding: 8px;">
-              <p style="font-weight: bold;">Invoice Date:</p>
-              <p style="font-weight: bold;">${new Date(invoiceData.invoiceDate).toLocaleDateString('en-GB')}</p>
-            </div>
-            <div style="border-right: 2px solid black; padding: 8px;">
-              <p style="font-weight: bold;">Place of Supply:</p>
-              <p style="font-weight: bold;">${invoiceData.customerAddress}</p>
-            </div>
-            <div style="padding: 8px;">
-              <p style="font-weight: bold;">Due Date:</p>
-              <p style="font-weight: bold;">${new Date(invoiceData.dueDate).toLocaleDateString('en-GB')}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div style="border-bottom: 2px solid black; padding: 12px;">
-          <p style="font-weight: bold; margin-bottom: 4px;">Customer Details:</p>
-          <p>GSTIN: ${invoiceData.customerGST}</p>
-          <p>Billing Address: ${invoiceData.customerAddress}</p>
-        </div>
-        
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-          <thead>
-            <tr>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">#</th>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">Item</th>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">HSN/SAC</th>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">Rate/Item</th>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">Qty</th>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">Taxable Value</th>
-              <th style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">Tax Amount</th>
-              <th style="border-bottom: 2px solid black; padding: 8px; text-align: center; font-weight: bold;">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${invoiceData.productDetails.map((p, i) => {
-              const qty = parseFloat(p.quantity || 0);
-              const price = parseFloat(p.price || 0);
-              const discountPct = parseFloat(p.discountPercentage || 0);
-              const originalValue = qty * price;
-              const discountAmount = (originalValue * discountPct) / 100;
-              const taxableValue = originalValue - discountAmount;
-              const taxAmount = taxableValue * (gstRate / 100);
-              
-              return `
-                <tr>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">${i + 1}</td>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">${p.description}</td>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">${p.unit}</td>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">₹${price.toFixed(2)}</td>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">${qty}</td>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">₹${taxableValue.toFixed(2)}</td>
-                  <td style="border-bottom: 2px solid black; border-right: 2px solid black; padding: 8px; text-align: center;">₹${taxAmount.toFixed(2)}</td>
-                  <td style="border-bottom: 2px solid black; padding: 8px; text-align: center;">₹${p.amount}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-        
-        <div style="border-bottom: 2px solid black; padding: 8px; text-align: right;">
-          <p><strong>Taxable Amount: ₹${baseAmount.toFixed(2)}</strong></p>
-          <p><strong>CGST ${gstRate / 2}%: ₹${cgstAmount}</strong></p>
-          <p><strong>SGST ${gstRate / 2}%: ₹${sgstAmount}</strong></p>
-          <p style="font-size: 14px; font-weight: bold; margin-top: 4px;"><strong>Total: ₹${totalAmount}</strong></p>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr;">
-          <div style="border-right: 2px solid black; padding: 12px;">
-            <p style="font-weight: bold; margin-bottom: 8px;">Bank Details:</p>
-            <p><strong>Bank:</strong> HDFC Bank</p>
-            <p><strong>Account #:</strong> 50200068337918</p>
-            <p><strong>IFSC Code:</strong> HDFC0004331</p>
-            <p><strong>Branch:</strong> GEETA PRESS</p>
-          </div>
-          <div style="padding: 12px; text-align: right;">
-            <p style="margin-bottom: 32px;"><strong>Amount Payable:</strong></p>
-            <p style="margin-top: 32px;">For SHINE INFOSOLUTIONS</p>
-            <div style="margin-top: 32px; margin-bottom: 8px;">
-              <div style="width: 96px; height: 48px; border-bottom: 1px solid black; margin-left: auto;"></div>
-            </div>
-            <p>Authorised Signatory</p>
-          </div>
-        </div>
-      </div>
-    `;
-  };
 
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-  };
 
-  const saveEditedContent = async () => {
-    setSaving(true);
-    try {
-      const response = await fetch(`${API_URL}/api/invoices/${id}/content`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ editedContent: editableContent }),
-      });
-      
-      if (response.ok) {
-        alert('Invoice content saved successfully!');
-      } else {
-        alert('Failed to save invoice content');
-      }
-    } catch (error) {
-      console.error('Error saving content:', error);
-      alert('Error saving invoice content');
-    }
-    setSaving(false);
-  };
+
 
   const capitalizeWords = (str) =>
     str
@@ -199,13 +58,7 @@ const CreateInvoice = () => {
   const baseAmount = totalAmount / (1 + gstRate / 100);
   const cgstAmount = (baseAmount * (gstRate / 2 / 100)).toFixed(2);
   const sgstAmount = (baseAmount * (gstRate / 2 / 100)).toFixed(2);
-  const totalQty =
-    invoice?.productDetails?.reduce((acc, p) => acc + Number(p.quantity || 0), 0) || 0;
 
-  const hasAnyDiscount =
-    invoice?.productDetails?.some(
-      (p) => parseFloat(p.discountPercentage || 0) > 0
-    ) || false;
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
@@ -259,22 +112,19 @@ const CreateInvoice = () => {
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
-            className="no-print bg-green-600/90 text-white px-4 py-2 rounded-lg text-xs sm:text-sm backdrop-blur-xl hover:bg-green-700/90 transition-all duration-0.3"
-            onClick={handleEditToggle}
+            className="no-print bg-purple-600/90 text-white px-4 py-2 rounded-lg text-xs sm:text-sm backdrop-blur-xl hover:bg-purple-700/90 transition-all duration-0.3"
+            onClick={() => setShowNotesInInvoice(!showNotesInInvoice)}
           >
-            {isEditing ? '📝 Exit Edit' : '✏️ Edit'}
+            📝 {showNotesInInvoice ? 'Hide Notes' : 'Show Notes'}
           </motion.button>
-          {isEditing && (
-            <motion.button
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              className="no-print bg-purple-600/90 text-white px-4 py-2 rounded-lg text-xs sm:text-sm backdrop-blur-xl hover:bg-purple-700/90 transition-all duration-0.3"
-              onClick={saveEditedContent}
-              disabled={saving}
-            >
-              {saving ? '💾 Saving...' : '💾 Save'}
-            </motion.button>
-          )}
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            className="no-print bg-green-600/90 text-white px-4 py-2 rounded-lg text-xs sm:text-sm backdrop-blur-xl hover:bg-green-700/90 transition-all duration-0.3"
+            onClick={() => setShowNotesEditor(!showNotesEditor)}
+          >
+            ✏️ {showNotesEditor ? 'Close Editor' : 'Edit Notes'}
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -287,28 +137,7 @@ const CreateInvoice = () => {
         </div>
       </motion.div>
 
-      {isEditing ? (
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-          className="bg-white/90 backdrop-blur-xl rounded-xl p-6 shadow-lg"
-        >
-          <div className="mb-4 flex gap-2 border-b pb-2">
-            <button onClick={() => document.execCommand('bold')} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">B</button>
-            <button onClick={() => document.execCommand('italic')} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">I</button>
-            <button onClick={() => document.execCommand('underline')} className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">U</button>
-          </div>
-          <div
-            ref={editorRef}
-            contentEditable
-            className="min-h-[600px] p-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            dangerouslySetInnerHTML={{ __html: editableContent }}
-            onInput={(e) => setEditableContent(e.target.innerHTML)}
-            style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontSize: '14px' }}
-          />
-        </motion.div>
-      ) : (
+
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -462,6 +291,19 @@ const CreateInvoice = () => {
             <p className="text-xs text-right"><strong>Total amount (in words):</strong> INR {capitalizeWords(toWords(totalAmount))} Only</p>
           </motion.div>
 
+          {/* Notes Section */}
+          {showNotesInInvoice && notes && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 1.05 }}
+              className="border-b-2 border-black p-3"
+            >
+              <p className="text-xs font-semibold mb-2">Notes:</p>
+              <div className="text-xs whitespace-pre-wrap">{notes}</div>
+            </motion.div>
+          )}
+
           {/* Payment Terms & Signature */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -486,6 +328,74 @@ const CreateInvoice = () => {
             </div>
           </motion.div>
         </div>
+        </motion.div>
+
+      {/* Notes Editor Modal */}
+      {showNotesEditor && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 no-print"
+        >
+          <motion.div 
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add Notes</h3>
+              <button
+                onClick={() => setShowNotesEditor(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add your notes here..."
+              className="w-full min-h-[300px] p-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
+              style={{ 
+                fontFamily: 'Helvetica, Arial, sans-serif', 
+                fontSize: '14px',
+                direction: 'ltr',
+                textAlign: 'left'
+              }}
+              dir="ltr"
+            />
+            
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setShowNotesEditor(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await fetch(`${API_URL}/api/invoices/${id}/notes`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ notes })
+                    });
+                  } catch (error) {
+                    console.log('Notes saved locally only');
+                  }
+                  setShowNotesEditor(false);
+                  setShowNotesInInvoice(true);
+                  setSaving(false);
+                }}
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Notes'}
+              </button>
+            </div>
+          </motion.div>
         </motion.div>
       )}
     </div>

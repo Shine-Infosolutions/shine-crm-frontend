@@ -24,6 +24,7 @@ const AddInvoice = () => {
     customerEmail: "",
     dispatchThrough: "",
     customerAadhar: "",
+    notes: "",
     productDetails: [],
     amountDetails: {
       gstPercentage: 18,
@@ -59,6 +60,7 @@ const AddInvoice = () => {
             ...data,
             invoiceDate: formatDate(data.invoiceDate),
             dueDate: formatDate(data.dueDate),
+            notes: data.notes || "",
           }));
           setRows(data.productDetails || []);
         } else {
@@ -269,6 +271,24 @@ const AddInvoice = () => {
             </motion.div>
           ))}
         </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.6 }}
+          className="mt-6"
+        >
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes (Optional)</label>
+          <motion.textarea
+            whileFocus={{ scale: 1.02 }}
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Add optional notes..."
+            rows={3}
+            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+          />
+        </motion.div>
 
         <motion.h3 
           initial={{ opacity: 0, x: -20 }}

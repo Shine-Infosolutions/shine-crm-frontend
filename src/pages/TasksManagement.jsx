@@ -41,6 +41,22 @@ function TasksManagement() {
     }
   }, [currentUser, isAdmin]);
 
+  // Add visibility change listener to refresh tasks when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && (currentUser?._id || currentUser?.id)) {
+        if (isAdmin) {
+          loadTasks();
+        } else {
+          loadMyTasks();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUser, isAdmin]);
+
   const loadEmployees = async () => {
     try {
       console.log("API_URL:", API_URL);
@@ -71,8 +87,10 @@ function TasksManagement() {
       
       if (response.ok) {
         const data = await response.json();
-        setTasks(data.data || []);
+        const taskList = data.data || data.tasks || [];
+        setTasks(Array.isArray(taskList) ? taskList : []);
       } else {
+        console.error('Failed to load tasks:', response.status);
         setTasks([]);
       }
     } catch (error) {
@@ -86,12 +104,14 @@ function TasksManagement() {
   const loadMyTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks?employee_id=${currentUser._id || currentUser.id}`);
+      const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser._id || currentUser.id}`);
       
       if (response.ok) {
         const data = await response.json();
-        setTasks(data.data || []);
+        const taskList = data.data || data.tasks || [];
+        setTasks(Array.isArray(taskList) ? taskList : []);
       } else {
+        console.error('Failed to load my tasks:', response.status);
         setTasks([]);
       }
     } catch (error) {
@@ -255,14 +275,27 @@ function TasksManagement() {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {isAdmin ? "Tasks Management" : "My Tasks"}
         </h2>
-        {isAdmin && (
-          <button
-            onClick={() => showForm ? handleCancelEdit() : (resetForm(), setShowForm(true))}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            {showForm ? "Cancel" : "Assign New Task"}
-          </button>
-        )}
+        <div className="flex space-x-2">
+          {isAdmin && (
+            <>
+              <button
+                onClick={() => isAdmin ? loadTasks() : loadMyTasks()}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
+              <button
+                onClick={() => showForm ? handleCancelEdit() : (resetForm(), setShowForm(true))}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                {showForm ? "Cancel" : "Assign New Task"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {isAdmin && showForm && (
@@ -391,7 +424,12 @@ function TasksManagement() {
                   <tr key={task._id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-3 px-4 font-medium">
                       {isAdmin ? (
-                        task.title
+                        <button
+                          onClick={() => setSelectedTask(task)}
+                          className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                        >
+                          {task.title}
+                        </button>
                       ) : (
                         <button
                           onClick={() => setSelectedTask(task)}
@@ -401,7 +439,18 @@ function TasksManagement() {
                         </button>
                       )}
                     </td>
-                    {isAdmin && <td className="py-3 px-4">{task.assigned_to?.name || 'Unknown'}</td>}
+                    {isAdmin && (
+                      <td className="py-3 px-4">
+                        <div>
+                          <div className="font-medium">{task.assigned_to?.name || task.assigned_to?.email || 'Unassigned'}</div>
+                          {task.taken_at && (
+                            <div className="text-xs text-gray-500">
+                              Taken: {new Date(task.taken_at).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded text-xs ${
                         task.priority === 'High' ? 'bg-red-100 text-red-800' :
@@ -415,20 +464,29 @@ function TasksManagement() {
                       <span className={`px-2 py-1 rounded text-xs ${
                         task.status === 'Completed' ? 'bg-green-100 text-green-800' :
                         task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                        task.status === 'Available' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {task.status || 'Pending'}
+                        {task.status || 'Available'}
                       </span>
                     </td>
                     <td className="py-3 px-4">{new Date(task.due_date).toLocaleDateString()}</td>
                     {isAdmin && (
                       <td className="py-3 px-4">
-                        <button
-                          onClick={() => handleEditTask(task)}
-                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
-                        >
-                          Edit
-                        </button>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => handleEditTask(task)}
+                            className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => loadTasks()}
+                            className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                          >
+                            Refresh
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

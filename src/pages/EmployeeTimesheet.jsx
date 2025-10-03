@@ -94,21 +94,42 @@ function EmployeeTimesheet() {
   };
 
   const loadTasks = async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) {
+      console.log('No current user ID found');
+      return;
+    }
+    
+    console.log('Loading tasks for user:', currentUser.id);
     
     try {
+      // Load available tasks
       const availableResponse = await fetch(`${API_URL}/api/tasks/available`);
+      console.log('Available tasks response status:', availableResponse.status);
+      
       if (availableResponse.ok) {
         const availableData = await availableResponse.json();
-        const availableList = availableData?.data || availableData?.tasks || [];
+        console.log('Available tasks data:', availableData);
+        const availableList = availableData?.data || availableData?.tasks || availableData || [];
         setAvailableTasks(Array.isArray(availableList) ? availableList : []);
+        console.log('Set available tasks:', availableList);
+      } else {
+        console.error('Failed to load available tasks:', availableResponse.status);
+        setAvailableTasks([]);
       }
 
+      // Load assigned tasks
       const assignedResponse = await fetch(`${API_URL}/api/tasks/employee/${currentUser.id}`);
+      console.log('Assigned tasks response status:', assignedResponse.status);
+      
       if (assignedResponse.ok) {
         const assignedData = await assignedResponse.json();
-        const assignedList = assignedData?.data || assignedData?.tasks || [];
+        console.log('Assigned tasks data:', assignedData);
+        const assignedList = assignedData?.data || assignedData?.tasks || assignedData || [];
         setAssignedTasks(Array.isArray(assignedList) ? assignedList : []);
+        console.log('Set assigned tasks:', assignedList);
+      } else {
+        console.error('Failed to load assigned tasks:', assignedResponse.status);
+        setAssignedTasks([]);
       }
     } catch (error) {
       console.error("Error loading tasks:", error);
@@ -127,13 +148,24 @@ function EmployeeTimesheet() {
       const response = await fetch(`${API_URL}/api/tasks/${taskId}/take`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ employee_id: currentUser.id })
+        body: JSON.stringify({ 
+          employee_id: currentUser.id,
+          employee_name: currentUser.name || currentUser.email,
+          status: "In Progress",
+          taken_at: new Date().toISOString()
+        })
       });
       
       if (response.ok) {
-        toast.success("Task taken successfully");
-        loadTasks();
+        const responseData = await response.json();
+        toast.success("Task taken successfully and assigned to you");
+        
+        // Reload tasks to update both available and assigned lists
+        await loadTasks();
         setShowTaskModal(false);
+        
+        // Log for admin visibility
+        console.log(`Task ${taskId} taken by employee ${currentUser.name || currentUser.email}`);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || "Failed to take task");
@@ -359,8 +391,9 @@ function EmployeeTimesheet() {
                           </label>
                           {canEdit && (
                             <button
-                              onClick={() => {
+                              onClick={async () => {
                                 setSelectedTaskIndex(index);
+                                await loadTasks(); // Refresh tasks when opening modal
                                 setShowTaskModal(true);
                               }}
                               className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
@@ -480,9 +513,15 @@ function EmployeeTimesheet() {
                           </div>
                           <button
                             onClick={() => {
-                              updateTimeEntry(selectedTaskIndex, "task_description", task.title);
-                              updateTimeEntry(selectedTaskIndex, "project_name", task.description);
-                              updateTimeEntry(selectedTaskIndex, "task_id", task._id);
+                              const updatedEntries = [...timeEntries];
+                              updatedEntries[selectedTaskIndex] = {
+                                ...updatedEntries[selectedTaskIndex],
+                                task_description: task.title,
+                                project_name: task.description,
+                                task_id: task._id
+                              };
+                              setTimeEntries(updatedEntries);
+                              saveToLocalStorage(updatedEntries);
                               setShowTaskModal(false);
                             }}
                             className="ml-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
@@ -513,9 +552,15 @@ function EmployeeTimesheet() {
                           <div className="flex space-x-2">
                             <button
                               onClick={() => {
-                                updateTimeEntry(selectedTaskIndex, "task_description", task.title);
-                                updateTimeEntry(selectedTaskIndex, "project_name", task.description);
-                                updateTimeEntry(selectedTaskIndex, "task_id", task._id);
+                                const updatedEntries = [...timeEntries];
+                                updatedEntries[selectedTaskIndex] = {
+                                  ...updatedEntries[selectedTaskIndex],
+                                  task_description: task.title,
+                                  project_name: task.description,
+                                  task_id: task._id
+                                };
+                                setTimeEntries(updatedEntries);
+                                saveToLocalStorage(updatedEntries);
                                 setShowTaskModal(false);
                               }}
                               className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"

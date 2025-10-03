@@ -118,19 +118,19 @@ const InvoiceManagement = () => {
               <tbody>
                 {filtered.map((inv) => (
                   <tr key={inv._id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                    <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {inv.invoiceNumber}
                     </td>
-                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {inv.customerName}
                     </td>
-                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {new Date(inv.invoiceDate).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {new Date(inv.dueDate).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 font-semibold cursor-pointer" onClick={() => navigate(`/invoices/edit/${inv._id}`)}>
+                    <td className="py-3 px-4 font-semibold cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       ₹ {inv.amountDetails.totalAmount}
                     </td>
                     <td className="py-3 px-4">

@@ -18,6 +18,18 @@ function TaskManagement() {
     }
   }, [currentUser?.id, activeTab]);
 
+  // Add visibility change listener to refresh tasks when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && currentUser?.id) {
+        loadTasks();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [currentUser?.id, activeTab]);
+
   const loadTasks = async () => {
     setLoading(true);
     try {
@@ -25,16 +37,25 @@ function TaskManagement() {
         const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser?.id}`);
         if (response.ok) {
           const data = await response.json();
-          setTasks(data.tasks || []);
+          const taskList = data.tasks || data.data || [];
+          setTasks(Array.isArray(taskList) ? taskList : []);
+        } else {
+          console.error('Failed to load assigned tasks:', response.status);
+          setTasks([]);
         }
       } else {
         const response = await fetch(`${API_URL}/api/tasks/available`);
         if (response.ok) {
           const data = await response.json();
-          setAvailableTasks(data.tasks || []);
+          const taskList = data.tasks || data.data || [];
+          setAvailableTasks(Array.isArray(taskList) ? taskList : []);
+        } else {
+          console.error('Failed to load available tasks:', response.status);
+          setAvailableTasks([]);
         }
       }
     } catch (error) {
+      console.error('Error loading tasks:', error);
       toast.error('Error loading tasks');
     }
     setLoading(false);
@@ -50,11 +71,23 @@ function TaskManagement() {
       
       if (response.ok) {
         toast.success('Task taken successfully');
-        loadTasks();
+        // Refresh both tabs to ensure synchronization
+        await loadTasks();
+        // If we're on available tab, also refresh assigned tasks
+        if (activeTab === 'available') {
+          const assignedResponse = await fetch(`${API_URL}/api/tasks/employee/${currentUser?.id}`);
+          if (assignedResponse.ok) {
+            const assignedData = await assignedResponse.json();
+            const assignedList = assignedData.tasks || assignedData.data || [];
+            setTasks(Array.isArray(assignedList) ? assignedList : []);
+          }
+        }
       } else {
-        toast.error('Failed to take task');
+        const errorData = await response.json();
+        toast.error(errorData.message || 'Failed to take task');
       }
     } catch (error) {
+      console.error('Take task error:', error);
       toast.error('Error taking task');
     }
   };
