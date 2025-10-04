@@ -98,52 +98,57 @@ const InvoiceManagement = () => {
       )}
 
       <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             All Invoices
           </h3>
         </div>
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-6 text-center">Loading...</div>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+            </div>
           ) : filtered.length > 0 ? (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50 dark:bg-gray-700">
-                  {["Invoice #", "Customer", "Date", "Due Date", "Amount", "Actions"].map((heading) => (
-                    <th key={heading} className="text-left py-3 px-4">{heading}</th>
-                  ))}
+            <table className="min-w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Invoice #</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Due Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                 {filtered.map((inv) => (
-                  <tr key={inv._id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-3 px-4 font-medium cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
+                  <tr key={inv._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {inv.invoiceNumber}
                     </td>
-                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {inv.customerName}
                     </td>
-                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {new Date(inv.invoiceDate).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       {new Date(inv.dueDate).toLocaleDateString()}
                     </td>
-                    <td className="py-3 px-4 font-semibold cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 dark:text-blue-400 cursor-pointer" onClick={() => navigate(`/invoices/view/${inv._id}`)}>
                       ₹ {inv.amountDetails.totalAmount}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
                         <Link
                           to={`/invoices/view/${inv._id}`}
-                          className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                          className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full hover:bg-green-200 dark:hover:bg-green-800"
                         >
                           View
                         </Link>
                         <button
                           onClick={() => handleDelete(inv._id)}
-                          className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
+                          className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full hover:bg-red-200 dark:hover:bg-red-800"
                         >
                           Delete
                         </button>
@@ -154,7 +159,9 @@ const InvoiceManagement = () => {
               </tbody>
             </table>
           ) : (
-            <div className="p-6 text-center text-gray-500">No invoices found</div>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">No invoices found</p>
+            </div>
           )}
         </div>
       </div>

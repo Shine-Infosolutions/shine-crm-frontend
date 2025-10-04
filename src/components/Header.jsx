@@ -5,31 +5,9 @@ function Header() {
     useAppContext();
 
   return (
-    <header className="bg-white shadow-md dark:bg-gray-900 dark:text-white">
-      <div className={`mx-auto py-3 flex justify-between items-center ${!sidebarOpen ? 'px-0' : 'px-4'}`}>
+    <header className="bg-slate-300/80 dark:bg-gray-800/80 backdrop-blur-xl text-gray-800 dark:text-white border-b border-white/20 dark:border-gray-700/50 shadow-2xl">
+      <div className="mx-auto py-3 px-4 flex justify-between items-center">
         <div className="flex items-center">
-          {!sidebarOpen && (
-            <button
-              onClick={toggleSidebar}
-              className="px-4 text-gray-600 dark:text-gray-200"
-              title="Toggle Sidebar"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          )}
           <h1 className="text-xl font-bold">
             {currentUser?.role === "employee"
               ? "Employee Dashboard"
@@ -37,7 +15,7 @@ function Header() {
           </h1>
         </div>
 
-        <div className={`flex items-center space-x-4 ${!sidebarOpen ? 'px-4' : ''}`}>
+        <div className="flex items-center space-x-4">
           {/* Toggle Dark Mode Button */}
           <button
             onClick={toggleDarkMode}

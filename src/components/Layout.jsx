@@ -8,13 +8,13 @@ function Layout({ children }) {
 
   return (
     <div className={`min-h-screen ${darkMode ? "dark" : ""}`}>
-      <div className="flex h-screen bg-gray-100 dark:bg-gray-900 dark:text-white">
+      <div className="flex h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 dark:text-white">
         <Sidebar />
 
 
 
         <div className={`flex-1 flex flex-col transition-all duration-300 overflow-hidden ${
-          sidebarOpen ? "md:ml-64" : "md:ml-0"
+          sidebarOpen ? "ml-64" : "ml-20"
         }`}>
           <Header />
           <main

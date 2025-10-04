@@ -38,30 +38,24 @@ function ProjectManagement() {
   }, []);
   
 
-  // Calculate progress based on start date, handover date, and current date
+  // Calculate progress based on start date and deadline only
   const calculateProgress = (startDate, handOverDate, deadline) => {
     const start = new Date(startDate);
     const today = new Date();
-
-    // If end date is provided, project is completed
-    if (handOverDate && handOverDate.trim() !== "") {
-      return 100;
-    }
-
+    const end = new Date(deadline);
+    
     // If project hasn't started yet
-    if (today < start) return 0;
+    if (today <= start) return 0;
+    
+    // If past deadline, show 100%
+    if (today >= end) return 100;
 
-    const handover = new Date(deadline);
-
-    // If project is already past handover date
-    if (today > handover) return 100;
-
-    // Calculate progress percentage based on time elapsed between start and handover
-    const totalDuration = handover - start;
-    const elapsedDuration = today - start;
-    const progress = Math.round((elapsedDuration / totalDuration) * 100);
-
-    return progress;
+    // Calculate time-based progress between start and deadline
+    const totalTime = end.getTime() - start.getTime();
+    const elapsedTime = today.getTime() - start.getTime();
+    
+    const percentage = (elapsedTime / totalTime) * 100;
+    return Math.round(Math.max(0, Math.min(100, percentage)));
   };
 
   // Determine project status based on progress and handover date
@@ -72,7 +66,7 @@ function ProjectManagement() {
     }
 
     const start = new Date(startDate);
-    const handover = new Date(deadline);
+    const targetDate = new Date(deadline);
     const today = new Date();
 
     // If project hasn't started yet
@@ -80,19 +74,9 @@ function ProjectManagement() {
       return "Not Started";
     }
 
-    // If project is past handover date but not marked as completed
-    if (today > handover) {
+    // If project is past deadline but not marked as completed
+    if (today > targetDate) {
       return "Overdue";
-    }
-
-    // Calculate days remaining until handover
-    const daysRemaining = Math.ceil((handover - today) / (1000 * 60 * 60 * 24));
-    const totalDays = Math.ceil((handover - start) / (1000 * 60 * 60 * 24));
-    const percentRemaining = (daysRemaining / totalDays) * 100;
-
-    // If less than 20% of time remains until handover
-    if (percentRemaining < 20) {
-      return "Approaching Deadline";
     }
 
     return "On Track";
@@ -123,8 +107,8 @@ function ProjectManagement() {
 
     const matchesFilter =
       projectFilter === "all" ||
-      (projectFilter === "active" && !project.isCompleted) ||
-      (projectFilter === "completed" && project.isCompleted);
+      (projectFilter === "active" && project.progress <= 99.9) ||
+      (projectFilter === "completed" && project.progress === 100);
 
     return matchesSearch && matchesFilter;
   });

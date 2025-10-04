@@ -99,96 +99,97 @@ function EmployeeManagement() {
       </div>
 
       <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
             All Employees
           </h3>
         </div>
-        <div>
+        <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-6 text-center">Loading...</div>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">Loading...</p>
+            </div>
           ) : filteredEmployees.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-xs">
-              <thead>
-                <tr className="border-b bg-gray-50 dark:bg-gray-700">
-                  <th className="text-left py-2 px-1">ID</th>
-                  <th className="text-left py-2 px-1">Name</th>
-                  <th className="text-left py-2 px-1">Contact</th>
-                  <th className="text-left py-2 px-1">Email</th>
-                  <th className="text-left py-2 px-1">Pic</th>
-                  <th className="text-left py-2 px-1">City</th>
-                  <th className="text-left py-2 px-1">Aadhar</th>
-                  <th className="text-left py-2 px-1">PAN</th>
-                  <th className="text-left py-2 px-1">Start</th>
-                  <th className="text-left py-2 px-1">Type</th>
-                  <th className="text-left py-2 px-1">Status</th>
-                  <th className="text-left py-2 px-1">Experience</th>
-                  <th className="text-left py-2 px-1">Salary</th>
-                  <th className="text-left py-2 px-1">Documents</th>
+            <table className="min-w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pic</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">City</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Aadhar</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">PAN</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Start</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Experience</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Salary</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Documents</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                 {filteredEmployees.map((emp, index) => (
-                  <tr key={emp._id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={emp._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     {/* ID */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.employee_id}
                     </td>
                   
                     {/* Name */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       <div className="font-medium">{emp.name}</div>
                     </td>
                   
                     {/* Contact */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       <div>
                         {emp.contact1}
-                        {emp.contact2 && <div className="text-xs text-gray-500">{emp.contact2}</div>}
+                        {emp.contact2 && <div className="text-xs text-gray-500 dark:text-gray-400">{emp.contact2}</div>}
                       </div>
                     </td>
                   
                     {/* Email */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.email}
                     </td>
                   
                     {/* Profile */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.profile_image?.url ? (
                         <img 
                           src={emp.profile_image.url} 
                           alt="Profile" 
-                          className="w-6 h-6 rounded-full object-cover" 
+                          className="w-8 h-8 rounded-full object-cover" 
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.parentElement.innerHTML = '<div class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"><span class="text-xs text-gray-500">N/A</span></div>';
+                            e.target.parentElement.innerHTML = '<div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center"><span class="text-xs text-gray-500 dark:text-gray-400">N/A</span></div>';
                           }}
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                          <span className="text-xs text-gray-500">N/A</span>
+                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">N/A</span>
                         </div>
                       )}
                     </td>
                   
                     {/* City */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.city || "N/A"}
                     </td>
                   
                     {/* Aadhaar */}
-                    <td className="py-2 px-1">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex flex-col">
-                        <span>{emp.aadhar_number || "N/A"}</span>
+                        <span className="text-gray-900 dark:text-white">{emp.aadhar_number || "N/A"}</span>
                         {emp.aadhar_document?.url && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(emp.aadhar_document.url, "_blank");
                             }}
-                            className="mt-1 w-fit text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
+                            className="mt-1 w-fit text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800"
                           >
                             View Aadhaar
                           </button>
@@ -197,16 +198,16 @@ function EmployeeManagement() {
                     </td>
 
                     {/* PAN */}
-                    <td className="py-2 px-1">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex flex-col">
-                        <span>{emp.pan_number || "N/A"}</span>
+                        <span className="text-gray-900 dark:text-white">{emp.pan_number || "N/A"}</span>
                         {emp.pan_document?.url && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(emp.pan_document.url, "_blank");
                             }}
-                            className="mt-1 w-fit text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
+                            className="mt-1 w-fit text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800"
                           >
                             View PAN
                           </button>
@@ -215,60 +216,60 @@ function EmployeeManagement() {
                     </td>
                   
                     {/* Work Start Date */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.work_start_date ? new Date(emp.work_start_date).toLocaleDateString() : "N/A"}
                     </td>
                   
                     {/* Employment Type */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.employment_type}
                     </td>
                   
                     {/* Employee Status */}
-                    <td className="py-2 px-1 cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        emp.employee_status === "Active" ? "bg-green-100 text-green-800" :
-                        emp.employee_status === "On Leave" ? "bg-yellow-100 text-yellow-800" :
-                        "bg-red-100 text-red-800"
+                    <td className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        emp.employee_status === "Active" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
+                        emp.employee_status === "On Leave" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" :
+                        "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                       }`}>
                         {emp.employee_status}
                       </span>
                     </td>
                   
                     {/* Experience Button */}
-                    <td className="py-2 px-1">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedExperience(emp.work_experience || []);
                         }}
-                        className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800"
                       >
                         View Experience
                       </button>
                     </td>
                     
                     {/* Salary Button */}
-                    <td className="py-2 px-1">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedSalary(emp.salary_details || {});
                         }}
-                        className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                        className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full hover:bg-green-200 dark:hover:bg-green-800"
                       >
                         View Salary
                       </button>
                     </td>
                     
                     {/* Documents Button */}
-                    <td className="py-2 px-1">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedDocuments(emp.documents || {});
                         }}
-                        className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200"
+                        className="px-2 py-1 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 rounded-full hover:bg-purple-200 dark:hover:bg-purple-800"
                       >
                         View Documents
                       </button>
@@ -277,9 +278,10 @@ function EmployeeManagement() {
                 ))}
               </tbody>
               </table>
-            </div>
           ) : (
-            <div className="p-6 text-center text-gray-500">No employees found</div>
+            <div className="text-center py-8">
+              <p className="text-gray-500 dark:text-gray-400">No employees found</p>
+            </div>
           )}
         </div>
       </div>
