@@ -3,7 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import { Link } from "react-router-dom";
 import { FaChevronDown, FaTachometerAlt, FaUsers, FaProjectDiagram, FaFileInvoiceDollar, FaTasks, FaClock, FaCalendarCheck, FaClipboardList, FaFileContract, FaHistory, FaChartBar, FaUserTie, FaCog, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-
+import Logo from "../assets/Shine Infosolutions Logo Blue Black.png";
 function Sidebar() {
   const { sidebarOpen, toggleSidebar, currentUser } = useAppContext();
   const [employeeDropdownOpen, setEmployeeDropdownOpen] = useState(false);
@@ -27,7 +27,7 @@ function Sidebar() {
             className="flex items-center"
           >
             <img 
-              src="/src/assets/Shine Infosolutions Logo Blue Black.png" 
+              src={Logo} 
               alt="Shine Infosolutions Logo" 
               className="h-13 w-auto"
             />
