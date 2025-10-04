@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Link } from "react-router-dom";
-import { FaChevronDown } from "react-icons/fa";
+import { FaChevronDown, FaTachometerAlt, FaUsers, FaProjectDiagram, FaFileInvoiceDollar, FaTasks, FaClock, FaCalendarCheck, FaClipboardList, FaFileContract, FaHistory, FaChartBar, FaUserTie, FaCog, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 
 function Sidebar() {
@@ -13,44 +13,37 @@ function Sidebar() {
   return (
     <motion.div
       initial={{ x: -256 }}
-      animate={{ x: sidebarOpen ? 0 : -256 }}
+      animate={{ x: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className="bg-slate-300/80 dark:bg-gray-800/80 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 w-64 shadow-2xl"
+      className={`bg-slate-300/80 dark:bg-gray-800/80 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 shadow-2xl transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}
     >
       <div className="p-4 relative">
         {/* Hamburger/Close button */}
-        <div className="flex items-center justify-between mb-6">
-          <motion.h2 
+        <div className="flex items-center justify-center mb-6">
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+            className="flex items-center"
           >
-            Shine CRM
-          </motion.h2>
-          <motion.button
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={toggleSidebar}
-            className="p-1 rounded-full hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
-            aria-label="Toggle sidebar"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </motion.button>
+            <img 
+              src="/src/assets/Shine Infosolutions Logo Blue Black.png" 
+              alt="Shine Infosolutions Logo" 
+              className="h-13 w-auto"
+            />
+            {sidebarOpen && <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">SHINE CRM</span>}
+          </motion.div>
         </div>
+        
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={toggleSidebar}
+          className="absolute top-1/2 -translate-y-1/2 -right-3 p-2 rounded-full bg-slate-300/80 dark:bg-gray-800/80 hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 border border-white/20 dark:border-gray-700/50"
+          aria-label="Toggle sidebar"
+        >
+          {sidebarOpen ? <FaChevronLeft className="h-3 w-3" /> : <FaChevronRight className="h-3 w-3" />}
+        </motion.button>
 
         <nav>
           <ul className="space-y-2">
@@ -64,9 +57,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Dashboard"
                   >
-                    Dashboard
+                    <FaTachometerAlt className="text-lg" />
+                    {sidebarOpen && <span>Dashboard</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -80,9 +75,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/leads"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Lead Management"
                   >
-                    Lead Management
+                    <FaUsers className="text-lg" />
+                    {sidebarOpen && <span>Lead Management</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -96,9 +93,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/projects"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Project Management"
                   >
-                    Project Management
+                    <FaProjectDiagram className="text-lg" />
+                    {sidebarOpen && <span>Project Management</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -112,9 +111,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/invoices"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Invoice Management"
                   >
-                    Invoice Management
+                    <FaFileInvoiceDollar className="text-lg" />
+                    {sidebarOpen && <span>Invoice Management</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -128,9 +129,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/task-assignment"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Task Assignment"
                   >
-                    Task Assignment
+                    <FaTasks className="text-lg" />
+                    {sidebarOpen && <span>Task Assignment</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -144,9 +147,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/timesheet"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Employee Timesheets"
                   >
-                    Employee Timesheets
+                    <FaClock className="text-lg" />
+                    {sidebarOpen && <span>Employee Timesheets</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -159,9 +164,11 @@ function Sidebar() {
               >
                 <Link
                   to="/attendance"
-                  className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  title="Employee Attendance"
                 >
-                  Employee Attendance
+                  <FaCalendarCheck className="text-lg" />
+                  {sidebarOpen && <span>Employee Attendance</span>}
                 </Link>
               </motion.div>
             </li>
@@ -174,9 +181,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/task-management"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="My Tasks"
                   >
-                    My Tasks
+                    <FaClipboardList className="text-lg" />
+                    {sidebarOpen && <span>My Tasks</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -190,9 +199,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/timesheet"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Employee Timesheet"
                   >
-                    Employee Timesheet
+                    <FaClock className="text-lg" />
+                    {sidebarOpen && <span>Employee Timesheet</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -206,9 +217,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/contracts"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Contract Agreement"
                   >
-                    Contract Agreement
+                    <FaFileContract className="text-lg" />
+                    {sidebarOpen && <span>Contract Agreement</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -222,9 +235,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/work-history"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Work History"
                   >
-                    Work History
+                    <FaHistory className="text-lg" />
+                    {sidebarOpen && <span>Work History</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -238,9 +253,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/work-summary"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Work Summary"
                   >
-                    Work Summary
+                    <FaChartBar className="text-lg" />
+                    {sidebarOpen && <span>Work Summary</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -254,9 +271,11 @@ function Sidebar() {
                 >
                   <Link
                     to="/work-summary"
-                    className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Employee Work Summary"
                   >
-                    Employee Work Summary
+                    <FaChartBar className="text-lg" />
+                    {sidebarOpen && <span>Employee Work Summary</span>}
                   </Link>
                 </motion.div>
               </li>
@@ -269,18 +288,28 @@ function Sidebar() {
                   className="rounded-lg"
                 >
                   <button
-                    onClick={() => setEmployeeDropdownOpen(!employeeDropdownOpen)}
+                    onClick={() => {
+                      if (!sidebarOpen) {
+                        toggleSidebar();
+                      } else {
+                        setEmployeeDropdownOpen(!employeeDropdownOpen);
+                      }
+                    }}
                     className="flex items-center justify-between w-full py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    title="Employee Management"
                   >
-                    <span>Employee Management</span>
-                    <FaChevronDown
+                    <span className="flex items-center gap-3">
+                      <FaUserTie className="text-lg" />
+                      {sidebarOpen && <span>Employee Management</span>}
+                    </span>
+                    {sidebarOpen && <FaChevronDown
                       className={`transition-transform ${
                         employeeDropdownOpen ? "rotate-180" : ""
                       }`}
-                    />
+                    />}
                   </button>
                 </motion.div>
-                {employeeDropdownOpen && (
+                {employeeDropdownOpen && sidebarOpen && (
                   <ul className="ml-6 mt-1 space-y-1">
                     <li>
                       <motion.div
@@ -289,9 +318,10 @@ function Sidebar() {
                       >
                         <Link
                           to="/employees"
-                          className="block text-md text-orange-400 hover:text-white"
+                          className="flex items-center gap-2 text-md text-black dark:text-gray-800 hover:text-gray-600 dark:hover:text-gray-600"
                         >
-                          • Employee List
+                          <FaUsers className="text-sm" />
+                          Employee List
                         </Link>
                       </motion.div>
                     </li>
@@ -302,9 +332,10 @@ function Sidebar() {
                       >
                         <Link
                           to="/contracts"
-                          className="block text-md text-orange-400 hover:text-white"
+                          className="flex items-center gap-2 text-md text-black dark:text-gray-800 hover:text-gray-600 dark:hover:text-gray-600"
                         >
-                          • Contract Agreement
+                          <FaFileContract className="text-sm" />
+                          Contract Agreement
                         </Link>
                       </motion.div>
                     </li>
@@ -320,9 +351,11 @@ function Sidebar() {
               >
                 <Link
                   to="/settings"
-                  className="block py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  title="Settings"
                 >
-                  Settings
+                  <FaCog className="text-lg" />
+                  {sidebarOpen && <span>Settings</span>}
                 </Link>
               </motion.div>
             </li>

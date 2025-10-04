@@ -150,7 +150,7 @@ function LeadManagement() {
                           {lead.email}
                         </div>
                         <div className="text-xs text-gray-400 lg:hidden mt-1">
-                          {lead.followUpDate && `Follow up: ${lead.followUpDate}`}
+                          {lead.followUpDate && `Follow up: ${new Date(lead.followUpDate).toLocaleDateString()}`}
                         </div>
                       </td>
                       <td className="px-3 py-4 hidden md:table-cell">
@@ -177,12 +177,12 @@ function LeadManagement() {
                         </div>
                       </td>
                       <td className="px-3 py-4 hidden lg:table-cell">
-                        <div className="text-sm">{lead.followUpDate || 'Not set'}</div>
+                        <div className="text-sm">{lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString() : 'Not set'}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {lead.followUpStatus}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
-                          Meeting: {lead.meetingDate || "Not Scheduled"}
+                          Meeting: {lead.meetingDate ? new Date(lead.meetingDate).toLocaleDateString() : "Not Scheduled"}
                         </div>
                       </td>
                     </motion.tr>
