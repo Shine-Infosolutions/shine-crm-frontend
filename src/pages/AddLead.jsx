@@ -20,6 +20,9 @@ const AddLead = () => {
     followUpStatus: "Not Started",
     isInterested: false,
     meetingDate: "",
+    clientRequestedCallDate: "",
+    notes: "",
+    reference: "",
   });
 
   // Check if we're in edit mode by looking for an ID in the URL
@@ -53,6 +56,9 @@ const AddLead = () => {
           : "",
         meetingDate: data.meetingDate
           ? new Date(data.meetingDate).toISOString().split("T")[0]
+          : "",
+        clientRequestedCallDate: data.clientRequestedCallDate
+          ? new Date(data.clientRequestedCallDate).toISOString().split("T")[0]
           : "",
       };
 
@@ -315,33 +321,84 @@ const AddLead = () => {
               />
             </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.55 }}
+            >
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Interest Level
+              </label>
+              <select
+                name="isInterested"
+                value={formData.isInterested}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+              >
+                <option value={true}>Interested</option>
+                <option value={false}>Not Interested</option>
+              </select>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.6 }}
+            >
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Client Requested Call Date
+              </label>
+              <input
+                type="date"
+                name="clientRequestedCallDate"
+                value={formData.clientRequestedCallDate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.62 }}
+            >
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Reference
+              </label>
+              <input
+                type="text"
+                name="reference"
+                value={formData.reference}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                placeholder="How did they hear about us?"
+              />
+            </motion.div>
+
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.55 }}
-              className="flex items-center"
+              transition={{ duration: 0.3, delay: 0.67 }}
+              className="md:col-span-2"
             >
-              <input
-                type="checkbox"
-                id="isInterested"
-                name="isInterested"
-                checked={formData.isInterested}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-              />
-              <label
-                htmlFor="isInterested"
-                className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
-              >
-                Interested
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes
               </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md resize-vertical"
+                placeholder="Add any additional notes about this lead..."
+              />
             </motion.div>
           </div>
 
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.6 }}
+            transition={{ duration: 0.3, delay: 0.72 }}
             className="mt-6 flex justify-end space-x-3"
           >
             <motion.button

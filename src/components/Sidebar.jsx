@@ -31,7 +31,7 @@ function Sidebar() {
               alt="Shine Infosolutions Logo" 
               className="h-13 w-auto"
             />
-            {sidebarOpen && <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">SHINE CRM</span>}
+            {sidebarOpen && <span className="ml-2 text-xl font-bold text-gray-800 dark:text-white">SHINE INFOSOLUTIONS CRM</span>}
           </motion.div>
         </div>
         
