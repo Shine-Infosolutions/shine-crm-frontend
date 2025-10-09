@@ -14,6 +14,7 @@ const AddInvoice = () => {
   const [formErrors, setFormErrors] = useState({});
   const [rowErrors, setRowErrors] = useState([]);
   const [gstLoading, setGstLoading] = useState(false);
+  const [units, setUnits] = useState([]);
 
   const [formData, setFormData] = useState({
     customerGST: "",
@@ -50,6 +51,12 @@ const AddInvoice = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch units
+        const unitsRes = await axios.get(`${API_URL}/api/units`);
+        if (unitsRes.data?.success) {
+          setUnits(unitsRes.data.data || []);
+        }
+
         if (id) {
           const res = await axios.get(`${API_URL}/api/invoices/mono/${id}`);
           const data = res.data.data;
@@ -369,6 +376,7 @@ const AddInvoice = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.9 }}
           className="overflow-x-auto mb-4"
+          style={{ overflow: 'visible' }}
         >
           <table className="w-full table-auto border-2 border-collapse text-sm text-left bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg">
             <thead className="bg-gray-100/80 dark:bg-gray-700/80 dark:text-gray-300 backdrop-blur-xl">
@@ -403,10 +411,18 @@ const AddInvoice = () => {
                       value={row.unit}
                       onChange={(e) => handleRowChange(i, "unit", e.target.value)}
                       className="w-full px-2 py-1 border-2 border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3"
+                      style={{ maxHeight: '50px', overflowY: 'auto' }}
+
                     >
-                      {["Unit", "Pieces", "Kilograms", "Liters", "Pack", "Dozen"].map((u) => (
-                        <option key={u}>{u}</option>
-                      ))}
+                      {units.length > 0 ? (
+                        units.map((unit) => (
+                          <option key={unit._id} value={unit.name}>
+                            {unit.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="Unit">Unit</option>
+                      )}
                     </motion.select>
                   </td>
                   {["quantity", "price", "discountPercentage"].map((field) => (
