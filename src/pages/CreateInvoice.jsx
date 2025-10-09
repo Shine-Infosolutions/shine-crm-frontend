@@ -53,11 +53,12 @@ const CreateInvoice = () => {
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
-  const gstRate = Number(invoice?.amountDetails?.gstPercentage || 0);
-  const totalAmount = Number(invoice?.amountDetails?.totalAmount || 0);
-  const baseAmount = totalAmount / (1 + gstRate / 100);
-  const cgstAmount = (baseAmount * (gstRate / 2 / 100)).toFixed(2);
-  const sgstAmount = (baseAmount * (gstRate / 2 / 100)).toFixed(2);
+  const isGSTInvoice = invoice?.isGSTInvoice !== false; // Default to true for backward compatibility
+  const gstRate = isGSTInvoice ? Number(invoice?.amountDetails?.gstPercentage || 0) : 0;
+  const totalAmount = Math.round(Number(invoice?.amountDetails?.totalAmount || 0));
+  const baseAmount = isGSTInvoice ? Math.round((totalAmount / (1 + gstRate / 100)) * 100) / 100 : totalAmount;
+  const cgstAmount = isGSTInvoice ? (Math.round((baseAmount * (gstRate / 2 / 100)) * 100) / 100).toFixed(2) : '0.00';
+  const sgstAmount = isGSTInvoice ? (Math.round((baseAmount * (gstRate / 2 / 100)) * 100) / 100).toFixed(2) : '0.00';
 
 
   const handlePrint = useReactToPrint({
@@ -156,7 +157,7 @@ const CreateInvoice = () => {
           >
             <div className="flex-1"></div>
             <h1 className="text-base sm:text-xl font-bold text-center">
-              TAX INVOICE
+              {isGSTInvoice ? 'TAX INVOICE' : 'INVOICE'}
             </h1>
             <div className="flex-1 text-right">
               <span className="text-xs sm:text-sm font-semibold">
@@ -176,7 +177,7 @@ const CreateInvoice = () => {
               <img src="/icon.png" alt="Logo" className="w-16 h-12 object-contain" />
               <div>
                 <p className="text-sm font-bold">SHINE INFOSOLUTIONS</p>
-                <p className="text-xs">GSTIN: 09FTJPS4577P1ZD</p>
+                {isGSTInvoice && <p className="text-xs">GSTIN: 09FTJPS4577P1ZD</p>}
                 <p className="text-xs">87a, Bankati chak, Raiganj road,Near Chhoti</p>
                 <p className="text-xs">Masjid, Gorakhpur</p>
                 <p className="text-xs">Gorakhpur, UTTAR PRADESH, 273001</p>
@@ -212,7 +213,7 @@ const CreateInvoice = () => {
             className="border-b-2 border-black p-3"
           >
             <p className="text-xs font-semibold mb-1">Customer Details:</p>
-            <p className="text-xs">GSTIN: {invoice.customerGST}</p>
+            {isGSTInvoice && <p className="text-xs">GSTIN: {invoice.customerGST}</p>}
             <p className="text-xs">Billing Address: {invoice.customerAddress}</p>
           </motion.div>
 
@@ -231,8 +232,8 @@ const CreateInvoice = () => {
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">HSN/SAC</th>
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Rate/Item</th>
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Qty</th>
-                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Taxable Value</th>
-                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Tax Amount</th>
+                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">{isGSTInvoice ? 'Taxable Value' : 'Value'}</th>
+                  {isGSTInvoice && <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Tax Amount</th>}
                   <th className="border-b-2 px-1 py-2 text-center font-semibold">Amount</th>
                 </tr>
               </thead>
@@ -241,10 +242,10 @@ const CreateInvoice = () => {
                   const qty = parseFloat(p.quantity || 0);
                   const price = parseFloat(p.price || 0);
                   const discountPct = parseFloat(p.discountPercentage || 0);
-                  const originalValue = qty * price;
-                  const discountAmount = (originalValue * discountPct) / 100;
-                  const taxableValue = originalValue - discountAmount;
-                  const taxAmount = taxableValue * (gstRate / 100);
+                  const originalValue = Math.round((qty * price) * 100) / 100;
+                  const discountAmount = Math.round((originalValue * discountPct / 100) * 100) / 100;
+                  const taxableValue = Math.round((originalValue - discountAmount) * 100) / 100;
+                  const taxAmount = Math.round((taxableValue * (gstRate / 100)) * 100) / 100;
 
                   return (
                     <motion.tr 
@@ -259,8 +260,8 @@ const CreateInvoice = () => {
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{price.toFixed(2)}</td>
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{qty}</td>
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{taxableValue.toFixed(2)}</td>
-                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{taxAmount.toFixed(2)}</td>
-                      <td className="border-b-2 px-1 py-2 text-center">₹{p.amount}</td>
+                      {isGSTInvoice && <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{taxAmount.toFixed(2)}</td>}
+                      <td className="border-b-2 px-1 py-2 text-center">₹{(Math.round(parseFloat(p.amount) * 100) / 100).toFixed(2)}</td>
                     </motion.tr>
                   );
                 })}
@@ -275,10 +276,19 @@ const CreateInvoice = () => {
             transition={{ duration: 0.3, delay: 0.8 }}
             className="border-b-2 border-black p-2 text-right"
           >
-            <p className="text-xs"><strong>Taxable Amount: ₹{baseAmount.toFixed(2)}</strong></p>
-            <p className="text-xs"><strong>CGST {gstRate / 2}%: ₹{cgstAmount}</strong></p>
-            <p className="text-xs"><strong>SGST {gstRate / 2}%: ₹{sgstAmount}</strong></p>
-            <p className="text-sm font-bold mt-1"><strong>Total: ₹{totalAmount}</strong></p>
+            {isGSTInvoice ? (
+              <>
+                <p className="text-xs"><strong>Taxable Amount: ₹{baseAmount.toFixed(2)}</strong></p>
+                <p className="text-xs"><strong>CGST {gstRate / 2}%: ₹{cgstAmount}</strong></p>
+                <p className="text-xs"><strong>SGST {gstRate / 2}%: ₹{sgstAmount}</strong></p>
+                <p className="text-sm font-bold mt-1"><strong>Total: ₹{totalAmount}</strong></p>
+              </>
+            ) : (
+              <>
+                <p className="text-xs"><strong>Sub Total: ₹{baseAmount.toFixed(2)}</strong></p>
+                <p className="text-sm font-bold mt-1"><strong>Total: ₹{totalAmount}</strong></p>
+              </>
+            )}
           </motion.div>
 
           {/* Amount in Words */}
@@ -288,7 +298,7 @@ const CreateInvoice = () => {
             transition={{ duration: 0.3, delay: 1.0 }}
             className="border-b-2 border-black p-2"
           >
-            <p className="text-xs text-right"><strong>Total amount (in words):</strong> INR {capitalizeWords(toWords(totalAmount))} Only</p>
+            <p className="text-xs text-right"><strong>Total amount (in words):</strong> INR {capitalizeWords(toWords(Math.round(totalAmount)))} Only</p>
           </motion.div>
 
           {/* Notes Section */}
