@@ -4,6 +4,7 @@ import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
+import { fetchGSTDetails } from "../utils/gstLookup";
 
 const AddInvoice = () => {
   const { id } = useParams();
@@ -12,6 +13,7 @@ const AddInvoice = () => {
 
   const [formErrors, setFormErrors] = useState({});
   const [rowErrors, setRowErrors] = useState([]);
+  const [gstLoading, setGstLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     customerGST: "",
@@ -25,6 +27,7 @@ const AddInvoice = () => {
     dispatchThrough: "",
     customerAadhar: "",
     notes: "",
+    isGSTInvoice: true,
     productDetails: [],
     amountDetails: {
       gstPercentage: 18,
@@ -84,15 +87,15 @@ const AddInvoice = () => {
       (acc, item) => acc + parseFloat(item.amount || 0),
       0
     );
-    const gstPct = parseFloat(formData.amountDetails.gstPercentage || 0);
+    const gstPct = formData.isGSTInvoice ? parseFloat(formData.amountDetails.gstPercentage || 0) : 0;
     const discPct = parseFloat(formData.amountDetails.discountOnTotal || 0);
-    const discountedBase = parseFloat(
-      (baseAmount * (1 - discPct / 100)).toFixed(2)
-    );
-    const gstAmount = parseFloat(
-      (discountedBase * (gstPct / 100)).toFixed(2)
-    );
-    const total = parseFloat((discountedBase + gstAmount).toFixed(2));
+    const discountedBase = Math.round(
+      (baseAmount * (1 - discPct / 100)) * 100
+    ) / 100;
+    const gstAmount = Math.round(
+      (discountedBase * (gstPct / 100)) * 100
+    ) / 100;
+    const total = Math.round(discountedBase + gstAmount);
 
     setFormData((prev) => ({
       ...prev,
@@ -105,10 +108,32 @@ const AddInvoice = () => {
     rows,
     formData.amountDetails.gstPercentage,
     formData.amountDetails.discountOnTotal,
+    formData.isGSTInvoice,
   ]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleGSTLookup = async () => {
+    if (!formData.customerGST || formData.customerGST.length !== 15) {
+      alert('Please enter a valid 15-digit GST number');
+      return;
+    }
+
+    setGstLoading(true);
+    try {
+      const gstDetails = await fetchGSTDetails(formData.customerGST);
+      setFormData(prev => ({
+        ...prev,
+        customerName: gstDetails.name,
+        customerAddress: gstDetails.address
+      }));
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setGstLoading(false);
+    }
   };
 
   const handleRowChange = (index, field, value) => {
@@ -119,7 +144,7 @@ const AddInvoice = () => {
     const price = parseFloat(updated[index].price) || 0;
     const discount = parseFloat(updated[index].discountPercentage) || 0;
     const amount = price * qty * (1 - discount / 100);
-    updated[index].amount = amount.toFixed(2);
+    updated[index].amount = (Math.round(amount * 100) / 100).toFixed(2);
     setRows(updated);
   };
 
@@ -151,8 +176,12 @@ const AddInvoice = () => {
   
     const requiredFields = [
       "customerName", "invoiceDate", "dueDate", "invoiceNumber",
-      "customerAddress", "customerPhone", "customerEmail", "customerGST"
+      "customerAddress", "customerPhone", "customerEmail"
     ];
+    
+    if (formData.isGSTInvoice) {
+      requiredFields.push("customerGST");
+    }
     requiredFields.forEach((field) => {
       if (!formData[field]?.trim()) errors[field] = true;
     });
@@ -238,6 +267,29 @@ const AddInvoice = () => {
         onSubmit={handleSubmit} 
         className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6"
       >
+        {/* GST Invoice Toggle */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.25 }}
+          className="mb-6 p-4 bg-white/50 dark:bg-gray-700/50 rounded-lg border border-white/20 dark:border-gray-700/50"
+        >
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.isGSTInvoice}
+              onChange={(e) => setFormData(prev => ({ ...prev, isGSTInvoice: e.target.checked }))}
+              className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              GST Invoice {formData.isGSTInvoice ? '(Tax Invoice)' : '(Non-GST Invoice)'}
+            </span>
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            {formData.isGSTInvoice ? 'This invoice will include GST calculations and require customer GSTIN' : 'This invoice will not include GST calculations'}
+          </p>
+        </motion.div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
             ["Invoice Date", "invoiceDate", "date"],
@@ -248,9 +300,9 @@ const AddInvoice = () => {
             ["Customer Phone", "customerPhone", "tel"],
             ["Customer Email", "customerEmail", "email"],
             ["Dispatch Through", "dispatchThrough", "text"],
-            ["Customer GSTIN", "customerGST", "text"],
+            ...(formData.isGSTInvoice ? [["Customer GSTIN", "customerGST", "text", true]] : []),
             ["Customer Aadhar", "customerAadhar", "text"],
-          ].map(([label, name, type], index) => (
+          ].map(([label, name, type, hasLookup], index) => (
             <motion.div 
               key={name}
               initial={{ opacity: 0, y: 10 }}
@@ -258,16 +310,30 @@ const AddInvoice = () => {
               transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
             >
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-              <motion.input
-                whileFocus={{ scale: 1.02 }}
-                type={type}
-                name={name}
-                value={formData[name]}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3 ${
-                  formErrors[name] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
-                }`}
-              />
+              <div className={hasLookup ? "flex gap-2" : ""}>
+                <motion.input
+                  whileFocus={{ scale: 1.02 }}
+                  type={type}
+                  name={name}
+                  value={formData[name]}
+                  onChange={handleChange}
+                  className={`${hasLookup ? 'flex-1' : 'w-full'} px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3 ${
+                    formErrors[name] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
+                  }`}
+                />
+                {hasLookup && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    type="button"
+                    onClick={handleGSTLookup}
+                    disabled={gstLoading}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all duration-0.3"
+                  >
+                    {gstLoading ? '...' : '🔍'}
+                  </motion.button>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>
@@ -384,29 +450,31 @@ const AddInvoice = () => {
           + Add Item
         </motion.button>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 1.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
-        >
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GST Percentage</label>
-            <motion.input
-              whileFocus={{ scale: 1.02 }}
-              type="number"
-              value={formData.amountDetails.gstPercentage}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  amountDetails: { ...formData.amountDetails, gstPercentage: e.target.value },
-                })
-              }
-              className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
-            />
-            <p className="text-xs mt-1 text-gray-500">CGST: {cgst}%, SGST: {sgst}%</p>
-          </div>
-        </motion.div>
+        {formData.isGSTInvoice && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 1.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
+          >
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GST Percentage</label>
+              <motion.input
+                whileFocus={{ scale: 1.02 }}
+                type="number"
+                value={formData.amountDetails.gstPercentage}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    amountDetails: { ...formData.amountDetails, gstPercentage: e.target.value },
+                  })
+                }
+                className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+              />
+              <p className="text-xs mt-1 text-gray-500">CGST: {cgst}%, SGST: {sgst}%</p>
+            </div>
+          </motion.div>
+        )}
 
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -414,7 +482,7 @@ const AddInvoice = () => {
           transition={{ duration: 0.3, delay: 1.3 }}
           className="mt-6 text-right text-lg font-semibold dark:text-white"
         >
-          Total Amount: ₹{totalAmount}
+          Total Amount: ₹{Math.round(totalAmount)}
         </motion.div>
 
         <motion.div 
