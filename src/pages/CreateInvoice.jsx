@@ -174,7 +174,7 @@ const CreateInvoice = () => {
             className="grid grid-cols-2 border-b-2 border-black"
           >
             <div className="flex items-start gap-2 p-3 border-r-2 border-black">
-              <img src="/icon.png" alt="Logo" className="w-16 h-12 object-contain" />
+              <img src="/icon.png" alt="Logo" className="w-30 h-34 object-contain" />
               <div>
                 <p className="text-sm font-bold">SHINE INFOSOLUTIONS</p>
                 {isGSTInvoice && <p className="text-xs">GSTIN: 09FTJPS4577P1ZD</p>}
