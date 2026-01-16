@@ -3,7 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
 
 function Settings() {
-  const { currentUser, API_URL } = useAppContext();
+  const { currentUser, API_URL, getAuthHeaders } = useAppContext();
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
@@ -46,9 +46,12 @@ function Settings() {
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/employees/${currentUser.id}`, {
+      const response = await fetch(`${API_URL}/api/employees/${currentUser._id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
         body: JSON.stringify(settings.profile)
       });
       
@@ -106,11 +109,13 @@ function Settings() {
     
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/auth/change-password`, {
+      const response = await fetch(`${API_URL}/api/settings/change-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
         body: JSON.stringify({
-          userId: currentUser.id,
           currentPassword: settings.security.currentPassword,
           newPassword: settings.security.newPassword
         })
@@ -135,9 +140,9 @@ function Settings() {
   const handleBackupData = async (dataType) => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/backup/${dataType}`, {
+      const response = await fetch(`${API_URL}/api/settings/backup/${dataType}`, {
         method: "GET",
-        headers: { "Authorization": `Bearer ${currentUser?.token}` }
+        headers: getAuthHeaders()
       });
       
       if (response.ok) {
