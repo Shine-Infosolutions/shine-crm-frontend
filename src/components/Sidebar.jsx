@@ -15,7 +15,7 @@ function Sidebar() {
       initial={{ x: -256 }}
       animate={{ x: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className={`bg-slate-300/80 dark:bg-gray-800/80 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 shadow-2xl transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}
+      className={`bg-slate-300/80 dark:bg-gray-800/80 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 shadow-2xl transition-all duration-300 overflow-y-auto ${sidebarOpen ? 'w-64' : 'w-20'}`}
     >
       <div className="p-4 relative">
         {/* Hamburger/Close button */}
@@ -318,7 +318,7 @@ function Sidebar() {
                       >
                         <Link
                           to="/employees"
-                          className="flex items-center gap-2 text-md text-black dark:text-gray-800 hover:text-gray-600 dark:hover:text-gray-600"
+                          className="flex items-center gap-2 text-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                         >
                           <FaUsers className="text-sm" />
                           Employee List
@@ -332,7 +332,7 @@ function Sidebar() {
                       >
                         <Link
                           to="/contracts"
-                          className="flex items-center gap-2 text-md text-black dark:text-gray-800 hover:text-gray-600 dark:hover:text-gray-600"
+                          className="flex items-center gap-2 text-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                         >
                           <FaFileContract className="text-sm" />
                           Contract Agreement
