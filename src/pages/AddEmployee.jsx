@@ -12,7 +12,6 @@ const AddEmployee = () => {
   const [employeeId, setEmployeeId] = useState(null);
 
   const [formData, setFormData] = useState({
-    employee_id: "",
     name: "",
     profile_image: null,
     password: "",
@@ -334,20 +333,6 @@ const AddEmployee = () => {
                 Personal Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Employee ID
-                  </label>
-                  <input
-                    type="text"
-                    name="employee_id"
-                    value={formData.employee_id}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
-                    required
-                  />
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Full Name

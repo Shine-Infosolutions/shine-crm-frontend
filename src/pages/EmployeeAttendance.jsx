@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
 
 function EmployeeAttendance() {
-  const { currentUser, API_URL } = useAppContext();
+  const { currentUser, API_URL, getAuthHeaders } = useAppContext();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -59,8 +59,12 @@ function EmployeeAttendance() {
       if (isAdmin) {
         // For admin: load both attendance and employees
         const [attendanceResponse, employeeResponse] = await Promise.all([
-          fetch(`${API_URL}/api/attendance`),
-          fetch(`${API_URL}/api/employees`),
+          fetch(`${API_URL}/api/attendance`, {
+            headers: getAuthHeaders(),
+          }),
+          fetch(`${API_URL}/api/employees`, {
+            headers: getAuthHeaders(),
+          }),
         ]);
 
         if (attendanceResponse.ok) {
@@ -83,8 +87,12 @@ function EmployeeAttendance() {
         }
       } else {
         // For employee: only load attendance
+        const employeeId = currentUser?._id || currentUser?.id;
         const response = await fetch(
-          `${API_URL}/api/attendance?employee_id=${currentUser?.id}`
+          `${API_URL}/api/attendance?employee_id=${employeeId}`,
+          {
+            headers: getAuthHeaders(),
+          }
         );
 
         if (response.ok) {
@@ -160,14 +168,16 @@ function EmployeeAttendance() {
 
     setLoading(true);
     try {
+      const employeeId = currentUser?._id || currentUser?.id;
       const attendanceData = {
-        employee_id: currentUser.id
+        employee_id: employeeId
       };
 
       const response = await fetch(`${API_URL}/api/attendance/time-in`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(attendanceData),
       });
@@ -212,8 +222,9 @@ function EmployeeAttendance() {
         return recordDate === today;
       });
 
+      const employeeId = currentUser?._id || currentUser?.id;
       const requestBody = {
-        employee_id: currentUser.id
+        employee_id: employeeId
       };
 
       if (isManualCheckout && customCheckoutTime) {
@@ -235,6 +246,7 @@ function EmployeeAttendance() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(requestBody),
       });
@@ -280,13 +292,14 @@ function EmployeeAttendance() {
   };
 
   const checkAutoCheckout = async () => {
-    if (!currentUser?.id || isCompleted) return;
+    const employeeId = currentUser?._id || currentUser?.id;
+    if (!employeeId || isCompleted) return;
     
     const today = new Date().toDateString();
     const todayRecord = attendanceRecords.find((record) => {
       if (!record.date) return false;
       const recordDate = new Date(record.date).toDateString();
-      return recordDate === today && record.employee_id === currentUser.id;
+      return recordDate === today && record.employee_id === employeeId;
     });
     
     if (todayRecord && todayRecord.time_in && !(todayRecord.checkout_time || todayRecord.time_out)) {
@@ -298,8 +311,9 @@ function EmployeeAttendance() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              ...getAuthHeaders(),
             },
-            body: JSON.stringify({ employee_id: currentUser.id }),
+            body: JSON.stringify({ employee_id: employeeId }),
           });
           
           if (response.ok) {
@@ -317,7 +331,9 @@ function EmployeeAttendance() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/employees`);
+      const response = await fetch(`${API_URL}/api/employees`, {
+        headers: getAuthHeaders(),
+      });
       if (response.ok) {
         const data = await response.json();
         setEmployees(data.data || data || []);
