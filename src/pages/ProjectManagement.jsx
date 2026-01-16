@@ -380,8 +380,8 @@ function ProjectManagement() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Project Amount
                       </p>
-                      <p className="font-medium">${project.projectAmount}</p>
-                      <p className="text-sm">Advance: ${project.advanceAmount}</p>
+                      <p className="font-medium">₹{parseFloat(project.projectAmount || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-sm">Advance: ₹{parseFloat(project.advanceAmount || 0).toLocaleString('en-IN')}</p>
                     </div>
 
                     <div>
@@ -415,7 +415,7 @@ function ProjectManagement() {
                       <p className="font-medium">
                         {project.commissionTo || "Not specified"}
                       </p>
-                      <p className="text-sm">${project.commissionAmount || 0}</p>
+                      <p className="text-sm">₹{parseFloat(project.commissionAmount || 0).toLocaleString('en-IN')}</p>
                     </div>
 
                     <div>
@@ -434,7 +434,7 @@ function ProjectManagement() {
                         </p>
                       )}
                       {project.domainCost && (
-                        <p className="text-sm">Cost: ${project.domainCost}</p>
+                        <p className="text-sm">Cost: ₹{parseFloat(project.domainCost || 0).toLocaleString('en-IN')}</p>
                       )}
                       {project.domainExpiryDate && (
                         <p className="text-sm">
