@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 
 function Dashboard() {
-  const { API_URL, navigate } = useAppContext();
+  const { API_URL, navigate, getAuthHeaders } = useAppContext();
   const [totalLeads, setTotalLeads] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
   const [totalEmployees, setTotalEmployees] = useState(0);
@@ -19,7 +19,9 @@ function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         // Fetch leads data
-        const leadsResponse = await fetch(`${API_URL}/api/leads`);
+        const leadsResponse = await fetch(`${API_URL}/api/leads`, {
+          headers: getAuthHeaders()
+        });
         if (leadsResponse.ok) {
           const leadsData = await leadsResponse.json();
           const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
@@ -28,7 +30,9 @@ function Dashboard() {
         }
 
         // Fetch projects data
-        const projectsResponse = await fetch(`${API_URL}/api/projects`);
+        const projectsResponse = await fetch(`${API_URL}/api/projects`, {
+          headers: getAuthHeaders()
+        });
         if (projectsResponse.ok) {
           const projectsData = await projectsResponse.json();
           const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
@@ -49,7 +53,9 @@ function Dashboard() {
         }
 
         // Fetch employees data
-        const employeesResponse = await fetch(`${API_URL}/api/employees`);
+        const employeesResponse = await fetch(`${API_URL}/api/employees`, {
+          headers: getAuthHeaders()
+        });
         if (employeesResponse.ok) {
           const employeesData = await employeesResponse.json();
           if (employeesData?.success) {
@@ -61,7 +67,9 @@ function Dashboard() {
         }
 
         // Fetch recent tasks
-        const tasksResponse = await fetch(`${API_URL}/api/tasks`);
+        const tasksResponse = await fetch(`${API_URL}/api/tasks`, {
+          headers: getAuthHeaders()
+        });
         if (tasksResponse.ok) {
           const tasksData = await tasksResponse.json();
           const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];

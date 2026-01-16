@@ -59,7 +59,8 @@ export function AppProvider({ children }) {
   };
 
   const getAuthHeaders = () => {
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const authToken = token || localStorage.getItem('token');
+    return authToken ? { Authorization: `Bearer ${authToken}` } : {};
   };
 
   const contextValue = {
