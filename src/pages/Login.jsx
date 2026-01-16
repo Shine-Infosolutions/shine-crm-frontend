@@ -16,38 +16,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      // Check employee login first
-      const employeeResponse = await fetch(`${API_URL}/api/employees`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (employeeResponse.ok) {
-        const employeeData = await employeeResponse.json();
-
-        if (employeeData.success && employeeData.data) {
-          const employee = employeeData.data.find(
-            (emp) => emp.email === email && emp.password === password
-          );
-
-          if (employee) {
-            const userData = {
-              id: employee._id,
-              email: employee.email,
-              name: employee.name,
-              role: "employee",
-            };
-            login(userData);
-            navigate("/leads");
-            return;
-          }
-        }
-      }
-
-      // If not employee, try admin login
-      const adminResponse = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -55,10 +24,10 @@ function Login() {
         body: JSON.stringify({ email, password }),
       });
 
-      const adminData = await adminResponse.json();
+      const data = await response.json();
 
-      if (adminResponse.ok) {
-        login(adminData.user || adminData);
+      if (response.ok) {
+        login(data.user, data.token);
         navigate("/");
       } else {
         throw new Error("Invalid credentials");

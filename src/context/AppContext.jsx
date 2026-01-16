@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 const AppContext = createContext();
 
-const API_URL = "https://shine-crm-backend.vercel.app";
+const API_URL = "http://localhost:5000";
 
 export function AppProvider({ children }) {
-  // State variables for the admin dashboard
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     const savedDark = localStorage.getItem("darkMode");
     if (savedDark !== null) return savedDark === "true";
@@ -17,19 +17,21 @@ export function AppProvider({ children }) {
 
   const navigate = useNavigate();
 
-  // Check for saved user and theme on initial load
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
-    if (savedUser) {
+    const savedToken = localStorage.getItem("token");
+    
+    if (savedUser && savedToken) {
       try {
         setCurrentUser(JSON.parse(savedUser));
+        setToken(savedToken);
       } catch {
         localStorage.removeItem("user");
+        localStorage.removeItem("token");
       }
     }
   }, []);
 
-  // Apply or remove dark class on <html>
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark");
@@ -39,33 +41,39 @@ export function AppProvider({ children }) {
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
-  // Functions to manipulate state
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const login = (userData) => {
+  const login = (userData, authToken) => {
     setCurrentUser(userData);
+    setToken(authToken);
     localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", authToken);
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setToken(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
-  // Values to be provided to consumers
+  const getAuthHeaders = () => {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   const contextValue = {
     API_URL,
-    // State
     sidebarOpen,
     currentUser,
+    token,
     darkMode,
-    // Functions
     navigate,
     toggleSidebar,
     toggleDarkMode,
     login,
     logout,
+    getAuthHeaders,
   };
 
   return (
@@ -73,7 +81,6 @@ export function AppProvider({ children }) {
   );
 }
 
-// Custom hook for using the context
 export function useAppContext() {
   const context = useContext(AppContext);
   if (!context) {
