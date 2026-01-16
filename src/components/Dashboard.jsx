@@ -11,6 +11,9 @@ function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [recentTasks, setRecentTasks] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -19,21 +22,26 @@ function Dashboard() {
         const leadsResponse = await fetch(`${API_URL}/api/leads`);
         if (leadsResponse.ok) {
           const leadsData = await leadsResponse.json();
-          setTotalLeads(leadsData.length || 0);
+          const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
+          setLeads(leadsArray.slice(0, 5));
+          setTotalLeads(leadsArray.length || 0);
         }
 
         // Fetch projects data
         const projectsResponse = await fetch(`${API_URL}/api/projects`);
         if (projectsResponse.ok) {
           const projectsData = await projectsResponse.json();
+          const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
+          setProjects(projectsArray);
+          
           // Count active projects (not completed)
-          const activeCount = projectsData.filter(project => {
+          const activeCount = projectsArray.filter(project => {
             return !project.handoverDate || project.handoverDate.trim() === "";
           }).length;
           setActiveProjects(activeCount);
           
           // Calculate total revenue from all projects
-          const revenue = projectsData.reduce((sum, project) => {
+          const revenue = projectsArray.reduce((sum, project) => {
             const amount = parseFloat(project.projectAmount) || 0;
             return sum + amount;
           }, 0);
@@ -50,6 +58,14 @@ function Dashboard() {
             setEmployees(employeeArray.slice(0, 4)); // Show first 4 employees
             setTotalEmployees(employeeArray.length || 0);
           }
+        }
+
+        // Fetch recent tasks
+        const tasksResponse = await fetch(`${API_URL}/api/tasks`);
+        if (tasksResponse.ok) {
+          const tasksData = await tasksResponse.json();
+          const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
+          setRecentTasks(tasksArray.slice(0, 3));
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -238,102 +254,115 @@ function Dashboard() {
           transition={{ duration: 0.3, delay: 0.4 }}
           className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8"
         >
-          {/* Lead Generation */}
+          {/* Recent Leads */}
           <motion.div 
             whileHover={{ y: -3 }}
             className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Lead Generation</h3>
-              <span className="bg-blue-100/80 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">3</span>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Recent Leads</h3>
+              <span className="bg-blue-100/80 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{leads.length}</span>
             </div>
             
             <div className="space-y-4">
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="bg-blue-50/80 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500 backdrop-blur-sm"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
-                    TS
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Website Redesign</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Tech Solutions Inc.</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg backdrop-blur-sm"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm font-medium">
-                    SC
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Mobile App</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">StartUp Co.</p>
-                  </div>
-                </div>
-              </motion.div>
+              {leads.slice(0, 2).map((lead, index) => {
+                const initials = lead.name ? lead.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'L';
+                const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500'];
+                return (
+                  <motion.div 
+                    key={lead._id || index}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-blue-50/80 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500 backdrop-blur-sm"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className={`w-8 h-8 rounded-full ${colors[index % colors.length]} flex items-center justify-center text-white text-sm font-medium`}>
+                        {initials}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{lead.projectType || 'New Lead'}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{lead.name}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              {leads.length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No recent leads</p>
+              )}
             </div>
           </motion.div>
 
-          {/* In Progress */}
+          {/* Active Projects */}
           <motion.div 
             whileHover={{ y: -3 }}
             className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">In Progress</h3>
-              <span className="bg-yellow-100/80 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">2</span>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Active Projects</h3>
+              <span className="bg-yellow-100/80 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{activeProjects}</span>
             </div>
             
             <div className="space-y-4">
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-yellow-500 backdrop-blur-sm"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-sm font-medium">
-                    RC
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">E-commerce Platform</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Retail Corp</p>
-                  </div>
-                </div>
-              </motion.div>
+              {projects.filter(p => !p.handoverDate || p.handoverDate.trim() === "").slice(0, 2).map((project, index) => {
+                const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
+                return (
+                  <motion.div 
+                    key={project._id || index}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-yellow-500 backdrop-blur-sm"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-white text-sm font-medium">
+                        {initials}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{project.projectName || 'Unnamed Project'}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{project.clientName || 'Unknown Client'}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              {activeProjects === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No active projects</p>
+              )}
             </div>
           </motion.div>
 
-          {/* Completed */}
+          {/* Completed Projects */}
           <motion.div 
             whileHover={{ y: -3 }}
             className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white">Completed</h3>
-              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">4</span>
+              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length}</span>
             </div>
             
             <div className="space-y-4">
-              <motion.div 
-                whileHover={{ scale: 1.02 }}
-                className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-green-500 backdrop-blur-sm"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-medium">
-                    BL
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">CRM System</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Business Ltd</p>
-                  </div>
-                </div>
-              </motion.div>
+              {projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").slice(0, 2).map((project, index) => {
+                const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'C';
+                return (
+                  <motion.div 
+                    key={project._id || index}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-green-500 backdrop-blur-sm"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-medium">
+                        {initials}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{project.projectName || 'Completed Project'}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{project.clientName || 'Unknown Client'}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+              {projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length === 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No completed projects</p>
+              )}
             </div>
           </motion.div>
 
@@ -424,36 +453,34 @@ function Dashboard() {
             
             <div className="p-6">
               <div className="space-y-4">
-                <motion.div 
-                  whileHover={{ x: 5 }}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Client meeting completed</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</p>
+                {recentTasks.length > 0 ? recentTasks.map((task, index) => {
+                  const statusColors = {
+                    'completed': 'bg-green-500',
+                    'in_progress': 'bg-blue-500', 
+                    'pending': 'bg-yellow-500',
+                    'assigned': 'bg-purple-500'
+                  };
+                  const statusColor = statusColors[task.status] || 'bg-gray-500';
+                  const timeAgo = task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : 'Recently';
+                  
+                  return (
+                    <motion.div 
+                      key={task._id || index}
+                      whileHover={{ x: 5 }}
+                      className="flex items-center space-x-3"
+                    >
+                      <div className={`w-2 h-2 ${statusColor} rounded-full`}></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title || task.description || 'Task'}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{timeAgo}</p>
+                      </div>
+                    </motion.div>
+                  );
+                }) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No recent tasks</p>
                   </div>
-                </motion.div>
-                <motion.div 
-                  whileHover={{ x: 5 }}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">New lead assigned</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">4 hours ago</p>
-                  </div>
-                </motion.div>
-                <motion.div 
-                  whileHover={{ x: 5 }}
-                  className="flex items-center space-x-3"
-                >
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Project milestone reached</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">1 day ago</p>
-                  </div>
-                </motion.div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -476,9 +503,9 @@ function Dashboard() {
                   className="text-center"
                 >
                   <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    85%
+                    {totalLeads > 0 ? Math.round((projects.length / totalLeads) * 100) : 0}%
                   </div>
-                  <p className="text-sm font-medium text-blue-600">Conversion Rate</p>
+                  <p className="text-sm font-medium text-blue-600">Lead to Project</p>
                 </motion.div>
                 
                 <motion.div 
@@ -486,9 +513,9 @@ function Dashboard() {
                   className="text-center"
                 >
                   <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    92%
+                    {projects.length > 0 ? Math.round((projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length / projects.length) * 100) : 0}%
                   </div>
-                  <p className="text-sm font-medium text-green-600">Customer Satisfaction</p>
+                  <p className="text-sm font-medium text-green-600">Project Completion</p>
                 </motion.div>
               </div>
             </div>
