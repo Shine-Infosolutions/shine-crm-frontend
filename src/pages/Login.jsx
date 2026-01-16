@@ -27,10 +27,16 @@ function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        login(data.user, data.token);
-        navigate("/");
+        localStorage.setItem('token', data.token);
+        login(data.user);
+        
+        if (data.user.role === 'employee') {
+          navigate("/attendance");
+        } else {
+          navigate("/");
+        }
       } else {
-        throw new Error("Invalid credentials");
+        setError(data.message || "Invalid credentials");
       }
     } catch (error) {
       setError(error.message);
