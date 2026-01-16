@@ -70,9 +70,10 @@ const CreateInvoice = () => {
     pageStyle: `
       @page { size: A4 portrait; margin: 5mm; }
       @media print {
-        html, body { margin:0; padding:24px; -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
-        #print-root, #root { box-sizing:border-box; }
+        html, body { margin:0; padding:0; -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+        #print-root, #root { box-sizing:border-box; width:100%; height:auto; }
         .no-print { display:none!important; }
+        * { page-break-inside: avoid; }
       }
     `,
   });
@@ -366,7 +367,7 @@ const CreateInvoice = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add your notes here..."
-              className="w-full min-h-[300px] p-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
+              className="w-full min-h-[300px] p-4 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
               style={{ 
                 fontFamily: 'Helvetica, Arial, sans-serif', 
                 fontSize: '14px',
@@ -384,16 +385,19 @@ const CreateInvoice = () => {
                 Cancel
               </button>
               <button
-onClick={async () => {
+                onClick={async () => {
                   setSaving(true);
                   try {
-                    await fetch(`${API_URL}/api/invoices/${id}/notes`, {
+                    const response = await fetch(`${API_URL}/api/invoices/${id}/notes`, {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ notes })
                     });
+                    if (response.ok) {
+                      setInvoice(prev => ({ ...prev, notes }));
+                    }
                   } catch (error) {
-                    console.log('Notes saved locally only');
+                    console.log('Failed to save notes:', error);
                   }
                   setShowNotesEditor(false);
                   setShowNotesInInvoice(true);
