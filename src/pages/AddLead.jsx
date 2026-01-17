@@ -171,6 +171,7 @@ const AddLead = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                placeholder="Enter client's full name"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                 required
               />
@@ -189,6 +190,7 @@ const AddLead = () => {
                 name="number"
                 value={formData.number}
                 onChange={handleChange}
+                placeholder="10-digit mobile number (e.g., 9876543210)"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                 required
               />
@@ -207,6 +209,7 @@ const AddLead = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                placeholder="client@company.com"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                 required
               />
@@ -247,6 +250,7 @@ const AddLead = () => {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
+                placeholder="Complete business/residential address"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
               />
             </motion.div>
@@ -264,6 +268,7 @@ const AddLead = () => {
                 name="followUpDate"
                 value={formData.followUpDate}
                 onChange={handleChange}
+                placeholder="Select next contact date"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
               />
             </motion.div>
@@ -302,6 +307,7 @@ const AddLead = () => {
                 name="meetingDate"
                 value={formData.meetingDate}
                 onChange={handleChange}
+                placeholder="Schedule meeting date"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
               />
             </motion.div>
@@ -338,6 +344,7 @@ const AddLead = () => {
                 name="clientRequestedCallDate"
                 value={formData.clientRequestedCallDate}
                 onChange={handleChange}
+                placeholder="When client prefers to be called"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
               />
             </motion.div>
@@ -356,7 +363,7 @@ const AddLead = () => {
                 value={formData.reference}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
-                placeholder="How did they hear about us?"
+                placeholder="How did they hear about us? (e.g., Google, referral)"
               />
             </motion.div>
 
@@ -375,7 +382,7 @@ const AddLead = () => {
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md resize-vertical"
-                placeholder="Add any additional notes about this lead..."
+                placeholder="Additional details about client requirements, budget, timeline"
               />
             </motion.div>
           </div>

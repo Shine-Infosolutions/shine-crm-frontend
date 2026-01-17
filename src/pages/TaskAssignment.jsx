@@ -259,6 +259,7 @@ function TaskAssignment() {
                   value={formData.title}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Brief, clear task description"
                   required
                 />
               </div>
@@ -273,6 +274,7 @@ function TaskAssignment() {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   rows="3"
+                  placeholder="Detailed task requirements and deliverables"
                   required
                 />
               </div>
@@ -303,6 +305,7 @@ function TaskAssignment() {
                   value={formData.due_date}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Task completion deadline"
                 />
               </div>
 

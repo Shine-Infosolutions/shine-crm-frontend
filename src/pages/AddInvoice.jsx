@@ -303,17 +303,17 @@ const AddInvoice = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            ["Invoice Date", "invoiceDate", "date"],
-            ["Due Date", "dueDate", "date"],
-            ["Customer Name", "customerName", "text"],
-            ["Invoice Number", "invoiceNumber", "text"],
-            ["Customer Address", "customerAddress", "text"],
-            ["Customer Phone", "customerPhone", "tel"],
-            ["Customer Email", "customerEmail", "email"],
-            ["Dispatch Through", "dispatchThrough", "text"],
-            ...(formData.isGSTInvoice ? [["Customer GSTIN", "customerGST", "text", true]] : []),
-            ["Customer Aadhar", "customerAadhar", "text"],
-          ].map(([label, name, type, hasLookup], index) => (
+            ["Invoice Date", "invoiceDate", "date", false, "Invoice generation date"],
+            ["Due Date", "dueDate", "date", false, "Payment due date"],
+            ["Customer Name", "customerName", "text", false, "Client or company name"],
+            ["Invoice Number", "invoiceNumber", "text", false, "Auto-generated invoice number"],
+            ["Customer Address", "customerAddress", "text", false, "Complete billing address"],
+            ["Customer Phone", "customerPhone", "tel", false, "10-digit contact number"],
+            ["Customer Email", "customerEmail", "email", false, "billing@client.com"],
+            ["Dispatch Through", "dispatchThrough", "text", false, "Courier service or delivery method"],
+            ...(formData.isGSTInvoice ? [["Customer GSTIN", "customerGST", "text", true, "15-digit GST number (e.g., 09ABCDE1234F1Z5)"]] : []),
+            ["Customer Aadhar", "customerAadhar", "text", false, "12-digit Aadhar number (optional)"],
+          ].map(([label, name, type, hasLookup, placeholder], index) => (
             <motion.div 
               key={name}
               initial={{ opacity: 0, y: 10 }}
@@ -328,6 +328,7 @@ const AddInvoice = () => {
                   name={name}
                   value={formData[name]}
                   onChange={handleChange}
+                  placeholder={placeholder}
                   className={`${hasLookup ? 'flex-1' : 'w-full'} px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3 ${
                     formErrors[name] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
                   }`}
@@ -361,7 +362,7 @@ const AddInvoice = () => {
             name="notes"
             value={formData.notes}
             onChange={handleChange}
-            placeholder="Add optional notes..."
+            placeholder="Payment terms, special instructions, or additional details"
             rows={3}
             className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
           />
@@ -404,6 +405,7 @@ const AddInvoice = () => {
                       type="text"
                       value={row.description}
                       onChange={(e) => handleRowChange(i, "description", e.target.value)}
+                      placeholder="Product/service description"
                       className={`w-full px-2 py-1 border-2 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
                         rowErrors[i]?.description ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
                       }`}
@@ -436,6 +438,7 @@ const AddInvoice = () => {
                         type="number"
                         value={row[field]}
                         onChange={(e) => handleRowChange(i, field, e.target.value)}
+                        placeholder={field === "quantity" ? "Number of items" : field === "price" ? "Rate per item in ₹" : "Discount % (0-100)"}
                         className={`w-full px-2 py-1 border-2 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3 ${
                           rowErrors[i]?.[field] ? "border-red-500" : "border-white/20 dark:border-gray-700/50"
                         }`}

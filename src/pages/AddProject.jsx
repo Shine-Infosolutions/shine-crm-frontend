@@ -107,26 +107,26 @@ function AddProject() {
   };
 
   const formFields = [
-    { label: "Project Name", name: "projectName", type: "text", required: true },
-    { label: "Project Type", name: "projectType", type: "text" },
-    { label: "Project Amount", name: "projectAmount", type: "number" },
-    { label: "Advance Amount", name: "advanceAmount", type: "number" },
-    { label: "Client Name", name: "clientName", type: "text", required: true },
-    { label: "Client Contact", name: "clientContact", type: "text", maxLength: 10 },
-    { label: "Start Date", name: "startDate", type: "date", required: true },
-    { label: "Deadline", name: "deadline", type: "date" },
-    { label: "Handover Date", name: "handoverDate", type: "date" },
-    { label: "Commission To", name: "commissionTo", type: "text" },
-    { label: "Commission Amount", name: "commissionAmount", type: "number" },
-    { label: "Domain", name: "domain", type: "text" },
-    { label: "Domain Purchase Date", name: "domainPurchaseDate", type: "date" },
-    { label: "Domain Cost", name: "domainCost", type: "number" },
-    { label: "Domain Expiry Date", name: "domainExpiryDate", type: "date" },
-    { label: "Renewal Date", name: "renewalDate", type: "date" },
-    { label: "Project Link", name: "projectLink", type: "url" },
-    { label: "Source Code Link", name: "sourceCodeLink", type: "url" },
-    { label: "Email", name: "email", type: "email" },
-    { label: "Password", name: "password", type: "password" },
+    { label: "Project Name", name: "projectName", type: "text", required: true, placeholder: "Enter descriptive project title" },
+    { label: "Project Type", name: "projectType", type: "text", placeholder: "Website, Mobile App, E-commerce, etc." },
+    { label: "Project Amount", name: "projectAmount", type: "number", placeholder: "Total project value in ₹" },
+    { label: "Advance Amount", name: "advanceAmount", type: "number", placeholder: "Amount received upfront in ₹" },
+    { label: "Client Name", name: "clientName", type: "text", required: true, placeholder: "Client or company name" },
+    { label: "Client Contact", name: "clientContact", type: "text", maxLength: 10, placeholder: "10-digit phone number" },
+    { label: "Start Date", name: "startDate", type: "date", required: true, placeholder: "Project kickoff date" },
+    { label: "Deadline", name: "deadline", type: "date", placeholder: "Final delivery date" },
+    { label: "Handover Date", name: "handoverDate", type: "date", placeholder: "Client handover date" },
+    { label: "Commission To", name: "commissionTo", type: "text", placeholder: "Sales person or referrer name" },
+    { label: "Commission Amount", name: "commissionAmount", type: "number", placeholder: "Commission amount in ₹" },
+    { label: "Domain", name: "domain", type: "text", placeholder: "example.com (without www)" },
+    { label: "Domain Purchase Date", name: "domainPurchaseDate", type: "date", placeholder: "When domain was bought" },
+    { label: "Domain Cost", name: "domainCost", type: "number", placeholder: "Domain purchase cost in ₹" },
+    { label: "Domain Expiry Date", name: "domainExpiryDate", type: "date", placeholder: "Domain renewal due date" },
+    { label: "Renewal Date", name: "renewalDate", type: "date", placeholder: "Next renewal date" },
+    { label: "Project Link", name: "projectLink", type: "url", placeholder: "https://live-website-url.com" },
+    { label: "Source Code Link", name: "sourceCodeLink", type: "url", placeholder: "https://github.com/repo-link" },
+    { label: "Email", name: "email", type: "email", placeholder: "admin@clientdomain.com" },
+    { label: "Password", name: "password", type: "password", placeholder: "Admin panel or hosting password" },
   ];
 
   return (
@@ -208,7 +208,7 @@ function AddProject() {
                   pattern={field.name === "clientContact" ? "[0-9]{10}" : undefined}
                   maxLength={field.maxLength}
                   max={field.name === "handoverDate" ? formData.deadline || undefined : undefined}
-                  placeholder={field.name === "clientContact" ? "Enter 10-digit phone number" : undefined}
+                  placeholder={field.placeholder || (field.name === "clientContact" ? "Enter 10-digit phone number" : undefined)}
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
                   required={field.required}
                 />

@@ -358,6 +358,7 @@ const AddEmployee = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    placeholder="Employee's complete legal name"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                     required
                   />
@@ -385,7 +386,7 @@ const AddEmployee = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder={isEditMode ? "Leave blank to keep current password" : ""}
+                    placeholder={isEditMode ? "Leave blank to keep current password" : "Secure login password (min 8 characters)"}
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                     required={!isEditMode}
                   />
@@ -400,6 +401,7 @@ const AddEmployee = () => {
                     name="contact1"
                     value={formData.contact1}
                     onChange={handleChange}
+                    placeholder="10-digit mobile number"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                     required
                   />
@@ -414,6 +416,7 @@ const AddEmployee = () => {
                     name="contact2"
                     value={formData.contact2}
                     onChange={handleChange}
+                    placeholder="Alternative contact number (optional)"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -427,6 +430,7 @@ const AddEmployee = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    placeholder="employee@company.com"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                     required
                   />
@@ -441,6 +445,7 @@ const AddEmployee = () => {
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
+                    placeholder="Complete residential address"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -454,6 +459,7 @@ const AddEmployee = () => {
                     name="aadhar_number"
                     value={formData.aadhar_number}
                     onChange={handleChange}
+                    placeholder="12-digit Aadhar number"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -480,6 +486,7 @@ const AddEmployee = () => {
                     name="pan_number"
                     value={formData.pan_number}
                     onChange={handleChange}
+                    placeholder="10-character PAN (e.g., ABCDE1234F)"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -518,6 +525,7 @@ const AddEmployee = () => {
                     name="work_start_date"
                     value={formData.work_start_date}
                     onChange={handleChange}
+                    placeholder="Employee joining date"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -550,6 +558,7 @@ const AddEmployee = () => {
                     name="designation"
                     value={formData.designation}
                     onChange={handleChange}
+                    placeholder="Job title or role"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -655,6 +664,7 @@ const AddEmployee = () => {
                         name="company_name"
                         value={exp.company_name}
                         onChange={(e) => handleExperienceChange(index, e)}
+                        placeholder="Previous employer name"
                         className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                       />
                     </div>
@@ -667,6 +677,7 @@ const AddEmployee = () => {
                         name="role"
                         value={exp.role}
                         onChange={(e) => handleExperienceChange(index, e)}
+                        placeholder="Previous job designation"
                         className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                       />
                     </div>
@@ -679,6 +690,7 @@ const AddEmployee = () => {
                         name="duration"
                         value={exp.duration}
                         onChange={(e) => handleExperienceChange(index, e)}
+                        placeholder="Employment period (e.g., Jan 2020 - Dec 2022)"
                         className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                       />
                     </div>
@@ -732,6 +744,7 @@ const AddEmployee = () => {
                     name="salary_details.monthly_salary"
                     value={formData.salary_details.monthly_salary}
                     onChange={handleChange}
+                    placeholder="Gross monthly salary in ₹"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -745,6 +758,7 @@ const AddEmployee = () => {
                     name="salary_details.bank_account_number"
                     value={formData.salary_details.bank_account_number}
                     onChange={handleChange}
+                    placeholder="Employee's bank account number"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -758,6 +772,7 @@ const AddEmployee = () => {
                     name="salary_details.ifsc_code"
                     value={formData.salary_details.ifsc_code}
                     onChange={handleChange}
+                    placeholder="Bank IFSC code (e.g., HDFC0001234)"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -771,6 +786,7 @@ const AddEmployee = () => {
                     name="salary_details.bank_name"
                     value={formData.salary_details.bank_name}
                     onChange={handleChange}
+                    placeholder="Name of the bank"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>
@@ -784,6 +800,7 @@ const AddEmployee = () => {
                     name="salary_details.pf_account_number"
                     value={formData.salary_details.pf_account_number}
                     onChange={handleChange}
+                    placeholder="Provident Fund account number"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                   />
                 </div>

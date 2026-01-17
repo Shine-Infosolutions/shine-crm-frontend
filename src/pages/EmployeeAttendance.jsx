@@ -343,6 +343,7 @@ function EmployeeAttendance() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
+              placeholder="Filter by specific date"
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm"
             />
           </div>
@@ -477,7 +478,8 @@ function EmployeeAttendance() {
                       type="time"
                       value={customCheckoutTime}
                       onChange={(e) => setCustomCheckoutTime(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="HH:MM (24-hour format)"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required={isManualCheckout}
                     />
                   </div>
