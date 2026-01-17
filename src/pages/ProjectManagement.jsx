@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import api from '../utils/axiosConfig';
 import Loader from "../components/Loader";
+import Pagination from "../components/Pagination";
 
 function ProjectManagement() {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -12,6 +13,8 @@ function ProjectManagement() {
   const [error, setError] = useState("");
   const [projects, setProjects] = useState([]);
   const [projectFilter, setProjectFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const navigate = useNavigate();
   const { API_URL } = useAppContext();
 
@@ -19,23 +22,27 @@ function ProjectManagement() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/projects`);
-        const sortedProjects = (response.data || []).sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0);
-          const dateB = new Date(b.createdAt || 0);
-          return dateB - dateA;
-        });
-        setProjects(sortedProjects);
+        const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
+        if (response.data.success) {
+          setProjects(response.data.data || []);
+          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          const sortedProjects = (response.data || []).sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+          });
+          setProjects(sortedProjects);
+        }
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching projects:", err);
         setError("Failed to load projects. Please try again.");
         setLoading(false);
       }
     };
   
     fetchProjects();
-  }, []);
+  }, [currentPage]);
   
 
   // Calculate progress based on start date and deadline only
@@ -309,6 +316,19 @@ function ProjectManagement() {
           )}
         </motion.div>
 
+        {/* Pagination */}
+        {!loading && pagination.pages > 1 && (
+          <div className="mb-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pagination.pages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={pagination.limit}
+              totalItems={pagination.total}
+            />
+          </div>
+        )}
+
         {/* Project Details Section - Shows when a project is selected */}
         <AnimatePresence>
           {selectedProject !== null && (
@@ -380,8 +400,8 @@ function ProjectManagement() {
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Project Amount
                       </p>
-                      <p className="font-medium">${project.projectAmount}</p>
-                      <p className="text-sm">Advance: ${project.advanceAmount}</p>
+                      <p className="font-medium">₹{parseFloat(project.projectAmount || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-sm">Advance: ₹{parseFloat(project.advanceAmount || 0).toLocaleString('en-IN')}</p>
                     </div>
 
                     <div>
@@ -415,7 +435,7 @@ function ProjectManagement() {
                       <p className="font-medium">
                         {project.commissionTo || "Not specified"}
                       </p>
-                      <p className="text-sm">${project.commissionAmount || 0}</p>
+                      <p className="text-sm">₹{parseFloat(project.commissionAmount || 0).toLocaleString('en-IN')}</p>
                     </div>
 
                     <div>
@@ -434,7 +454,7 @@ function ProjectManagement() {
                         </p>
                       )}
                       {project.domainCost && (
-                        <p className="text-sm">Cost: ${project.domainCost}</p>
+                        <p className="text-sm">Cost: ₹{parseFloat(project.domainCost || 0).toLocaleString('en-IN')}</p>
                       )}
                       {project.domainExpiryDate && (
                         <p className="text-sm">

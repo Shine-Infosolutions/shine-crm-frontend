@@ -18,7 +18,6 @@
 //           setSubmitted(true);
 //         }
 //       } catch (err) {
-//         console.error("Error fetching policy status:", err);
 //       } finally {
 //         setLoading(false);
 //       }
@@ -35,7 +34,6 @@
 //       await axios.post(`${API_URL}/api/employees/${employeeId}/accept-policy`, { signature });
 //       setSubmitted(true);
 //     } catch (error) {
-//       console.error("Submission error:", error);
 //       alert("Submission failed.");
 //     }
 //   };

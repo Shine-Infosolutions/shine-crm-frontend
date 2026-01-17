@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import Pagination from "../components/Pagination";
+import axiosInstance from "../utils/axiosConfig";
 import { useLocation } from "react-router-dom";
 import Loader from "../components/Loader";
 
 function EmployeeManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [employees, setEmployees] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedExperience, setSelectedExperience] = useState(null);
@@ -21,21 +24,14 @@ function EmployeeManagement() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/employees`);
+      const response = await axiosInstance.get(`/api/employees?page=${currentPage}&limit=${pagination.limit}`);
       if (response.data?.success) {
-        const data = response.data.data;
-        const employeeArray = Array.isArray(data) ? data : data.employees || [];
-  
-        // Sort employees by createdAt (latest first)
-        const sortedEmployees = employeeArray.sort(
-          (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
-        );         
-        setEmployees(sortedEmployees);
+        setEmployees(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
       } else {
         throw new Error(response.data?.message || "Failed to load employees");
       }
     } catch (err) {
-      console.error("Error fetching employees:", err);
       setError(err.message || "Failed to load employees");
     } finally {
       setLoading(false);
@@ -45,7 +41,7 @@ function EmployeeManagement() {
 
   useEffect(() => {
     fetchEmployees();
-  }, [location.key]);
+  }, [currentPage]);
 
   useEffect(() => {
     document.body.style.overflow =
@@ -285,6 +281,19 @@ function EmployeeManagement() {
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
 
       {/* Error message for toggle */}
       {toggleError && (

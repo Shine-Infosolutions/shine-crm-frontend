@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import api from "../utils/axiosConfig";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -8,7 +9,7 @@ function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, API_URL } = useAppContext();
+  const { login } = useAppContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,55 +17,21 @@ function Login() {
     setIsLoading(true);
 
     try {
-      // Check employee login first
-      const employeeResponse = await fetch(`${API_URL}/api/employees`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await api.post('/api/auth/login', {
+        email,
+        password
       });
-
-      if (employeeResponse.ok) {
-        const employeeData = await employeeResponse.json();
-
-        if (employeeData.success && employeeData.data) {
-          const employee = employeeData.data.find(
-            (emp) => emp.email === email && emp.password === password
-          );
-
-          if (employee) {
-            const userData = {
-              id: employee._id,
-              email: employee.email,
-              name: employee.name,
-              role: "employee",
-            };
-            login(userData);
-            navigate("/leads");
-            return;
-          }
-        }
-      }
-
-      // If not employee, try admin login
-      const adminResponse = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const adminData = await adminResponse.json();
-
-      if (adminResponse.ok) {
-        login(adminData.user || adminData);
-        navigate("/");
+      
+      const data = response.data;
+      login(data.user, data.token);
+      
+      if (data.user.role === 'employee') {
+        navigate("/attendance");
       } else {
-        throw new Error("Invalid credentials");
+        navigate("/");
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.response?.data?.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }

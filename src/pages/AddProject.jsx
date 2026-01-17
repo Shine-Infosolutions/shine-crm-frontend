@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from '../utils/axiosConfig';
 import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
 
@@ -86,18 +86,17 @@ function AddProject() {
     try {
       if (isEditing) {
         // Update existing project
-        await axios.put(
-          `${API_URL}/api/projects/${projectToEdit._id}`,
+        await api.put(
+          `/api/projects/${projectToEdit._id}`,
           formData
         );
       } else {
         // Create new project
-        await axios.post(`${API_URL}/api/projects`, formData);
+        await api.post(`/api/projects`, formData);
       }
 
       navigate("/projects");
     } catch (err) {
-      console.error("Error saving project:", err);
       setError(
         err.response?.data?.message ||
           "Failed to save project. Please try again."

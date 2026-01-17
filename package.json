@@ -1,14 +1,19 @@
 {
-  "name": "client",
+  "name": "shine-crm-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Shine CRM Frontend Application",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext js,jsx --fix",
+    "preview": "vite preview",
+    "start": "vite preview"
   },
+  "keywords": ["crm", "react", "vite", "tailwindcss"],
+  "author": "Shine Infosolutions",
   "dependencies": {
     "@tailwindcss/vite": "^4.1.8",
     "@tinymce/tinymce-react": "^6.3.0",
@@ -38,5 +43,9 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
     "vite": "^6.3.5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

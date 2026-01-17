@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import { useLocation } from "react-router-dom";
+import axiosInstance from "../utils/axiosConfig";
 
 const AddEmployee = () => {
   const { API_URL, navigate } = useAppContext();
@@ -12,7 +13,6 @@ const AddEmployee = () => {
   const [employeeId, setEmployeeId] = useState(null);
 
   const [formData, setFormData] = useState({
-    employee_id: "",
     name: "",
     profile_image: null,
     password: "",
@@ -65,19 +65,43 @@ const AddEmployee = () => {
   const fetchEmployeeData = async (id) => {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/api/employees/${id}`);
-      const json = await resp.json();
-      if (!resp.ok || !json.success) throw new Error(json.message);
-      const data = json.data;
+      const resp = await axiosInstance.get(`${API_URL}/api/employees/${id}`);
+      if (!resp.data.success) throw new Error(resp.data.message);
+      const data = resp.data.data;
       setFormData({
-        ...data,
+        name: data.name || "",
         work_start_date: data.work_start_date?.slice(0,10) || "",
         profile_image: data.profile_image || null,
+        password: "",
+        contact1: data.contact1 || "",
+        contact2: data.contact2 || "",
+        email: data.email || "",
+        address: data.address || "",
+        city: data.city || "",
+        state: data.state || "",
+        pincode: data.pincode || "",
+        aadhar_number: data.aadhar_number || "",
         aadhar_document: data.aadhar_document || null,
+        pan_number: data.pan_number || "",
         pan_document: data.pan_document || null,
-        salary_details: { ...data.salary_details },
-        work_experience: data.work_experience.map(exp => ({
-          ...exp,
+        tenure: data.tenure || "",
+        employment_type: data.employment_type || "Full Time",
+        is_current_employee: data.is_current_employee ?? true,
+        designation: data.designation || "",
+        department: data.department || "",
+        reporting_manager: data.reporting_manager || "",
+        employee_status: data.employee_status || "Active",
+        salary_details: {
+          monthly_salary: data.salary_details?.monthly_salary || "",
+          bank_account_number: data.salary_details?.bank_account_number || "",
+          ifsc_code: data.salary_details?.ifsc_code || "",
+          bank_name: data.salary_details?.bank_name || "",
+          pf_account_number: data.salary_details?.pf_account_number || "",
+        },
+        work_experience: (data.work_experience || []).map(exp => ({
+          company_name: exp.company_name || "",
+          role: exp.role || "",
+          duration: exp.duration || "",
           experience_letter: exp.experience_letter || null,
         })),
         documents: {
@@ -85,7 +109,8 @@ const AddEmployee = () => {
           offer_letter: data.documents?.offer_letter || null,
           joining_letter: data.documents?.joining_letter || null,
           other_docs: data.documents?.other_docs || []
-        }
+        },
+        notes: data.notes || "",
       });
     } catch (err) {
       setError(err.message);
@@ -232,30 +257,20 @@ const AddEmployee = () => {
     });
   
     try {
-      const url = isEditMode 
-        ? `${API_URL}/api/employees/${employeeId}` 
-        : `${API_URL}/api/employees`;
+      const res = isEditMode 
+        ? await axiosInstance.put(`${API_URL}/api/employees/${employeeId}`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        : await axiosInstance.post(`${API_URL}/api/employees`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
       
-      const method = isEditMode ? 'PUT' : 'POST';
-      
-      const res = await fetch(url, { 
-        method, 
-        body: fd
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || 'Failed to save employee');
-      }
-      
-      const json = await res.json();
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to save employee');
+      if (!res.data.success) {
+        throw new Error(res.data.message || 'Failed to save employee');
       }
       
       navigate('/employees');
     } catch (err) {
-      console.error('Submission error:', err);
       setError(err.message || 'An error occurred while saving');
     } finally {
       setLoading(false);
@@ -336,20 +351,6 @@ const AddEmployee = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Employee ID
-                  </label>
-                  <input
-                    type="text"
-                    name="employee_id"
-                    value={formData.employee_id}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Full Name
                   </label>
                   <input
@@ -377,15 +378,16 @@ const AddEmployee = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Password
+                    Password {!isEditMode && <span className="text-red-500">*</span>}
                   </label>
                   <input
                     type="password"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
+                    placeholder={isEditMode ? "Leave blank to keep current password" : ""}
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
-                    required
+                    required={!isEditMode}
                   />
                 </div>
 
@@ -427,6 +429,71 @@ const AddEmployee = () => {
                     onChange={handleChange}
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Aadhar Number
+                  </label>
+                  <input
+                    type="text"
+                    name="aadhar_number"
+                    value={formData.aadhar_number}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Aadhar Document
+                  </label>
+                  <input
+                    type="file"
+                    name="aadhar_document"
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    PAN Number
+                  </label>
+                  <input
+                    type="text"
+                    name="pan_number"
+                    value={formData.pan_number}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    PAN Document
+                  </label>
+                  <input
+                    type="file"
+                    name="pan_document"
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                    accept=".pdf,.jpg,.jpeg,.png"
                   />
                 </div>
               </div>
@@ -502,6 +569,223 @@ const AddEmployee = () => {
                     <option value="Resigned">Resigned</option>
                     <option value="Terminated">Terminated</option>
                   </select>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Documents Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.25 }}
+            >
+              <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200/50 dark:border-gray-700/50 text-gray-900 dark:text-white">
+                Documents
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Resume
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleDocumentChange('resume', e)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                    accept=".pdf,.doc,.docx"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Offer Letter
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleDocumentChange('offer_letter', e)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                    accept=".pdf,.doc,.docx"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Joining Letter
+                  </label>
+                  <input
+                    type="file"
+                    onChange={(e) => handleDocumentChange('joining_letter', e)}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                    accept=".pdf,.doc,.docx"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Other Documents
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleOtherDocsChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Work Experience Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200/50 dark:border-gray-700/50 text-gray-900 dark:text-white">
+                Work Experience
+              </h3>
+              {formData.work_experience.map((exp, index) => (
+                <div key={index} className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        name="company_name"
+                        value={exp.company_name}
+                        onChange={(e) => handleExperienceChange(index, e)}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Role
+                      </label>
+                      <input
+                        type="text"
+                        name="role"
+                        value={exp.role}
+                        onChange={(e) => handleExperienceChange(index, e)}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Duration
+                      </label>
+                      <input
+                        type="text"
+                        name="duration"
+                        value={exp.duration}
+                        onChange={(e) => handleExperienceChange(index, e)}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Experience Letter
+                      </label>
+                      <input
+                        type="file"
+                        name="experience_letter"
+                        onChange={(e) => handleExperienceChange(index, e)}
+                        className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                        accept=".pdf,.doc,.docx"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeExperience(index)}
+                    className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addExperience}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Add Experience
+              </button>
+            </motion.div>
+
+            {/* Salary Details Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.35 }}
+            >
+              <h3 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200/50 dark:border-gray-700/50 text-gray-900 dark:text-white">
+                Salary Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Monthly Salary
+                  </label>
+                  <input
+                    type="number"
+                    name="salary_details.monthly_salary"
+                    value={formData.salary_details.monthly_salary}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Bank Account Number
+                  </label>
+                  <input
+                    type="text"
+                    name="salary_details.bank_account_number"
+                    value={formData.salary_details.bank_account_number}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    IFSC Code
+                  </label>
+                  <input
+                    type="text"
+                    name="salary_details.ifsc_code"
+                    value={formData.salary_details.ifsc_code}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Bank Name
+                  </label>
+                  <input
+                    type="text"
+                    name="salary_details.bank_name"
+                    value={formData.salary_details.bank_name}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    PF Account Number
+                  </label>
+                  <input
+                    type="text"
+                    name="salary_details.pf_account_number"
+                    value={formData.salary_details.pf_account_number}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+                  />
                 </div>
               </div>
             </motion.div>

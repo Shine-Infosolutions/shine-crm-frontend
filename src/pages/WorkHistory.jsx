@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
 
+import api from '../utils/axiosConfig';
 function WorkHistory() {
   const { currentUser, API_URL } = useAppContext();
   const [workHistory, setWorkHistory] = useState([]);
@@ -12,7 +13,7 @@ function WorkHistory() {
 
   const isEmployee = currentUser?.role === "employee";
   useEffect(() => {
-    if (currentUser?.id) {
+    if (currentUser?._id) {
       loadWorkHistory();
       loadTasks();
     } else {
@@ -22,27 +23,26 @@ function WorkHistory() {
 
   const loadTasks = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser.id}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await api.get(`/api/tasks/employee/${currentUser._id}`);
+      if (response.status === 200) {
+        const data = response.data;
         setTasks(data.data || data.tasks || []);
       }
     } catch (error) {
-      console.error("Error loading tasks:", error);
     }
   };
   const loadWorkHistory = async () => {
     setLoading(true);
     try {
       // Try API first
-      const response = await fetch(`${API_URL}/api/employee-timesheet`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await api.get('/api/employee-timesheet');
+      if (response.status === 200) {
+        const data = response.data;
         const timesheets = data.timesheets || data.data || [];
         
         // Filter for current employee
         const employeeTimesheets = timesheets.filter(
-          record => record.employee_id === currentUser.id
+          record => record.employee_id === currentUser._id
         );
         
         employeeTimesheets.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -54,7 +54,7 @@ function WorkHistory() {
       } else {
         // Fallback to localStorage
         const localStorageKeys = Object.keys(localStorage).filter(key =>
-          key.startsWith(`timesheet_${currentUser.id}_`)
+          key.startsWith(`timesheet_${currentUser._id}_`)
         );
         
         const localRecords = [];
@@ -63,7 +63,6 @@ function WorkHistory() {
             const data = JSON.parse(localStorage.getItem(key));
             localRecords.push(data);
           } catch (e) {
-            console.warn(`Invalid localStorage data for key: ${key}`);
           }
         });
         
@@ -75,7 +74,6 @@ function WorkHistory() {
         }
       }
     } catch (error) {
-      console.error("Error loading work history:", error);
       setError("Failed to load work history");
     } finally {
       setLoading(false);

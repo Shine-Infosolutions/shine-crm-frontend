@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-
+import Pagination from "../components/Pagination";
+import api from '../utils/axiosConfig';
 function TasksManagement() {
   const { currentUser, API_URL } = useAppContext();
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ function TasksManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -22,24 +25,17 @@ function TasksManagement() {
   const isAdmin = currentUser?.role !== "employee";
 
   useEffect(() => {
-    console.log("TasksManagement useEffect triggered");
-    console.log("currentUser:", currentUser);
-    console.log("isAdmin:", isAdmin);
     
     if (currentUser?._id || currentUser?.id) {
-      console.log("User ID exists, proceeding...");
       if (isAdmin) {
-        console.log("User is admin, loading employees and tasks");
         loadEmployees();
         loadTasks();
       } else {
-        console.log("User is employee, loading my tasks");
         loadMyTasks();
       }
     } else {
-      console.log("No user ID found");
     }
-  }, [currentUser, isAdmin]);
+  }, [currentUser, isAdmin, currentPage]);
 
   // Add visibility change listener to refresh tasks when page becomes visible
   useEffect(() => {
@@ -55,27 +51,19 @@ function TasksManagement() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentUser, isAdmin]);
+  }, [currentUser, isAdmin, currentPage]);
 
   const loadEmployees = async () => {
     try {
-      console.log("API_URL:", API_URL);
-      console.log("Loading employees from:", `${API_URL}/api/employees`);
-      const response = await fetch(`${API_URL}/api/employees`);
-      console.log("Employee response status:", response.status);
+      const response = await api.get('/api/employees');
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Employee response data:", data);
-        console.log("Employees array:", data.data);
+      if (response.status === 200) {
+        const data = response.data;
         setEmployees(data.data || []);
       } else {
-        const errorText = await response.text();
-        console.error("Failed to load employees:", response.status, errorText);
         setEmployees([]);
       }
     } catch (error) {
-      console.error("Error loading employees:", error);
       setEmployees([]);
     }
   };
@@ -83,18 +71,21 @@ function TasksManagement() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks`);
+      const response = await api.get(`/api/tasks?page=${currentPage}&limit=10`);
       
-      if (response.ok) {
-        const data = await response.json();
-        const taskList = data.data || data.tasks || [];
-        setTasks(Array.isArray(taskList) ? taskList : []);
+      if (response.status === 200) {
+        const data = response.data;
+        if (data.success) {
+          setTasks(data.data || []);
+          setPagination(data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          const taskList = data.data || data.tasks || [];
+          setTasks(Array.isArray(taskList) ? taskList : []);
+        }
       } else {
-        console.error('Failed to load tasks:', response.status);
         setTasks([]);
       }
     } catch (error) {
-      console.error("Error loading tasks:", error);
       setTasks([]);
     } finally {
       setLoading(false);
@@ -104,18 +95,21 @@ function TasksManagement() {
   const loadMyTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser._id || currentUser.id}`);
+      const response = await api.get(`/api/tasks/employee/${currentUser._id || currentUser.id}?page=${currentPage}&limit=10`);
       
-      if (response.ok) {
-        const data = await response.json();
-        const taskList = data.data || data.tasks || [];
-        setTasks(Array.isArray(taskList) ? taskList : []);
+      if (response.status === 200) {
+        const data = response.data;
+        if (data.success) {
+          setTasks(data.data || []);
+          setPagination(data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          const taskList = data.data || data.tasks || [];
+          setTasks(Array.isArray(taskList) ? taskList : []);
+        }
       } else {
-        console.error('Failed to load my tasks:', response.status);
         setTasks([]);
       }
     } catch (error) {
-      console.error("Error loading my tasks:", error);
       setTasks([]);
     } finally {
       setLoading(false);
@@ -145,7 +139,6 @@ function TasksManagement() {
         alert(data.message || "Failed to update task status");
       }
     } catch (error) {
-      console.error("Error updating task status:", error);
       alert("Error updating task status");
     }
   };
@@ -181,7 +174,6 @@ function TasksManagement() {
         alert(data.message || "Failed to update task");
       }
     } catch (error) {
-      console.error("Error updating task:", error);
       alert("Error updating task");
     }
   };
@@ -242,9 +234,8 @@ function TasksManagement() {
           }),
         });
 
-        const data = await response.json();
-        
         if (response.ok) {
+          const data = await response.json();
           alert(data.message || "Task assigned successfully!");
           setFormData({
             title: "",
@@ -256,11 +247,11 @@ function TasksManagement() {
           setShowForm(false);
           loadTasks();
         } else {
+          const data = await response.json();
           alert(data.message || "Failed to assign task");
         }
       }
     } catch (error) {
-      console.error("Error with task:", error);
       alert("Error with task. Please check your connection.");
     } finally {
       setLoading(false);
@@ -498,6 +489,19 @@ function TasksManagement() {
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
 
       {/* Task Detail Modal - For Employees */}
       {selectedTask && (

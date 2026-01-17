@@ -3,6 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import { toast } from 'react-toastify';
 import AdminTimesheetView from '../components/AdminTimesheetView';
 
+import api from '../utils/axiosConfig';
 function EmployeeTimesheet() {
   const { currentUser, API_URL } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(
@@ -41,42 +42,47 @@ function EmployeeTimesheet() {
   };
 
   useEffect(() => {
-    if (currentUser?.id && !isAdmin) {
+    if (currentUser?._id && !isAdmin) {
       loadTimesheet();
       loadTasks();
+    } else if (!isAdmin) {
+      initializeTimeEntries();
     }
-  }, [selectedDate, currentUser?.id]);
+  }, [selectedDate, currentUser?._id]);
+
+  // Force initialization on component mount
+  useEffect(() => {
+    if (!isAdmin && timeEntries.length === 0) {
+      initializeTimeEntries();
+    }
+  }, [isAdmin]);
 
   if (isAdmin) {
     return <AdminTimesheetView />;
   }
 
   const loadTimesheet = async () => {
-    const timesheetKey = `timesheet_${currentUser?.id}_${selectedDate}`;
+    const timesheetKey = `timesheet_${currentUser?._id}_${selectedDate}`;
     const savedTimesheet = localStorage.getItem(timesheetKey);
 
     try {
-      const response = await fetch(`${API_URL}/api/employee-timesheet`);
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = await response.json();
-          const apiRecord = data.timesheets?.find(
-            (record) =>
-              record.employee_id === currentUser?.id &&
-              new Date(record.date).toDateString() ===
-                new Date(selectedDate).toDateString()
-          );
+      const response = await api.get('/api/employee-timesheet');
+      if (response.status === 200) {
+        const data = response.data;
+        const apiRecord = data.timesheets?.find(
+          (record) =>
+            record.employee_id === currentUser?._id &&
+            new Date(record.date).toDateString() ===
+              new Date(selectedDate).toDateString()
+        );
 
-          if (apiRecord) {
-            setTimeEntries(apiRecord.time_entries || []);
-            setTimesheetStatus(apiRecord.status || "Draft");
-            return;
-          }
+        if (apiRecord) {
+          setTimeEntries(apiRecord.time_entries || []);
+          setTimesheetStatus(apiRecord.status || "Draft");
+          return;
         }
       }
     } catch (error) {
-      console.log("API check failed, using localStorage", error);
     }
 
     if (savedTimesheet) {
@@ -85,7 +91,6 @@ function EmployeeTimesheet() {
         setTimeEntries(data.time_entries || []);
         setTimesheetStatus(data.status || "Draft");
       } catch (error) {
-        console.error("Error parsing saved timesheet:", error);
         initializeTimeEntries();
       }
     } else {
@@ -94,70 +99,55 @@ function EmployeeTimesheet() {
   };
 
   const loadTasks = async () => {
-    if (!currentUser?.id) {
-      console.log('No current user ID found');
+    if (!currentUser?._id) {
       return;
     }
     
-    console.log('Loading tasks for user:', currentUser.id);
     
     try {
       // Load available tasks
-      const availableResponse = await fetch(`${API_URL}/api/tasks/available`);
-      console.log('Available tasks response status:', availableResponse.status);
+      const availableResponse = await api.get('/api/tasks/available');
       
-      if (availableResponse.ok) {
-        const availableData = await availableResponse.json();
-        console.log('Available tasks data:', availableData);
+      if (availableResponse.status === 200) {
+        const availableData = availableResponse.data;
         const availableList = availableData?.data || availableData?.tasks || availableData || [];
         setAvailableTasks(Array.isArray(availableList) ? availableList : []);
-        console.log('Set available tasks:', availableList);
       } else {
-        console.error('Failed to load available tasks:', availableResponse.status);
         setAvailableTasks([]);
       }
 
       // Load assigned tasks
-      const assignedResponse = await fetch(`${API_URL}/api/tasks/employee/${currentUser.id}`);
-      console.log('Assigned tasks response status:', assignedResponse.status);
+      const assignedResponse = await api.get(`/api/tasks/employee/${currentUser._id}`);
       
-      if (assignedResponse.ok) {
-        const assignedData = await assignedResponse.json();
-        console.log('Assigned tasks data:', assignedData);
+      if (assignedResponse.status === 200) {
+        const assignedData = assignedResponse.data;
         const assignedList = assignedData?.data || assignedData?.tasks || assignedData || [];
         setAssignedTasks(Array.isArray(assignedList) ? assignedList : []);
-        console.log('Set assigned tasks:', assignedList);
       } else {
-        console.error('Failed to load assigned tasks:', assignedResponse.status);
         setAssignedTasks([]);
       }
     } catch (error) {
-      console.error("Error loading tasks:", error);
       setAvailableTasks([]);
       setAssignedTasks([]);
     }
   };
 
   const takeTask = async (taskId) => {
-    if (!currentUser?.id || !taskId) {
+    if (!currentUser?._id || !taskId) {
       toast.error("Invalid user or task");
       return;
     }
     
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/take`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          employee_id: currentUser.id,
-          employee_name: currentUser.name || currentUser.email,
-          status: "In Progress",
-          taken_at: new Date().toISOString()
-        })
+      const response = await api.patch(`/api/tasks/${taskId}/take`, { 
+        employee_id: currentUser._id,
+        employee_name: currentUser.name || currentUser.email,
+        status: "In Progress",
+        taken_at: new Date().toISOString()
       });
       
-      if (response.ok) {
-        const responseData = await response.json();
+      if (response.status === 200) {
+        const responseData = response.data;
         toast.success("Task taken successfully and assigned to you");
         
         // Reload tasks to update both available and assigned lists
@@ -165,13 +155,11 @@ function EmployeeTimesheet() {
         setShowTaskModal(false);
         
         // Log for admin visibility
-        console.log(`Task ${taskId} taken by employee ${currentUser.name || currentUser.email}`);
       } else {
-        const errorData = await response.json();
+        const errorData = response.data;
         toast.error(errorData.message || "Failed to take task");
       }
     } catch (error) {
-      console.error("Take task error:", error);
       toast.error("Error taking task");
     }
   };
@@ -190,9 +178,9 @@ function EmployeeTimesheet() {
   };
 
   const saveToLocalStorage = (entries, status = timesheetStatus) => {
-    const timesheetKey = `timesheet_${currentUser?.id}_${selectedDate}`;
+    const timesheetKey = `timesheet_${currentUser?._id}_${selectedDate}`;
     const timesheetData = {
-      employee_id: currentUser?.id,
+      employee_id: currentUser?._id,
       employee_name: currentUser?.name,
       date: selectedDate,
       time_entries: entries,
@@ -220,7 +208,7 @@ function EmployeeTimesheet() {
   };
 
   const submitProject = async () => {
-    if (!currentUser?.id) {
+    if (!currentUser?._id) {
       toast.error("User information not found. Please login again.");
       return;
     }
@@ -237,7 +225,7 @@ function EmployeeTimesheet() {
     setLoading(true);
     try {
       const timesheetData = {
-        employee_id: currentUser.id,
+        employee_id: currentUser._id,
         employee_name: currentUser.name || currentUser.email,
         date: selectedDate,
         time_entries: timeEntries,
@@ -248,25 +236,18 @@ function EmployeeTimesheet() {
         status: "Submitted",
       };
 
-      const response = await fetch(`${API_URL}/api/employee-timesheet`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(timesheetData),
-      });
+      const response = await api.post('/api/employee-timesheet', timesheetData);
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 201) {
         setTimesheetStatus("Submitted");
-        const timesheetKey = `timesheet_${currentUser.id}_${selectedDate}`;
+        const timesheetKey = `timesheet_${currentUser._id}_${selectedDate}`;
         localStorage.removeItem(timesheetKey);
         toast.success("Project submitted successfully");
       } else {
-        const errorData = await response.json();
+        const errorData = response.data;
         toast.error(errorData.message || "Failed to submit timesheet");
       }
     } catch (error) {
-      console.error("Submit error:", error);
       toast.error("Network error occurred");
     } finally {
       setLoading(false);

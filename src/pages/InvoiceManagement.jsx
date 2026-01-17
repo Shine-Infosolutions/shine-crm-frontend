@@ -3,33 +3,36 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
-import Loader from "../components/Loader"; 
+import api from "../utils/axiosConfig";
+import Loader from "../components/Loader";
+import Pagination from "../components/Pagination"; 
 
 const InvoiceManagement = () => {
   const { API_URL } = useAppContext();
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true); 
-  const [error, setError] = useState(null); 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 }); 
 
   const fetchInvoices = async () => {
     try {
-      const res = await axios.get(`${API_URL}/api/invoices/all`);
+      const res = await api.get(`/api/invoices/all?page=${currentPage}&limit=10`);
       if (res.data?.success) {
-        const sorted = (res.data.data || []).sort((a, b) => {
+        setInvoices(res.data.data || []);
+        setPagination(res.data.pagination || { total: 0, pages: 0, limit: 10 });
+      } else {
+        const sorted = (res.data || []).sort((a, b) => {
           const aDate = new Date(a.created_at || parseInt(a._id.substring(0, 8), 16) * 1000);
           const bDate = new Date(b.created_at || parseInt(b._id.substring(0, 8), 16) * 1000);
           return bDate - aDate;
         });
         setInvoices(sorted);
-      } else {
-        throw new Error(res.data?.message || "Failed to load invoices");
       }
     } catch (err) {
-      console.error("Error fetching invoices:", err);
-      setError(err.message || "Failed to load invoices");
+      setError(err.response?.data?.message || err.message || "Failed to load invoices");
     } finally {
       setLoading(false);
     }
@@ -38,12 +41,12 @@ const InvoiceManagement = () => {
 
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [currentPage]);
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this invoice?")) {
       try {
-        await axios.delete(`${API_URL}/api/invoices/delete/${id}`);
+        await api.delete(`/api/invoices/delete/${id}`);
         fetchInvoices();
       } catch (err) {
         alert("Failed to delete invoice");
@@ -175,6 +178,19 @@ const InvoiceManagement = () => {
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
     </div>
   );
 };

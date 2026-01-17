@@ -8,6 +8,7 @@ import Loader from "../components/Loader";
 import { motion } from "framer-motion";
 
 
+import api from '../utils/axiosConfig';
 const CreateInvoice = () => {
   const { id } = useParams();
   const { API_URL } = useAppContext();
@@ -25,8 +26,8 @@ const CreateInvoice = () => {
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/invoices/mono/${id}`);
-        const data = await response.json();
+        const response = await api.get(`/api/invoices/mono/${id}`);
+        const data = response.data;
         if (data.success) {
           setInvoice(data.data);
           setNotes(data.data.notes || '');
@@ -66,13 +67,14 @@ const CreateInvoice = () => {
     contentRef: componentRef,
     documentTitle: `Invoice-${invoice?.invoiceNumber || "Invoice"}`,
     removeAfterPrint: true,
-    onAfterPrint: () => console.log("🖨️ Printed successfully"),
     pageStyle: `
-      @page { size: A4 portrait; margin: 5mm; }
+      @page { size: A4 portrait; margin: 10mm; }
       @media print {
-        html, body { margin:0; padding:24px; -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
-        #print-root, #root { box-sizing:border-box; }
+        html, body { margin:0; padding:0; -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
+        #print-root { box-sizing:border-box; width:100%; height:auto; page-break-inside: avoid; }
         .no-print { display:none!important; }
+        * { page-break-inside: avoid; }
+        .page-break { page-break-before: always; }
       }
     `,
   });
@@ -147,7 +149,7 @@ const CreateInvoice = () => {
           id="print-root" 
           className="overflow-x-auto"
         >
-        <div className="border-2 border-black max-w-full md:max-w-5xl mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white/90 backdrop-blur-xl">
+        <div className="border-2 border-black max-w-full mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white print:bg-white" style={{maxWidth: '210mm', minHeight: 'auto'}}>
           {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -366,7 +368,7 @@ const CreateInvoice = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add your notes here..."
-              className="w-full min-h-[300px] p-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-none"
+              className="w-full min-h-[300px] p-4 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
               style={{ 
                 fontFamily: 'Helvetica, Arial, sans-serif', 
                 fontSize: '14px',
@@ -384,16 +386,14 @@ const CreateInvoice = () => {
                 Cancel
               </button>
               <button
-onClick={async () => {
+                onClick={async () => {
                   setSaving(true);
                   try {
-                    await fetch(`${API_URL}/api/invoices/${id}/notes`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ notes })
-                    });
+                    const response = await api.put(`/api/invoices/${id}/notes`, { notes });
+                    if (response.data.success) {
+                      setInvoice(prev => ({ ...prev, notes }));
+                    }
                   } catch (error) {
-                    console.log('Notes saved locally only');
                   }
                   setShowNotesEditor(false);
                   setShowNotesInInvoice(true);

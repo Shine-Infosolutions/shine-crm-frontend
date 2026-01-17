@@ -1,71 +1,88 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { isTokenExpired, clearAuthData } from "../utils/tokenUtils";
 
 const AppContext = createContext();
-
-const API_URL = "https://shine-crm-backend.vercel.app";
+const API_URL = "http://localhost:5000";
 
 export function AppProvider({ children }) {
-  // State variables for the admin dashboard
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     const savedDark = localStorage.getItem("darkMode");
-    if (savedDark !== null) return savedDark === "true";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return savedDark !== null ? savedDark === "true" : window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   const navigate = useNavigate();
 
-  // Check for saved user and theme on initial load
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
-    if (savedUser) {
+    const savedToken = localStorage.getItem("token");
+    
+    if (savedUser && savedToken) {
+      if (isTokenExpired(savedToken)) {
+        clearAuthData();
+        navigate('/login');
+        return;
+      }
+      
       try {
         setCurrentUser(JSON.parse(savedUser));
-      } catch {
-        localStorage.removeItem("user");
+        setToken(savedToken);
+      } catch (error) {
+        clearAuthData();
+        navigate('/login');
       }
     }
-  }, []);
+  }, [navigate]);
 
-  // Apply or remove dark class on <html>
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
-  // Functions to manipulate state
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const login = (userData) => {
+  const login = (userData, authToken) => {
     setCurrentUser(userData);
+    setToken(authToken);
     localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", authToken);
   };
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem("user");
+    setToken(null);
+    clearAuthData();
+    navigate('/login');
   };
 
-  // Values to be provided to consumers
+  const getAuthHeaders = () => {
+    const authToken = token || localStorage.getItem('token');
+    if (!authToken) return {};
+    
+    if (isTokenExpired(authToken)) {
+      logout();
+      return {};
+    }
+    
+    return { Authorization: `Bearer ${authToken}` };
+  };
+
   const contextValue = {
     API_URL,
-    // State
     sidebarOpen,
     currentUser,
+    token,
     darkMode,
-    // Functions
     navigate,
     toggleSidebar,
     toggleDarkMode,
     login,
     logout,
+    getAuthHeaders,
   };
 
   return (
@@ -73,7 +90,6 @@ export function AppProvider({ children }) {
   );
 }
 
-// Custom hook for using the context
 export function useAppContext() {
   const context = useContext(AppContext);
   if (!context) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
+import api from '../utils/axiosConfig';
 
 function TaskAssignment() {
   const { currentUser, API_URL } = useAppContext();
@@ -24,32 +25,22 @@ function TaskAssignment() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/employees`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Employees data:', data);
-        const employeeList = data.data || data.employees || data || [];
-        setEmployees(Array.isArray(employeeList) ? employeeList : []);
-      }
+      const response = await api.get('/api/employees');
+      const data = response.data;
+      const employeeList = data.data || data.employees || data || [];
+      setEmployees(Array.isArray(employeeList) ? employeeList : []);
     } catch (error) {
-      console.error('Error loading employees:', error);
       setEmployees([]);
     }
   };
 
   const loadTasks = async () => {
     try {
-      console.log('Loading tasks from:', `${API_URL}/api/tasks`);
-      const response = await fetch(`${API_URL}/api/tasks`);
-      console.log('Response status:', response.status);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Tasks data received:', data);
-        const taskList = data.data || data.tasks || data || [];
-        setTasks(Array.isArray(taskList) ? taskList : []);
-      }
+      const response = await api.get('/api/tasks');
+      const data = response.data;
+      const taskList = data.data || data.tasks || data || [];
+      setTasks(Array.isArray(taskList) ? taskList : []);
     } catch (error) {
-      console.error('Error loading tasks:', error);
       setTasks([]);
     }
   };
@@ -57,7 +48,6 @@ function TaskAssignment() {
   const assignTask = async (e) => {
     e.preventDefault();
     
-    console.log('Current user:', currentUser);
     
     if (!currentUser?.id && !currentUser?._id) {
       toast.error('User not found. Please login again.');
@@ -77,52 +67,34 @@ function TaskAssignment() {
         delete taskData.assigned_to;
       }
       
-      console.log('Task data being sent:', taskData);
       
-      const response = await fetch(`${API_URL}/api/tasks/assign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(taskData)
+      const response = await api.post('/api/tasks/assign', taskData);
+      const result = response.data;
+      toast.success('Task assigned successfully');
+      setShowAssignModal(false);
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'Medium',
+        due_date: '',
+        assigned_to: '',
+        make_available: true
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Task created:', result);
-        toast.success('Task assigned successfully');
-        setShowAssignModal(false);
-        setFormData({
-          title: '',
-          description: '',
-          priority: 'Medium',
-          due_date: '',
-          assigned_to: '',
-          make_available: true
-        });
-        await loadTasks();
-        console.log('Tasks after reload:', tasks);
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || 'Failed to assign task');
-      }
+      await loadTasks();
     } catch (error) {
-      toast.error('Error assigning task');
+      toast.error(error.response?.data?.message || 'Error assigning task');
     }
     setLoading(false);
   };
 
   const getTasksByEmployee = async (employeeId) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/employee/${employeeId}`);
-      if (response.ok) {
-        const data = await response.json();
-        return data.tasks || [];
-      }
+      const response = await api.get(`/api/tasks/employee/${employeeId}`);
+      const data = response.data;
+      return data.tasks || [];
     } catch (error) {
-      console.error('Error loading employee tasks:', error);
+      return [];
     }
-    return [];
   };
 
   const getPriorityColor = (priority) => {

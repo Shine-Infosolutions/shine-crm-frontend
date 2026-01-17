@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import api from "../utils/axiosConfig";
 import Loader from "../components/Loader";
 import DigitalSignature from "../components/DigitalSignature";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,6 +14,8 @@ function ContractManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [editableContent, setEditableContent] = useState('');
   const [savingContent, setSavingContent] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const editorRef = useRef(null);
   const { navigate, API_URL, currentUser } = useAppContext();
 
@@ -22,12 +24,19 @@ function ContractManagement() {
   useEffect(() => {
     const fetchContracts = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/employees`);
-        let contractData = response.data.data || [];
+        const response = await api.get(`/api/employees?page=${currentPage}&limit=10`);
+        let contractData;
+        
+        if (response.data.success) {
+          contractData = response.data.data || [];
+          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          contractData = response.data.data || [];
+        }
 
         if (isEmployee) {
           contractData = contractData.filter(
-            (emp) => emp._id === currentUser.id
+            (emp) => emp._id === currentUser._id
           );
         }
 
@@ -36,28 +45,28 @@ function ContractManagement() {
             new Date(b.created_at || b._id.toString().substring(0, 8)) -
             new Date(a.created_at || a._id.toString().substring(0, 8))
         );
+        
         setContracts(sorted);
       } catch (error) {
-        console.error("Error fetching contracts:", error);
       } finally {
         setLoading(false);
       }
     };
     fetchContracts();
-  }, [currentUser]);
+  }, [currentUser, currentPage]);
 
   const filteredContracts = contracts.filter((emp) =>
     (emp.name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handlePreview = (id) => {
+    const token = localStorage.getItem('token') || currentUser?.token;
     const previewWindow = window.open('', '_blank');
     previewWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>Contract Preview</title>
-
         <style>
           body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
           .btn-container { 
@@ -86,6 +95,7 @@ function ContractManagement() {
           @media print { .btn-container { display: none !important; } }
           iframe { width: 100%; height: calc(100vh - 80px); border: none; }
           #editor-container { display: none; width: 100%; height: calc(100vh - 80px); padding: 20px; }
+          #loading { text-align: center; padding: 50px; }
         </style>
       </head>
       <body>
@@ -95,18 +105,41 @@ function ContractManagement() {
           <button class="btn btn-secondary" onclick="cancelEdit()" id="cancelBtn" style="display:none;">Cancel</button>
           <button class="btn" onclick="window.print()">🖨️ Print</button>
         </div>
-        <iframe src="${API_URL}/api/employees/${id}/contract/preview" id="previewFrame"></iframe>
+        <div id="loading">Loading contract...</div>
+        <iframe id="previewFrame" style="display:none;"></iframe>
         <div id="editor-container"></div>
         
         <script>
           let isEditing = false;
+          
+          // Load contract content on page load
+          window.onload = async function() {
+            try {
+              const response = await fetch('${API_URL}/api/employees/${id}/contract/preview', {
+                headers: { 'Authorization': 'Bearer ${token}' }
+              });
+              
+              if (response.ok) {
+                const html = await response.text();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('previewFrame').style.display = 'block';
+                document.getElementById('previewFrame').srcdoc = html;
+              } else {
+                document.getElementById('loading').innerHTML = 'Failed to load contract';
+              }
+            } catch (error) {
+              document.getElementById('loading').innerHTML = 'Error loading contract';
+            }
+          };
           
           async function toggleEdit() {
             if (!isEditing) {
               try {
                 let content;
                 try {
-                  const response = await fetch('${API_URL}/api/employees/${id}/contract/content');
+                  const response = await fetch('${API_URL}/api/employees/${id}/contract/content', {
+                    headers: { 'Authorization': 'Bearer ${token}' }
+                  });
                   if (response.status === 404) {
                     content = await getDefaultContent();
                   } else {
@@ -147,14 +180,24 @@ function ContractManagement() {
                 const content = contentEditor.innerHTML;
                 const response = await fetch('${API_URL}/api/employees/${id}/contract/content', {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ${token}'
+                  },
                   body: JSON.stringify({ editedContent: content })
                 });
                 
                 if (response.ok) {
                   alert('Contract saved successfully!');
                   cancelEdit();
-                  document.getElementById('previewFrame').src = '${API_URL}/api/employees/${id}/contract/preview?t=' + Date.now();
+                  // Reload the preview
+                  const previewResponse = await fetch('${API_URL}/api/employees/${id}/contract/preview', {
+                    headers: { 'Authorization': 'Bearer ${token}' }
+                  });
+                  if (previewResponse.ok) {
+                    const html = await previewResponse.text();
+                    document.getElementById('previewFrame').srcdoc = html;
+                  }
                 } else {
                   alert('Failed to save contract');
                 }
@@ -175,7 +218,9 @@ function ContractManagement() {
           
           async function getDefaultContent() {
             try {
-              const response = await fetch('${API_URL}/api/employees/${id}');
+              const response = await fetch('${API_URL}/api/employees/${id}', {
+                headers: { 'Authorization': 'Bearer ${token}' }
+              });
               const data = await response.json();
               if (data.success) {
                 const employee = data.data;
@@ -237,17 +282,9 @@ function ContractManagement() {
                 \`;
               }
             } catch (error) {
-              console.error('Error fetching employee data:', error);
             }
             return '<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6;"><h1>Employment Contract</h1><p>Unable to load contract content.</p></div>';
           }
-          
-          // Remove any existing TinyMCE instances on page load
-          window.addEventListener('load', function() {
-            if (typeof tinymce !== 'undefined') {
-              tinymce.remove();
-            }
-          });
         </script>
       </body>
       </html>
@@ -258,14 +295,14 @@ function ContractManagement() {
   const handleEditToggle = (employeeContract) => {
     if (!isEditing) {
       // Load contract content for editing
-      fetch(`${API_URL}/api/employees/${employeeContract._id}/contract/content`)
-        .then(res => {
-          if (res.status === 404) {
+      api.get(`/api/employees/${employeeContract._id}/contract/content`)
+        .then(data => {
+          if (data.status === 404) {
             // Endpoint doesn't exist, use generated content
             setEditableContent(generateContractHTML(employeeContract));
             return;
           }
-          return res.json();
+          return data.data;
         })
         .then(data => {
           if (data && data.success) {
@@ -341,29 +378,34 @@ function ContractManagement() {
   const saveEditedContent = async (employeeId) => {
     setSavingContent(true);
     try {
-      const response = await fetch(`${API_URL}/api/employees/${employeeId}/contract/content`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ editedContent: editableContent }),
+      const response = await api.put(`/api/employees/${employeeId}/contract/content`, {
+        editedContent: editableContent
       });
       
-      if (response.ok) {
-        alert('Contract content saved successfully!');
-        setIsEditing(false);
-      } else {
-        alert('Failed to save contract content');
-      }
+      alert('Contract content saved successfully!');
+      setIsEditing(false);
     } catch (error) {
-      console.error('Error saving content:', error);
       alert('Error saving contract content');
     }
     setSavingContent(false);
   };
 
-  const handleDownload = (id, name) => {
-    window.open(`${API_URL}/api/employees/${id}/contract/preview?download=1`, '_blank');
+  const handleDownload = async (id, name) => {
+    try {
+      const response = await api.get(`/api/employees/${id}/contract/download`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Employment_Contract_${name}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(`Download failed: ${error.response?.data?.message || error.message}`);
+    }
   };
 
   const handleCreateForEmployee = (id) => {
@@ -374,58 +416,48 @@ function ContractManagement() {
   const handleSaveSignature = async (signatureData) => {
     try {
       const employeeContract = filteredContracts[0];
-      console.log("Saving signature for:", employeeContract.name);
-      console.log("Signature data:", signatureData.substring(0, 50) + "...");
 
-      // Convert base64 to blob
-      const response = await fetch(signatureData);
-      const blob = await response.blob();
-
-      // Create FormData
-      const formData = new FormData();
-      formData.append("signature", blob, "signature.png");
-      formData.append("signed_date", new Date().toISOString());
-      formData.append("employee_name", employeeContract.name);
-
-      const apiResponse = await axios.put(
-        `${API_URL}/api/employees/${employeeContract._id}/contract/update`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      // Convert base64 to blob and create signature data
+      const signatureInfo = {
+        acceptance: {
+          signature: signatureData,
+          accepted: true,
+          accepted_at: new Date().toISOString()
         }
+      };
+
+      const apiResponse = await api.put(
+        `/api/employees/${employeeContract._id}/contract/update`,
+        signatureInfo
       );
 
-      console.log("Backend response:", apiResponse.data);
 
       if (apiResponse.data.success) {
-        setContracts((prev) =>
-          prev.map((emp) =>
-            emp._id === employeeContract._id
-              ? {
-                  ...emp,
-                  signature: signatureData,
-                  signed_date: new Date().toISOString(),
-                }
-              : emp
-          )
-        );
+        // Refresh employee data from server to get updated contract
+        const updatedResponse = await api.get(`/api/employees/${employeeContract._id}`);
+        if (updatedResponse.data.success) {
+          setContracts((prev) =>
+            prev.map((emp) =>
+              emp._id === employeeContract._id ? updatedResponse.data.data : emp
+            )
+          );
+        }
+        
         setShowSignature(false);
 
         const iframe = document.querySelector(
           'iframe[title="Contract Preview"]'
         );
         if (iframe) {
+          const token = localStorage.getItem('token');
           iframe.src = `${API_URL}/api/employees/${
             employeeContract._id
-          }/contract/preview?t=${Date.now()}`;
+          }/contract/preview?token=${token}&t=${Date.now()}`;
         }
 
         alert("Contract signed successfully!");
       }
     } catch (error) {
-      console.error("Error saving signature:", error);
       alert("Failed to save signature. Please try again.");
     }
   };
@@ -434,6 +466,8 @@ function ContractManagement() {
 
   if (isEmployee && filteredContracts.length > 0) {
     const employeeContract = filteredContracts[0];
+    const token = localStorage.getItem('token');
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
         {isEditing ? (
@@ -485,13 +519,13 @@ function ContractManagement() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            src={`${API_URL}/api/employees/${employeeContract._id}/contract/preview`}
+            src={`${API_URL}/api/employees/${employeeContract._id}/contract/preview?token=${token}`}
             className="w-full h-screen border-0 rounded-xl shadow-xl bg-white/80 backdrop-blur-xl"
             title="Contract Preview"
           />
         )}
 
-        {employeeContract.signature && (
+        {employeeContract.contract_agreement?.acceptance?.signature && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -502,14 +536,14 @@ function ContractManagement() {
               ✅ Signature saved successfully!
             </p>
             <img
-              src={employeeContract.signature}
+              src={employeeContract.contract_agreement.acceptance.signature}
               alt="Saved signature"
               className="h-16 border rounded"
             />
           </motion.div>
         )}
 
-        {!employeeContract.signature && (
+        {!employeeContract.contract_agreement?.acceptance?.signature && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -536,15 +570,6 @@ function ContractManagement() {
           transition={{ duration: 0.3, delay: 0.4 }}
           className="mt-6 flex gap-3"
         >
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleEditToggle(employeeContract)}
-            className="bg-blue-600/90 text-white px-6 py-2 rounded-lg hover:bg-blue-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
-          >
-            {isEditing ? '📝 Exit Edit' : '✏️ Edit Contract'}
-          </motion.button>
-          
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -686,6 +711,9 @@ function ContractManagement() {
                     Contract Status
                   </th>
                   <th className="px-16 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Signature
+                  </th>
+                  <th className="px-16 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
                     Action
                   </th>
                 </tr>
@@ -713,7 +741,7 @@ function ContractManagement() {
                       {emp.employee_id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {emp.signature ? (
+                      {emp.contract_agreement?.acceptance?.signature ? (
                         <span className="text-green-600 font-medium">
                           Signed
                         </span>
@@ -725,6 +753,18 @@ function ContractManagement() {
                         <span className="text-red-600 font-medium">
                           Pending
                         </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {emp.contract_agreement?.acceptance?.signature && (
+                        <img
+                          src={emp.contract_agreement.acceptance.signature}
+                          alt="Employee signature"
+                          className="h-8 w-16 object-contain border rounded"
+                        />
+                      )}
+                      {!emp.contract_agreement?.acceptance?.signature && (
+                        <span className="text-gray-400 text-sm">No signature</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap space-x-2">
@@ -761,6 +801,19 @@ function ContractManagement() {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Pagination */}
+      {!loading && !isEmployee && pagination && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
     </div>
   );
 }

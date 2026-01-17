@@ -1,23 +1,25 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import Pagination from "../components/Pagination";
+import api from '../utils/axiosConfig';
 import Loader from "../components/Loader";
 
 function LeadManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const { navigate, API_URL, currentUser } = useAppContext();
 
   const deleteLead = async (leadId, e) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this lead?')) {
       try {
-        await axios.delete(`${API_URL}/api/leads/${leadId}`);
+        await api.delete(`/api/leads/${leadId}`);
         setLeads(leads.filter(lead => lead._id !== leadId));
       } catch (error) {
-        console.error('Error deleting lead:', error);
         alert('Failed to delete lead');
       }
     }
@@ -34,10 +36,10 @@ function LeadManagement() {
       
       // For admin users, export all leads. For regular users, filter by employeeId
       const url = currentUser?.isAdmin 
-        ? `${API_URL}/api/leads/export/csv`
-        : `${API_URL}/api/leads/export/csv?employeeId=${employeeId}`;
+        ? '/api/leads/export/csv'
+        : `/api/leads/export/csv?employeeId=${employeeId}`;
       
-      const response = await axios.get(url, {
+      const response = await api.get(url, {
         responseType: 'blob'
       });
       
@@ -49,7 +51,6 @@ function LeadManagement() {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Error exporting CSV:', error);
       alert('Failed to export CSV');
     }
   };
@@ -57,22 +58,22 @@ function LeadManagement() {
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/leads`);
-        const sortedLeads = (response.data || []).sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0);
-          const dateB = new Date(b.createdAt || 0);
-          return dateB - dateA;
-        });
-        setLeads(sortedLeads);
+        const response = await api.get(`/api/leads?page=${currentPage}&limit=10`);
+        if (response.data.success) {
+          setLeads(response.data.data || []);
+          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          setLeads([]);
+        }
       } catch (error) {
-        console.error("Error fetching leads:", error);
+        setLeads([]);
       } finally {
         setLoading(false);
       }
     };
     
     fetchLeads();
-  }, [API_URL]);
+  }, [currentPage]);
   
 
   const filteredLeads = leads.filter(
@@ -307,6 +308,19 @@ function LeadManagement() {
             </motion.div>
           )}
           </motion.div>
+        )}
+        
+        {/* Pagination */}
+        {!loading && pagination.pages > 1 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pagination.pages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={pagination.limit}
+              totalItems={pagination.total}
+            />
+          </div>
         )}
       </motion.div>
     </div>

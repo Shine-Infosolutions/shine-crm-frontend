@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
 
+import api from '../utils/axiosConfig';
 function EmployeeAttendance() {
-  const { currentUser, API_URL } = useAppContext();
+  const { currentUser, API_URL, getAuthHeaders } = useAppContext();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -16,7 +17,7 @@ function EmployeeAttendance() {
   const [customCheckoutTime, setCustomCheckoutTime] = useState('');
   const dateInputRef = useRef(null);
 
-  const isAdmin = currentUser?.role !== "employee";
+  const isAdmin = currentUser?.role === "admin";
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -59,37 +60,30 @@ function EmployeeAttendance() {
       if (isAdmin) {
         // For admin: load both attendance and employees
         const [attendanceResponse, employeeResponse] = await Promise.all([
-          fetch(`${API_URL}/api/attendance`),
-          fetch(`${API_URL}/api/employees`),
+          api.get('/api/attendance'),
+          api.get('/api/employees'),
         ]);
 
-        if (attendanceResponse.ok) {
-          const data = await attendanceResponse.json();
-          const records = data.data || data || [];
+        const attendanceData = attendanceResponse.data;
+        const records = attendanceData.data || attendanceData || [];
 
-          if (employeeResponse?.ok) {
-            const employeeData = await employeeResponse.json();
-            const employeeList = employeeData.data || employeeData || [];
+        const employeeData = employeeResponse.data;
+        const employeeList = employeeData.data || employeeData || [];
 
-            const recordsWithNames = records.map((record) => ({
-              ...record,
-              employee_name: record.employee_id?.name || "Unknown",
-            }));
+        const recordsWithNames = records.map((record) => ({
+          ...record,
+          employee_name: record.employee_id?.name || "Unknown",
+        }));
 
-            setAttendanceRecords(recordsWithNames);
-          } else {
-            setAttendanceRecords(records);
-          }
-        }
+        setAttendanceRecords(recordsWithNames);
       } else {
-        // For employee: only load attendance
-        const response = await fetch(
-          `${API_URL}/api/attendance?employee_id=${currentUser?.id}`
-        );
+        // For employee: use their own attendance endpoint
+        const response = await api.get('/api/attendance/my-attendance');
 
-        if (response.ok) {
-          const data = await response.json();
-          const records = data.data || data || [];
+        if (response.status === 200) {
+          const data = response.data;
+          const records = data.data || [];
+          
           setAttendanceRecords(records);
 
           // Check attendance status for today
@@ -100,9 +94,6 @@ function EmployeeAttendance() {
             return recordDate === today;
           });
           
-          console.log('Today:', today);
-          console.log('Records:', records);
-          console.log('Today record:', todayRecord);
           
           // Simple logic: show checkout if checked in but not checked out
           const hasCheckedIn = todayRecord && todayRecord.time_in;
@@ -113,7 +104,6 @@ function EmployeeAttendance() {
         }
       }
     } catch (error) {
-      console.error("Error loading attendance records:", error);
       setAttendanceRecords([]);
     } finally {
       setLoading(false);
@@ -160,28 +150,18 @@ function EmployeeAttendance() {
 
     setLoading(true);
     try {
+      const employeeId = currentUser?._id || currentUser?.id;
       const attendanceData = {
-        employee_id: currentUser.id
+        employee_id: employeeId
       };
 
-      const response = await fetch(`${API_URL}/api/attendance/time-in`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(attendanceData),
-      });
+      const response = await api.post('/api/attendance/time-in', attendanceData);
 
-      const data = await response.json();
+      const data = response.data;
       
-      if (response.ok) {
-        await loadAttendanceRecords();
-        alert("Checked in successfully!");
-      } else {
-        alert(data.message || "Failed to check in");
-      }
+      await loadAttendanceRecords();
+      alert("Checked in successfully!");
     } catch (error) {
-      console.error("Error checking in:", error);
       alert("Error checking in: " + error.message);
     } finally {
       setLoading(false);
@@ -212,8 +192,9 @@ function EmployeeAttendance() {
         return recordDate === today;
       });
 
+      const employeeId = currentUser?._id || currentUser?.id;
       const requestBody = {
-        employee_id: currentUser.id
+        employee_id: employeeId
       };
 
       if (isManualCheckout && customCheckoutTime) {
@@ -231,17 +212,11 @@ function EmployeeAttendance() {
         requestBody.checkout_time = checkoutDateTime;
       }
 
-      const response = await fetch(`${API_URL}/api/attendance/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await api.post('/api/attendance/checkout', requestBody);
 
-      const data = await response.json();
+      const data = response.data;
       
-      if (response.ok && data.success) {
+      if (data.success) {
         setIsCheckedIn(false);
         setIsCompleted(true);
         await loadAttendanceRecords();
@@ -255,7 +230,6 @@ function EmployeeAttendance() {
         alert(data.message || "Failed to check out");
       }
     } catch (error) {
-      console.error("Error checking out:", error);
       alert("Error checking out: " + error.message);
     } finally {
       setLoading(false);
@@ -280,13 +254,14 @@ function EmployeeAttendance() {
   };
 
   const checkAutoCheckout = async () => {
-    if (!currentUser?.id || isCompleted) return;
+    const employeeId = currentUser?._id || currentUser?.id;
+    if (!employeeId || isCompleted) return;
     
     const today = new Date().toDateString();
     const todayRecord = attendanceRecords.find((record) => {
       if (!record.date) return false;
       const recordDate = new Date(record.date).toDateString();
-      return recordDate === today && record.employee_id === currentUser.id;
+      return recordDate === today && record.employee_id === employeeId;
     });
     
     if (todayRecord && todayRecord.time_in && !(todayRecord.checkout_time || todayRecord.time_out)) {
@@ -294,22 +269,14 @@ function EmployeeAttendance() {
       
       if (currentHours >= 9) {
         try {
-          const response = await fetch(`${API_URL}/api/attendance/checkout`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ employee_id: currentUser.id }),
-          });
+          const response = await api.post('/api/attendance/checkout', { employee_id: employeeId });
           
-          if (response.ok) {
-            setIsCheckedIn(false);
-            setIsCompleted(true);
-            await loadAttendanceRecords();
-            alert("You have been automatically checked out after 9 hours of work!");
-          }
+          const data = response.data;
+          setIsCheckedIn(false);
+          setIsCompleted(true);
+          await loadAttendanceRecords();
+          alert("You have been automatically checked out after 9 hours of work!");
         } catch (error) {
-          console.error("Auto checkout error:", error);
         }
       }
     }
@@ -317,13 +284,10 @@ function EmployeeAttendance() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/employees`);
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.data || data || []);
-      }
+      const response = await api.get('/api/employees');
+      const data = response.data;
+      setEmployees(data.data || data || []);
     } catch (error) {
-      console.error("Error loading employees:", error);
     }
   };
 

@@ -1,6 +1,5 @@
-// src/pages/AddInvoice.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from '../utils/axiosConfig';
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
@@ -52,13 +51,13 @@ const AddInvoice = () => {
     const fetchData = async () => {
       try {
         // Fetch units
-        const unitsRes = await axios.get(`${API_URL}/api/units`);
+        const unitsRes = await api.get('/api/units');
         if (unitsRes.data?.success) {
           setUnits(unitsRes.data.data || []);
         }
 
         if (id) {
-          const res = await axios.get(`${API_URL}/api/invoices/mono/${id}`);
+          const res = await api.get(`/api/invoices/mono/${id}`);
           const data = res.data.data;
           if (!data) throw new Error("Invoice not found");
 
@@ -74,14 +73,20 @@ const AddInvoice = () => {
           }));
           setRows(data.productDetails || []);
         } else {
-          const res = await axios.get(`${API_URL}/api/invoices/next-invoice-number`);
+          // Generate invoice number locally
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          const time = String(now.getTime()).slice(-4);
+          const invoiceNumber = `INV-${year}${month}${day}-${time}`;
+          
           setFormData((prev) => ({
             ...prev,
-            invoiceNumber: res.data.nextInvoiceNumber,
+            invoiceNumber: invoiceNumber,
           }));
         }
       } catch (err) {
-        console.error("Invoice fetch error:", err);
         alert("Failed to fetch invoice.");
       }
     };
@@ -221,13 +226,12 @@ const AddInvoice = () => {
   
     try {
       if (id) {
-        await axios.put(`${API_URL}/api/invoices/update/${id}`, payload);
+        await api.put(`/api/invoices/update/${id}`, payload);
       } else {
-        await axios.post(`${API_URL}/api/invoices/create`, payload);
+        await api.post('/api/invoices/create', payload);
       }
       navigate("/invoices");
     } catch (err) {
-      console.error("Submit failed:", err);
       alert("Failed to save invoice.");
     }
   };

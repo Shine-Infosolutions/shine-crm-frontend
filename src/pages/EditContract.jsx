@@ -4,6 +4,7 @@ import { useAppContext } from "../context/AppContext";
 import axios from "axios";
 import { motion } from "framer-motion";
 
+import api from '../utils/axiosConfig';
 const ContractFormPage = () => {
   const { id } = useParams();
   const { API_URL } = useAppContext();
@@ -63,8 +64,8 @@ const ContractFormPage = () => {
 
   const handleDownload = async () => {
     try {
-      const response = await axios.get(
-        `${API_URL}/api/employees/${id}/contract/download`,
+      const response = await api.get(
+        `/api/employees/${id}/contract/download`,
         { responseType: "blob" }
       );
 
@@ -79,7 +80,6 @@ const ContractFormPage = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Download failed:", error);
       setError("Failed to download contract");
     }
   };
@@ -87,7 +87,7 @@ const ContractFormPage = () => {
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/employees/${id}`);
+        const response = await api.get(`/api/employees/${id}`);
         const data = response.data.data;
         setEmployee(data);
 
@@ -102,7 +102,6 @@ const ContractFormPage = () => {
           });
         }
       } catch (error) {
-        console.error("Error fetching employee:", error);
         setError("Failed to load employee data");
       } finally {
         setLoading(false);
@@ -142,13 +141,12 @@ const ContractFormPage = () => {
     setSaving(true);
     setError("");
     try {
-      await axios.put(
-        `${API_URL}/api/employees/${id}/contract/update`,
+      await api.put(
+        `/api/employees/${id}/contract/update`,
         contract
       );
       navigate("/contracts");
     } catch (error) {
-      console.error("Error updating contract:", error);
       setError("Failed to update contract. Please try again.");
     } finally {
       setSaving(false);
@@ -156,14 +154,16 @@ const ContractFormPage = () => {
   };
 
   const handlePreview = () => {
-    window.open(`${API_URL}/api/employees/${id}/contract/preview`, "_blank");
+    const token = localStorage.getItem('token');
+    const url = `${API_URL}/api/employees/${id}/contract/preview${token ? `?token=${token}` : ''}`;
+    window.open(url, "_blank");
   };
 
   const handleEditToggle = () => {
     if (!isEditing) {
       // Load contract content for editing
-      fetch(`${API_URL}/api/employees/${id}/contract/content`)
-        .then(res => res.json())
+      api.get(`/api/employees/${id}/contract/content`)
+        .then(res => res.data)
         .then(data => {
           if (data.success) {
             setEditableContent(data.content || generateContractHTML());
@@ -237,21 +237,16 @@ const ContractFormPage = () => {
   const saveEditedContent = async () => {
     setSavingContent(true);
     try {
-      const response = await fetch(`${API_URL}/api/employees/${id}/contract/content`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ editedContent: editableContent }),
+      const response = await api.put(`/api/employees/${id}/contract/content`, {
+        editedContent: editableContent
       });
       
-      if (response.ok) {
+      if (response.data.success) {
         alert('Contract content saved successfully!');
       } else {
         alert('Failed to save contract content');
       }
     } catch (error) {
-      console.error('Error saving content:', error);
       alert('Error saving contract content');
     }
     setSavingContent(false);
@@ -264,7 +259,7 @@ const ContractFormPage = () => {
       )
     ) {
       try {
-        await axios.patch(`${API_URL}/api/employees/${id}/contract/accept`);
+        await api.patch(`/api/employees/${id}/contract/accept`);
         setContract((prev) => ({
           ...prev,
           acceptance: {
@@ -274,7 +269,6 @@ const ContractFormPage = () => {
           },
         }));
       } catch (error) {
-        console.error("Error accepting contract:", error);
         setError("Failed to accept contract");
       }
     }

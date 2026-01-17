@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
+import api from "../utils/axiosConfig";
 
 function WorkSummary() {
   const { currentUser, API_URL } = useAppContext();
@@ -43,14 +44,11 @@ function WorkSummary() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/employees`);
-      if (response.ok) {
-        const data = await response.json();
-        const employeeList = data.data || data || [];
-        setEmployees(employeeList);
-      }
+      const response = await api.get('/api/employees');
+      const data = response.data;
+      const employeeList = data.data || data || [];
+      setEmployees(employeeList);
     } catch (error) {
-      console.error("Error loading employees:", error);
       setEmployees([]);
     }
   };
@@ -62,25 +60,21 @@ function WorkSummary() {
       if (isAdmin) {
         if (selectedEmployee) {
           // Load tasks for specific employee
-          const response = await fetch(`${API_URL}/api/tasks/employee/${selectedEmployee}`);
-          if (response.ok) {
-            const data = await response.json();
-            const taskList = data.data || data.tasks || [];
-            allTasks = taskList;
-          }
+          const response = await api.get(`/api/tasks/employee/${selectedEmployee}`);
+          const data = response.data;
+          const taskList = data.data || data.tasks || [];
+          allTasks = taskList;
         } else {
           // Load all tasks for admin - get all employees' tasks
           const employeePromises = employees.length > 0 ? employees.map(emp => 
-            fetch(`${API_URL}/api/tasks/employee/${emp._id}`)
-              .then(res => res.ok ? res.json() : { data: [] })
-              .then(data => data.data || data.tasks || [])
+            api.get(`/api/tasks/employee/${emp._id}`)
+              .then(res => res.data.data || res.data.tasks || [])
               .catch(() => [])
           ) : [];
           
           // Also load available tasks
-          const availableResponse = fetch(`${API_URL}/api/tasks/available`)
-            .then(res => res.ok ? res.json() : { data: [] })
-            .then(data => data.data || data.tasks || [])
+          const availableResponse = api.get('/api/tasks/available')
+            .then(res => res.data.data || res.data.tasks || [])
             .catch(() => []);
           
           const [employeeTasks, availableTasks] = await Promise.all([
@@ -92,16 +86,13 @@ function WorkSummary() {
         }
       } else {
         // Load tasks for current employee
-        const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser._id || currentUser.id}`);
-        if (response.ok) {
-          const data = await response.json();
-          allTasks = data.data || data.tasks || [];
-        }
+        const response = await api.get(`/api/tasks/employee/${currentUser._id || currentUser.id}`);
+        const data = response.data;
+        allTasks = data.data || data.tasks || [];
       }
       
       setTasks(allTasks);
     } catch (error) {
-      console.error("Error loading task data:", error);
       setTasks([]);
     }
   };
@@ -118,10 +109,9 @@ function WorkSummary() {
       
       // First try to load from API
       try {
-        const response = await fetch(`${API_URL}/api/employee-timesheet`);
-        if (response.ok) {
-          const data = await response.json();
-          const apiRecords = data.timesheets || data.data || [];
+        const response = await api.get('/api/employee-timesheet');
+        const data = response.data;
+        const apiRecords = data.timesheets || data.data || [];
           
           if (isAdmin) {
             // Admin sees all timesheets
@@ -133,9 +123,7 @@ function WorkSummary() {
             // Employee sees only their own
             allRecords = apiRecords.filter(record => record.employee_id === userId);
           }
-        }
       } catch (apiError) {
-        console.log('API timesheet loading failed, trying localStorage:', apiError);
       }
       
       // If no API data, load from localStorage
@@ -156,7 +144,6 @@ function WorkSummary() {
                   status: data.status || "Pending",
                 });
               } catch (e) {
-                console.warn(`Invalid localStorage data for key: ${key}`);
               }
             });
           });
@@ -176,7 +163,6 @@ function WorkSummary() {
                 status: data.status || "Pending",
               });
             } catch (e) {
-              console.warn(`Invalid localStorage data for key: ${key}`);
             }
           });
         }
@@ -185,7 +171,6 @@ function WorkSummary() {
       allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
       setWorkHistory(allRecords);
     } catch (error) {
-      console.error("Error loading work history:", error);
       setWorkHistory([]);
     } finally {
       setLoading(false);
@@ -194,26 +179,17 @@ function WorkSummary() {
 
   const approveTimesheet = async (record) => {
     try {
-      const response = await fetch(`${API_URL}/api/timesheet/${record._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: "Approved" }),
+      const response = await api.put(`/api/timesheet/${record._id}`, {
+        status: "Approved"
       });
 
-      if (response.ok) {
-        // Update the record status locally
-        const updatedHistory = workHistory.map(item => 
-          item === record ? { ...item, status: 'Approved' } : item
-        );
-        setWorkHistory(updatedHistory);
-        alert("Timesheet approved successfully!");
-      } else {
-        alert("Failed to approve timesheet");
-      }
+      // Update the record status locally
+      const updatedHistory = workHistory.map(item => 
+        item === record ? { ...item, status: 'Approved' } : item
+      );
+      setWorkHistory(updatedHistory);
+      alert("Timesheet approved successfully!");
     } catch (error) {
-      console.error("Error approving timesheet:", error);
       alert("Error approving timesheet");
     }
   };

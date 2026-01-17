@@ -1,15 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { toast } from 'react-toastify';
+import api from '../utils/axiosConfig';
 
 const AdminTimesheetView = () => {
   const [timesheets, setTimesheets] = useState([]);
+  const [loading, setLoading] = useState(false);
   const { API_URL } = useAppContext();
 
+  const loadTimesheets = () => {
+    api.get('/api/employee-timesheet/admin/all')
+      .then(res => {
+        setTimesheets(res.data.timesheets || []);
+      })
+  };
+
   useEffect(() => {
-    fetch(`${API_URL}/api/employee-timesheet/admin/all`)
-      .then(res => res.json())
-      .then(data => setTimesheets(data.timesheets || []));
+    loadTimesheets();
   }, []);
+
+  const approveTimesheet = async (timesheetId, status) => {
+    setLoading(true);
+    try {
+      const response = await api.patch(`/api/employee-timesheet/admin/approve/${timesheetId}`, {
+        status: status
+      });
+      
+      if (response.status === 200) {
+        toast.success(`Timesheet ${status.toLowerCase()} successfully`);
+        loadTimesheets(); // Reload timesheets
+      }
+    } catch (error) {
+      toast.error('Error approving timesheet');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatTime = (time) => {
     const [hours, minutes] = time.split(':');
@@ -58,6 +84,24 @@ const AdminTimesheetView = () => {
                     }`}>
                       {timesheet.status}
                     </span>
+                    {timesheet.status === 'Submitted' && (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => approveTimesheet(timesheet._id, 'Approved')}
+                          disabled={loading}
+                          className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => approveTimesheet(timesheet._id, 'Rejected')}
+                          disabled={loading}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

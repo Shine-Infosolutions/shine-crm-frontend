@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import api from '../utils/axiosConfig';
 
 const AddContract = () => {
   const { id: employeeId } = useParams();
@@ -56,7 +56,7 @@ const AddContract = () => {
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/employees/${employeeId}`);
+        const response = await api.get(`/api/employees/${employeeId}`);
         const data = response.data.data;
         setEmployee(data);
         
@@ -72,7 +72,6 @@ const AddContract = () => {
           }
         }));
       } catch (error) {
-        console.error('Error fetching employee:', error);
         setError('Failed to load employee data');
       } finally {
         setLoading(false);
@@ -125,12 +124,11 @@ const AddContract = () => {
     setError('');
     try {
       // Update the employee with the new contract
-      await axios.put(`${API_URL}/api/employees/${employeeId}/contract/update`, contract);
+      await api.put(`/api/employees/${employeeId}/contract/update`, contract);
       
       // Redirect to contracts page
       navigate('/contracts');
     } catch (error) {
-      console.error('Error creating contract:', error);
       setError('Failed to create contract. Please try again.');
     } finally {
       setSaving(false);
@@ -138,13 +136,15 @@ const AddContract = () => {
   };
 
   const handlePreview = () => {
-    window.open(`${API_URL}/api/employees/${employeeId}/contract/preview`, '_blank');
+    const token = localStorage.getItem('token');
+    const url = `${API_URL}/api/employees/${employeeId}/contract/preview${token ? `?token=${token}` : ''}`;
+    window.open(url, '_blank');
   };
 
   const handleDownload = async () => {
     try {
-      const response = await axios.get(
-        `${API_URL}/api/employees/${employeeId}/contract/download`,
+      const response = await api.get(
+        `/api/employees/${employeeId}/contract/download`,
         { responseType: 'blob' }
       );
       
@@ -159,7 +159,6 @@ const AddContract = () => {
        window.URL.revokeObjectURL(url);
        document.body.removeChild(link);
      } catch (error) {
-       console.error('Download failed:', error);
        setError('Failed to download contract');
      }
    };
