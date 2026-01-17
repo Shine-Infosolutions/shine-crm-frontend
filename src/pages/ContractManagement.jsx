@@ -14,6 +14,8 @@ function ContractManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [editableContent, setEditableContent] = useState('');
   const [savingContent, setSavingContent] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const editorRef = useRef(null);
   const { navigate, API_URL, currentUser } = useAppContext();
 
@@ -22,8 +24,15 @@ function ContractManagement() {
   useEffect(() => {
     const fetchContracts = async () => {
       try {
-        const response = await api.get('/api/employees');
-        let contractData = response.data.data || [];
+        const response = await api.get(`/api/employees?page=${currentPage}&limit=10`);
+        let contractData;
+        
+        if (response.data.success) {
+          contractData = response.data.data || [];
+          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          contractData = response.data.data || [];
+        }
 
         if (isEmployee) {
           contractData = contractData.filter(
@@ -44,7 +53,7 @@ function ContractManagement() {
       }
     };
     fetchContracts();
-  }, [currentUser]);
+  }, [currentUser, currentPage]);
 
   const filteredContracts = contracts.filter((emp) =>
     (emp.name || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -792,6 +801,19 @@ function ContractManagement() {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Pagination */}
+      {!loading && !isEmployee && pagination && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
     </div>
   );
 }

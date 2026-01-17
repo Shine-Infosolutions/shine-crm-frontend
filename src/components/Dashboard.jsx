@@ -19,15 +19,15 @@ function Dashboard() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Fetch leads data
-        const leadsResponse = await api.get('/api/leads');
+        // Fetch leads data with high limit to get all records for accurate metrics
+        const leadsResponse = await api.get('/api/leads?limit=1000');
         const leadsData = leadsResponse.data;
         const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
         setLeads(leadsArray.slice(0, 5));
-        setTotalLeads(leadsArray.length || 0);
+        setTotalLeads(leadsData.pagination?.total || leadsArray.length || 0);
 
-        // Fetch projects data
-        const projectsResponse = await api.get('/api/projects');
+        // Fetch projects data with high limit to get all records for accurate metrics
+        const projectsResponse = await api.get('/api/projects?limit=1000');
         const projectsData = projectsResponse.data;
         const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
         setProjects(projectsArray);

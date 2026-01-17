@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
-
+import Pagination from '../components/Pagination';
 import api from '../utils/axiosConfig';
 function TaskManagement() {
   const { currentUser, API_URL } = useAppContext();
@@ -12,12 +12,14 @@ function TaskManagement() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
 
   useEffect(() => {
     if (currentUser?._id) {
       loadTasks();
     }
-  }, [currentUser?._id, activeTab]);
+  }, [currentUser?._id, activeTab, currentPage]);
 
   // Add visibility change listener to refresh tasks when page becomes visible
   useEffect(() => {
@@ -29,26 +31,36 @@ function TaskManagement() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentUser?._id, activeTab]);
+  }, [currentUser?._id, activeTab, currentPage]);
 
   const loadTasks = async () => {
     setLoading(true);
     try {
       if (activeTab === 'assigned') {
-        const response = await api.get(`/api/tasks/employee/${currentUser?._id}`);
+        const response = await api.get(`/api/tasks/employee/${currentUser?._id}?page=${currentPage}&limit=10`);
         if (response.status === 200) {
           const data = response.data;
-          const taskList = data.tasks || data.data || [];
-          setTasks(Array.isArray(taskList) ? taskList : []);
+          if (data.success) {
+            setTasks(data.data || []);
+            setPagination(data.pagination || { total: 0, pages: 0, limit: 10 });
+          } else {
+            const taskList = data.tasks || data.data || [];
+            setTasks(Array.isArray(taskList) ? taskList : []);
+          }
         } else {
           setTasks([]);
         }
       } else {
-        const response = await api.get('/api/tasks/available');
+        const response = await api.get(`/api/tasks/available?page=${currentPage}&limit=10`);
         if (response.status === 200) {
           const data = response.data;
-          const taskList = data.tasks || data.data || [];
-          setAvailableTasks(Array.isArray(taskList) ? taskList : []);
+          if (data.success) {
+            setAvailableTasks(data.data || []);
+            setPagination(data.pagination || { total: 0, pages: 0, limit: 10 });
+          } else {
+            const taskList = data.tasks || data.data || [];
+            setAvailableTasks(Array.isArray(taskList) ? taskList : []);
+          }
         } else {
           setAvailableTasks([]);
         }
@@ -293,6 +305,19 @@ function TaskManagement() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
 
       {/* Progress Modal */}
       {showProgressModal && selectedTask && (

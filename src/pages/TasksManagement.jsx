@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-
+import Pagination from "../components/Pagination";
 import api from '../utils/axiosConfig';
 function TasksManagement() {
   const { currentUser, API_URL } = useAppContext();
@@ -13,6 +13,8 @@ function TasksManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -33,7 +35,7 @@ function TasksManagement() {
       }
     } else {
     }
-  }, [currentUser, isAdmin]);
+  }, [currentUser, isAdmin, currentPage]);
 
   // Add visibility change listener to refresh tasks when page becomes visible
   useEffect(() => {
@@ -49,7 +51,7 @@ function TasksManagement() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentUser, isAdmin]);
+  }, [currentUser, isAdmin, currentPage]);
 
   const loadEmployees = async () => {
     try {
@@ -69,12 +71,17 @@ function TasksManagement() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/tasks');
+      const response = await api.get(`/api/tasks?page=${currentPage}&limit=10`);
       
       if (response.status === 200) {
         const data = response.data;
-        const taskList = data.data || data.tasks || [];
-        setTasks(Array.isArray(taskList) ? taskList : []);
+        if (data.success) {
+          setTasks(data.data || []);
+          setPagination(data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          const taskList = data.data || data.tasks || [];
+          setTasks(Array.isArray(taskList) ? taskList : []);
+        }
       } else {
         setTasks([]);
       }
@@ -88,12 +95,17 @@ function TasksManagement() {
   const loadMyTasks = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/tasks/employee/${currentUser._id || currentUser.id}`);
+      const response = await api.get(`/api/tasks/employee/${currentUser._id || currentUser.id}?page=${currentPage}&limit=10`);
       
       if (response.status === 200) {
         const data = response.data;
-        const taskList = data.data || data.tasks || [];
-        setTasks(Array.isArray(taskList) ? taskList : []);
+        if (data.success) {
+          setTasks(data.data || []);
+          setPagination(data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          const taskList = data.data || data.tasks || [];
+          setTasks(Array.isArray(taskList) ? taskList : []);
+        }
       } else {
         setTasks([]);
       }
@@ -477,6 +489,19 @@ function TasksManagement() {
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {!loading && pagination.pages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={pagination.limit}
+            totalItems={pagination.total}
+          />
+        </div>
+      )}
 
       {/* Task Detail Modal - For Employees */}
       {selectedTask && (

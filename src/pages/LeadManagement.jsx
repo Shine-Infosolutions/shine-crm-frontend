@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
+import Pagination from "../components/Pagination";
 import api from '../utils/axiosConfig';
 import Loader from "../components/Loader";
 
@@ -8,6 +9,8 @@ function LeadManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const { navigate, API_URL, currentUser } = useAppContext();
 
   const deleteLead = async (leadId, e) => {
@@ -55,21 +58,22 @@ function LeadManagement() {
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        const response = await api.get('/api/leads');
-        const sortedLeads = (response.data || []).sort((a, b) => {
-          const dateA = new Date(a.createdAt || 0);
-          const dateB = new Date(b.createdAt || 0);
-          return dateB - dateA;
-        });
-        setLeads(sortedLeads);
+        const response = await api.get(`/api/leads?page=${currentPage}&limit=10`);
+        if (response.data.success) {
+          setLeads(response.data.data || []);
+          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+        } else {
+          setLeads([]);
+        }
       } catch (error) {
+        setLeads([]);
       } finally {
         setLoading(false);
       }
     };
     
     fetchLeads();
-  }, [API_URL]);
+  }, [currentPage]);
   
 
   const filteredLeads = leads.filter(
@@ -304,6 +308,19 @@ function LeadManagement() {
             </motion.div>
           )}
           </motion.div>
+        )}
+        
+        {/* Pagination */}
+        {!loading && pagination.pages > 1 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pagination.pages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={pagination.limit}
+              totalItems={pagination.total}
+            />
+          </div>
         )}
       </motion.div>
     </div>
