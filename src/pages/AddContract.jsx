@@ -60,17 +60,37 @@ const AddContract = () => {
         const data = response.data.data;
         setEmployee(data);
         
-        // Pre-fill form with employee data
-        setContract(prev => ({
-          ...prev,
-          job_title: data.designation || '',
-          start_date: formatDateForInput(data.work_start_date) || formatDateForInput(new Date()),
+        // Reset contract state first, then pre-fill with fresh employee data
+        setContract({
+          company: {
+            name: "Shine Infosolutions",
+            address: "Gorakhpur UP",
+            contact: {
+              phone: "9876567897",
+              email: "shineinfo@gmail.com"
+            }
+          },
           effective_date: formatDateForInput(data.work_start_date) || formatDateForInput(new Date()),
+          job_title: data.designation || '',
+          contract_type: data.employment_type || 'Full Time',
+          start_date: formatDateForInput(data.work_start_date) || formatDateForInput(new Date()),
+          end_date: '',
+          working_hours: {
+            timing: '10 AM – 6 PM',
+            days_per_week: 6,
+            location: 'Head Office Gorahpur'
+          },
           compensation: {
-            ...prev.compensation,
-            monthly_salary: data.salary_details?.monthly_salary || 0
+            monthly_salary: data.salary_details?.monthly_salary || 0,
+            salary_date: '5th'
+          },
+          termination: {
+            notice_period_days: 30
+          },
+          acceptance: {
+            accepted: false
           }
-        }));
+        });
       } catch (error) {
         setError('Failed to load employee data');
       } finally {
@@ -123,11 +143,12 @@ const AddContract = () => {
     setSaving(true);
     setError('');
     try {
-      // Update the employee with the new contract
-      await api.put(`/api/employees/${employeeId}/contract/update`, contract);
+      // Send the complete contract data to replace existing
+      const response = await api.put(`/api/employees/${employeeId}/contract/update`, contract);
       
-      // Redirect to contracts page
-      navigate('/contracts');
+      if (response.data.success) {
+        navigate('/contracts');
+      }
     } catch (error) {
       setError('Failed to create contract. Please try again.');
     } finally {
