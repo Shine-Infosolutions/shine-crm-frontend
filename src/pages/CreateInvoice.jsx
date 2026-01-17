@@ -8,6 +8,7 @@ import Loader from "../components/Loader";
 import { motion } from "framer-motion";
 
 
+import api from '../utils/axiosConfig';
 const CreateInvoice = () => {
   const { id } = useParams();
   const { API_URL } = useAppContext();
@@ -25,8 +26,8 @@ const CreateInvoice = () => {
   useEffect(() => {
     const fetchInvoice = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/invoices/mono/${id}`);
-        const data = await response.json();
+        const response = await api.get(`/api/invoices/mono/${id}`);
+        const data = response.data;
         if (data.success) {
           setInvoice(data.data);
           setNotes(data.data.notes || '');
@@ -388,11 +389,7 @@ const CreateInvoice = () => {
                 onClick={async () => {
                   setSaving(true);
                   try {
-                    const response = await fetch(`${API_URL}/api/invoices/${id}/notes`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ notes })
-                    });
+                    const response = await api.put(`/api/invoices/${id}/notes`, { notes });
                     if (response.ok) {
                       setInvoice(prev => ({ ...prev, notes }));
                     }

@@ -3,6 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import { toast } from 'react-toastify';
 import AdminTimesheetView from '../components/AdminTimesheetView';
 
+import api from '../utils/axiosConfig';
 function EmployeeTimesheet() {
   const { currentUser, API_URL } = useAppContext();
   const [selectedDate, setSelectedDate] = useState(
@@ -56,11 +57,11 @@ function EmployeeTimesheet() {
     const savedTimesheet = localStorage.getItem(timesheetKey);
 
     try {
-      const response = await fetch(`${API_URL}/api/employee-timesheet`);
+      const response = await api.get('/api/employee-timesheet');
       if (response.ok) {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-          const data = await response.json();
+          const data = response.data;
           const apiRecord = data.timesheets?.find(
             (record) =>
               record.employee_id === currentUser?.id &&
@@ -103,7 +104,7 @@ function EmployeeTimesheet() {
     
     try {
       // Load available tasks
-      const availableResponse = await fetch(`${API_URL}/api/tasks/available`);
+      const availableResponse = await api.get('/api/tasks/available');
       console.log('Available tasks response status:', availableResponse.status);
       
       if (availableResponse.ok) {
@@ -118,7 +119,7 @@ function EmployeeTimesheet() {
       }
 
       // Load assigned tasks
-      const assignedResponse = await fetch(`${API_URL}/api/tasks/employee/${currentUser.id}`);
+      const assignedResponse = await api.get('/api/tasks/employee/${currentUser.id}');
       console.log('Assigned tasks response status:', assignedResponse.status);
       
       if (assignedResponse.ok) {
@@ -262,7 +263,7 @@ function EmployeeTimesheet() {
         localStorage.removeItem(timesheetKey);
         toast.success("Project submitted successfully");
       } else {
-        const errorData = await response.json();
+        const errorData = response.data;
         toast.error(errorData.message || "Failed to submit timesheet");
       }
     } catch (error) {

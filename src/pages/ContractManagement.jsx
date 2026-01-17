@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import api from "../utils/axiosConfig";
 import Loader from "../components/Loader";
 import DigitalSignature from "../components/DigitalSignature";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +22,7 @@ function ContractManagement() {
   useEffect(() => {
     const fetchContracts = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/employees`);
+        const response = await api.get('/api/employees');
         let contractData = response.data.data || [];
 
         if (isEmployee) {
@@ -258,14 +258,14 @@ function ContractManagement() {
   const handleEditToggle = (employeeContract) => {
     if (!isEditing) {
       // Load contract content for editing
-      fetch(`${API_URL}/api/employees/${employeeContract._id}/contract/content`)
-        .then(res => {
-          if (res.status === 404) {
+      api.get(`/api/employees/${employeeContract._id}/contract/content`)
+        .then(data => {
+          if (data.status === 404) {
             // Endpoint doesn't exist, use generated content
             setEditableContent(generateContractHTML(employeeContract));
             return;
           }
-          return res.json();
+          return data.data;
         })
         .then(data => {
           if (data && data.success) {
@@ -341,20 +341,12 @@ function ContractManagement() {
   const saveEditedContent = async (employeeId) => {
     setSavingContent(true);
     try {
-      const response = await fetch(`${API_URL}/api/employees/${employeeId}/contract/content`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ editedContent: editableContent }),
+      const response = await api.put(`/api/employees/${employeeId}/contract/content`, {
+        editedContent: editableContent
       });
       
-      if (response.ok) {
-        alert('Contract content saved successfully!');
-        setIsEditing(false);
-      } else {
-        alert('Failed to save contract content');
-      }
+      alert('Contract content saved successfully!');
+      setIsEditing(false);
     } catch (error) {
       console.error('Error saving content:', error);
       alert('Error saving contract content');
@@ -387,8 +379,8 @@ function ContractManagement() {
       formData.append("signed_date", new Date().toISOString());
       formData.append("employee_name", employeeContract.name);
 
-      const apiResponse = await axios.put(
-        `${API_URL}/api/employees/${employeeContract._id}/contract/update`,
+      const apiResponse = await api.put(
+        `/api/employees/${employeeContract._id}/contract/update`,
         formData,
         {
           headers: {

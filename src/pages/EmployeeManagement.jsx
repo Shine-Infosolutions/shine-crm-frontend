@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import axiosInstance from "../utils/axiosConfig";
 import { useLocation } from "react-router-dom";
 import Loader from "../components/Loader";
 
@@ -21,7 +21,7 @@ function EmployeeManagement() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/api/employees`);
+      const response = await axiosInstance.get(`${API_URL}/api/employees`);
       if (response.data?.success) {
         const data = response.data.data;
         const employeeArray = Array.isArray(data) ? data : data.employees || [];

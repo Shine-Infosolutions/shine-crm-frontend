@@ -3,6 +3,7 @@ import { useAppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
+import api from '../utils/axiosConfig';
 function TasksManagement() {
   const { currentUser, API_URL } = useAppContext();
   const navigate = useNavigate();
@@ -61,17 +62,16 @@ function TasksManagement() {
     try {
       console.log("API_URL:", API_URL);
       console.log("Loading employees from:", `${API_URL}/api/employees`);
-      const response = await fetch(`${API_URL}/api/employees`);
+      const response = await api.get('/api/employees');
       console.log("Employee response status:", response.status);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         console.log("Employee response data:", data);
         console.log("Employees array:", data.data);
         setEmployees(data.data || []);
       } else {
-        const errorText = await response.text();
-        console.error("Failed to load employees:", response.status, errorText);
+        console.error("Failed to load employees:", response.status);
         setEmployees([]);
       }
     } catch (error) {
@@ -83,10 +83,10 @@ function TasksManagement() {
   const loadTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks`);
+      const response = await api.get('/api/tasks');
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const taskList = data.data || data.tasks || [];
         setTasks(Array.isArray(taskList) ? taskList : []);
       } else {
@@ -104,10 +104,10 @@ function TasksManagement() {
   const loadMyTasks = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser._id || currentUser.id}`);
+      const response = await api.get(`/api/tasks/employee/${currentUser._id || currentUser.id}`);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const taskList = data.data || data.tasks || [];
         setTasks(Array.isArray(taskList) ? taskList : []);
       } else {
@@ -242,9 +242,8 @@ function TasksManagement() {
           }),
         });
 
-        const data = await response.json();
-        
         if (response.ok) {
+          const data = await response.json();
           alert(data.message || "Task assigned successfully!");
           setFormData({
             title: "",
@@ -256,6 +255,7 @@ function TasksManagement() {
           setShowForm(false);
           loadTasks();
         } else {
+          const data = await response.json();
           alert(data.message || "Failed to assign task");
         }
       }

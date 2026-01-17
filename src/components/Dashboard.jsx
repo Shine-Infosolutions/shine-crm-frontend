@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
+import api from '../utils/axiosConfig';
 
 function Dashboard() {
-  const { API_URL, navigate, getAuthHeaders } = useAppContext();
+  const { API_URL, navigate } = useAppContext();
   const [totalLeads, setTotalLeads] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
   const [totalEmployees, setTotalEmployees] = useState(0);
@@ -19,62 +20,46 @@ function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         // Fetch leads data
-        const leadsResponse = await fetch(`${API_URL}/api/leads`, {
-          headers: getAuthHeaders()
-        });
-        if (leadsResponse.ok) {
-          const leadsData = await leadsResponse.json();
-          const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
-          setLeads(leadsArray.slice(0, 5));
-          setTotalLeads(leadsArray.length || 0);
-        }
+        const leadsResponse = await api.get('/api/leads');
+        const leadsData = leadsResponse.data;
+        const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
+        setLeads(leadsArray.slice(0, 5));
+        setTotalLeads(leadsArray.length || 0);
 
         // Fetch projects data
-        const projectsResponse = await fetch(`${API_URL}/api/projects`, {
-          headers: getAuthHeaders()
-        });
-        if (projectsResponse.ok) {
-          const projectsData = await projectsResponse.json();
-          const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
-          setProjects(projectsArray);
-          
-          // Count active projects (not completed)
-          const activeCount = projectsArray.filter(project => {
-            return !project.handoverDate || project.handoverDate.trim() === "";
-          }).length;
-          setActiveProjects(activeCount);
-          
-          // Calculate total revenue from all projects
-          const revenue = projectsArray.reduce((sum, project) => {
-            const amount = parseFloat(project.projectAmount) || 0;
-            return sum + amount;
-          }, 0);
-          setTotalRevenue(revenue);
-        }
+        const projectsResponse = await api.get('/api/projects');
+        const projectsData = projectsResponse.data;
+        const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
+        setProjects(projectsArray);
+        
+        // Count active projects (not completed)
+        const activeCount = projectsArray.filter(project => {
+          return !project.handoverDate || project.handoverDate.trim() === "";
+        }).length;
+        setActiveProjects(activeCount);
+        
+        // Calculate total revenue from all projects
+        const revenue = projectsArray.reduce((sum, project) => {
+          const amount = parseFloat(project.projectAmount) || 0;
+          return sum + amount;
+        }, 0);
+        setTotalRevenue(revenue);
 
         // Fetch employees data
-        const employeesResponse = await fetch(`${API_URL}/api/employees`, {
-          headers: getAuthHeaders()
-        });
-        if (employeesResponse.ok) {
-          const employeesData = await employeesResponse.json();
-          if (employeesData?.success) {
-            const data = employeesData.data;
-            const employeeArray = Array.isArray(data) ? data : data.employees || [];
-            setEmployees(employeeArray.slice(0, 4)); // Show first 4 employees
-            setTotalEmployees(employeeArray.length || 0);
-          }
+        const employeesResponse = await api.get('/api/employees');
+        const employeesData = employeesResponse.data;
+        if (employeesData?.success) {
+          const data = employeesData.data;
+          const employeeArray = Array.isArray(data) ? data : data.employees || [];
+          setEmployees(employeeArray.slice(0, 4)); // Show first 4 employees
+          setTotalEmployees(employeeArray.length || 0);
         }
 
         // Fetch recent tasks
-        const tasksResponse = await fetch(`${API_URL}/api/tasks`, {
-          headers: getAuthHeaders()
-        });
-        if (tasksResponse.ok) {
-          const tasksData = await tasksResponse.json();
-          const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
-          setRecentTasks(tasksArray.slice(0, 3));
-        }
+        const tasksResponse = await api.get('/api/tasks');
+        const tasksData = tasksResponse.data;
+        const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
+        setRecentTasks(tasksArray.slice(0, 3));
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {

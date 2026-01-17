@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { isTokenExpired, clearAuthData } from "../utils/tokenUtils";
 
 const AppContext = createContext();
 
@@ -22,12 +23,18 @@ export function AppProvider({ children }) {
     const savedToken = localStorage.getItem("token");
     
     if (savedUser && savedToken) {
+      if (isTokenExpired(savedToken)) {
+        console.log('Token expired on app load, clearing storage');
+        clearAuthData();
+        return;
+      }
+      
       try {
         setCurrentUser(JSON.parse(savedUser));
         setToken(savedToken);
-      } catch {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+      } catch (error) {
+        console.log('Invalid user data, clearing storage');
+        clearAuthData();
       }
     }
   }, []);
@@ -54,8 +61,7 @@ export function AppProvider({ children }) {
   const logout = () => {
     setCurrentUser(null);
     setToken(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    clearAuthData();
   };
 
   const getAuthHeaders = () => {

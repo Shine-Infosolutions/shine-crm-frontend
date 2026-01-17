@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import { useLocation } from "react-router-dom";
 
+import api from '../utils/axiosConfig';
 const AddLead = () => {
   const { API_URL, navigate } = useAppContext();
   const [loading, setLoading] = useState(false);
@@ -41,11 +42,11 @@ const AddLead = () => {
   const fetchLeadData = async (id) => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/leads/${id}`);
-      const data = await response.json();
+      const response = await api.get(`/api/leads/${id}`);
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to fetch lead data");
+      if (response.status !== 200) {
+        throw new Error(response.data?.message || "Failed to fetch lead data");
       }
 
       // Format dates for form inputs
@@ -98,7 +99,7 @@ const AddLead = () => {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = response.data;
 
       if (!response.ok) {
         throw new Error(

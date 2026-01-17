@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
 
+import api from '../utils/axiosConfig';
 function Settings() {
   const { currentUser, API_URL, getAuthHeaders } = useAppContext();
   const [activeTab, setActiveTab] = useState("profile");
@@ -46,14 +47,7 @@ function Settings() {
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/employees/${currentUser._id}`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify(settings.profile)
-      });
+      const response = await api.put('/api/employees/${currentUser._id}', settings.profile);
       
       if (response.ok) {
         alert("Profile updated successfully!");
@@ -109,17 +103,10 @@ function Settings() {
     
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/settings/change-password`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({
+      const response = await api.post('/api/settings/change-password', {
           currentPassword: settings.security.currentPassword,
           newPassword: settings.security.newPassword
-        })
-      });
+        });
       
       if (response.ok) {
         alert("Password changed successfully!");
@@ -204,7 +191,7 @@ function Settings() {
         body: JSON.stringify({ userId: currentUser?.id })
       });
       
-      const data = await response.json();
+      const data = response.data;
       
       if (response.ok) {
         if (data.authUrl) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
 
+import api from '../utils/axiosConfig';
 function WorkHistory() {
   const { currentUser, API_URL } = useAppContext();
   const [workHistory, setWorkHistory] = useState([]);
@@ -22,9 +23,9 @@ function WorkHistory() {
 
   const loadTasks = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser.id}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await api.get(`/api/tasks/employee/${currentUser.id}`);
+      if (response.status === 200) {
+        const data = response.data;
         setTasks(data.data || data.tasks || []);
       }
     } catch (error) {
@@ -35,9 +36,9 @@ function WorkHistory() {
     setLoading(true);
     try {
       // Try API first
-      const response = await fetch(`${API_URL}/api/employee-timesheet`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await api.get('/api/employee-timesheet');
+      if (response.status === 200) {
+        const data = response.data;
         const timesheets = data.timesheets || data.data || [];
         
         // Filter for current employee

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
 
+import api from '../utils/axiosConfig';
 function TaskManagement() {
   const { currentUser, API_URL } = useAppContext();
   const [tasks, setTasks] = useState([]);
@@ -34,9 +35,9 @@ function TaskManagement() {
     setLoading(true);
     try {
       if (activeTab === 'assigned') {
-        const response = await fetch(`${API_URL}/api/tasks/employee/${currentUser?.id}`);
-        if (response.ok) {
-          const data = await response.json();
+        const response = await api.get(`/api/tasks/employee/${currentUser?.id}`);
+        if (response.status === 200) {
+          const data = response.data;
           const taskList = data.tasks || data.data || [];
           setTasks(Array.isArray(taskList) ? taskList : []);
         } else {
@@ -44,9 +45,9 @@ function TaskManagement() {
           setTasks([]);
         }
       } else {
-        const response = await fetch(`${API_URL}/api/tasks/available`);
-        if (response.ok) {
-          const data = await response.json();
+        const response = await api.get('/api/tasks/available');
+        if (response.status === 200) {
+          const data = response.data;
           const taskList = data.tasks || data.data || [];
           setAvailableTasks(Array.isArray(taskList) ? taskList : []);
         } else {
@@ -75,9 +76,9 @@ function TaskManagement() {
         await loadTasks();
         // If we're on available tab, also refresh assigned tasks
         if (activeTab === 'available') {
-          const assignedResponse = await fetch(`${API_URL}/api/tasks/employee/${currentUser?.id}`);
-          if (assignedResponse.ok) {
-            const assignedData = await assignedResponse.json();
+          const assignedResponse = await api.get(`/api/tasks/employee/${currentUser?.id}`);
+          if (assignedResponse.status === 200) {
+            const assignedData = assignedResponse.data;
             const assignedList = assignedData.tasks || assignedData.data || [];
             setTasks(Array.isArray(assignedList) ? assignedList : []);
           }

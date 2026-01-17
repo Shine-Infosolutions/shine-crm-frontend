@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAppContext } from "../context/AppContext";
 
+import api from '../utils/axiosConfig';
 function EmployeeAttendance() {
   const { currentUser, API_URL, getAuthHeaders } = useAppContext();
   const [isCheckedIn, setIsCheckedIn] = useState(false);
@@ -59,44 +60,29 @@ function EmployeeAttendance() {
       if (isAdmin) {
         // For admin: load both attendance and employees
         const [attendanceResponse, employeeResponse] = await Promise.all([
-          fetch(`${API_URL}/api/attendance`, {
-            headers: getAuthHeaders(),
-          }),
-          fetch(`${API_URL}/api/employees`, {
-            headers: getAuthHeaders(),
-          }),
+          api.get('/api/attendance'),
+          api.get('/api/employees'),
         ]);
 
-        if (attendanceResponse.ok) {
-          const data = await attendanceResponse.json();
-          const records = data.data || data || [];
+        const attendanceData = attendanceResponse.data;
+        const records = attendanceData.data || attendanceData || [];
 
-          if (employeeResponse?.ok) {
-            const employeeData = await employeeResponse.json();
-            const employeeList = employeeData.data || employeeData || [];
+        const employeeData = employeeResponse.data;
+        const employeeList = employeeData.data || employeeData || [];
 
-            const recordsWithNames = records.map((record) => ({
-              ...record,
-              employee_name: record.employee_id?.name || "Unknown",
-            }));
+        const recordsWithNames = records.map((record) => ({
+          ...record,
+          employee_name: record.employee_id?.name || "Unknown",
+        }));
 
-            setAttendanceRecords(recordsWithNames);
-          } else {
-            setAttendanceRecords(records);
-          }
-        }
+        setAttendanceRecords(recordsWithNames);
       } else {
         // For employee: only load attendance
         const employeeId = currentUser?._id || currentUser?.id;
-        const response = await fetch(
-          `${API_URL}/api/attendance?employee_id=${employeeId}`,
-          {
-            headers: getAuthHeaders(),
-          }
-        );
+        const response = await api.get(`/api/attendance?employee_id=${employeeId}`);
 
-        if (response.ok) {
-          const data = await response.json();
+        if (response.status === 200) {
+          const data = response.data;
           const records = data.data || data || [];
           setAttendanceRecords(records);
 
@@ -173,23 +159,12 @@ function EmployeeAttendance() {
         employee_id: employeeId
       };
 
-      const response = await fetch(`${API_URL}/api/attendance/time-in`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(attendanceData),
-      });
+      const response = await api.post('/api/attendance/time-in', attendanceData);
 
-      const data = await response.json();
+      const data = response.data;
       
-      if (response.ok) {
-        await loadAttendanceRecords();
-        alert("Checked in successfully!");
-      } else {
-        alert(data.message || "Failed to check in");
-      }
+      await loadAttendanceRecords();
+      alert("Checked in successfully!");
     } catch (error) {
       console.error("Error checking in:", error);
       alert("Error checking in: " + error.message);
@@ -242,18 +217,11 @@ function EmployeeAttendance() {
         requestBody.checkout_time = checkoutDateTime;
       }
 
-      const response = await fetch(`${API_URL}/api/attendance/checkout`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(requestBody),
-      });
+      const response = await api.post('/api/attendance/checkout', requestBody);
 
-      const data = await response.json();
+      const data = response.data;
       
-      if (response.ok && data.success) {
+      if (data.success) {
         setIsCheckedIn(false);
         setIsCompleted(true);
         await loadAttendanceRecords();
@@ -307,21 +275,13 @@ function EmployeeAttendance() {
       
       if (currentHours >= 9) {
         try {
-          const response = await fetch(`${API_URL}/api/attendance/checkout`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...getAuthHeaders(),
-            },
-            body: JSON.stringify({ employee_id: employeeId }),
-          });
+          const response = await api.post('/api/attendance/checkout', { employee_id: employeeId });
           
-          if (response.ok) {
-            setIsCheckedIn(false);
-            setIsCompleted(true);
-            await loadAttendanceRecords();
-            alert("You have been automatically checked out after 9 hours of work!");
-          }
+          const data = response.data;
+          setIsCheckedIn(false);
+          setIsCompleted(true);
+          await loadAttendanceRecords();
+          alert("You have been automatically checked out after 9 hours of work!");
         } catch (error) {
           console.error("Auto checkout error:", error);
         }
@@ -331,13 +291,9 @@ function EmployeeAttendance() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/employees`, {
-        headers: getAuthHeaders(),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.data || data || []);
-      }
+      const response = await api.get('/api/employees');
+      const data = response.data;
+      setEmployees(data.data || data || []);
     } catch (error) {
       console.error("Error loading employees:", error);
     }

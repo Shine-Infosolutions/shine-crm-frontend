@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import api from '../utils/axiosConfig';
 import Loader from "../components/Loader";
 
 function LeadManagement() {
@@ -14,7 +14,7 @@ function LeadManagement() {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this lead?')) {
       try {
-        await axios.delete(`${API_URL}/api/leads/${leadId}`);
+        await api.delete(`/api/leads/${leadId}`);
         setLeads(leads.filter(lead => lead._id !== leadId));
       } catch (error) {
         console.error('Error deleting lead:', error);
@@ -34,10 +34,10 @@ function LeadManagement() {
       
       // For admin users, export all leads. For regular users, filter by employeeId
       const url = currentUser?.isAdmin 
-        ? `${API_URL}/api/leads/export/csv`
-        : `${API_URL}/api/leads/export/csv?employeeId=${employeeId}`;
+        ? '/api/leads/export/csv'
+        : `/api/leads/export/csv?employeeId=${employeeId}`;
       
-      const response = await axios.get(url, {
+      const response = await api.get(url, {
         responseType: 'blob'
       });
       
@@ -57,7 +57,7 @@ function LeadManagement() {
   useEffect(() => {
     const fetchLeads = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/leads`);
+        const response = await api.get('/api/leads');
         const sortedLeads = (response.data || []).sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
           const dateB = new Date(b.createdAt || 0);

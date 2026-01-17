@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import api from '../utils/axiosConfig';
 
 const AdminTimesheetView = () => {
   const [timesheets, setTimesheets] = useState([]);
   const { API_URL } = useAppContext();
 
   useEffect(() => {
-    fetch(`${API_URL}/api/employee-timesheet/admin/all`)
-      .then(res => res.json())
-      .then(data => setTimesheets(data.timesheets || []));
+    api.get('/api/employee-timesheet/admin/all')
+      .then(res => setTimesheets(res.data.timesheets || []))
+      .catch(err => console.error('Error loading timesheets:', err));
   }, []);
 
   const formatTime = (time) => {

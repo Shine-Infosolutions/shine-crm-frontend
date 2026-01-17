@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import { useLocation } from "react-router-dom";
+import axiosInstance from "../utils/axiosConfig";
 
 const AddEmployee = () => {
   const { API_URL, navigate } = useAppContext();
@@ -64,19 +65,43 @@ const AddEmployee = () => {
   const fetchEmployeeData = async (id) => {
     setLoading(true);
     try {
-      const resp = await fetch(`${API_URL}/api/employees/${id}`);
-      const json = await resp.json();
-      if (!resp.ok || !json.success) throw new Error(json.message);
-      const data = json.data;
+      const resp = await axiosInstance.get(`${API_URL}/api/employees/${id}`);
+      if (!resp.data.success) throw new Error(resp.data.message);
+      const data = resp.data.data;
       setFormData({
-        ...data,
+        name: data.name || "",
         work_start_date: data.work_start_date?.slice(0,10) || "",
         profile_image: data.profile_image || null,
+        password: "",
+        contact1: data.contact1 || "",
+        contact2: data.contact2 || "",
+        email: data.email || "",
+        address: data.address || "",
+        city: data.city || "",
+        state: data.state || "",
+        pincode: data.pincode || "",
+        aadhar_number: data.aadhar_number || "",
         aadhar_document: data.aadhar_document || null,
+        pan_number: data.pan_number || "",
         pan_document: data.pan_document || null,
-        salary_details: { ...data.salary_details },
-        work_experience: data.work_experience.map(exp => ({
-          ...exp,
+        tenure: data.tenure || "",
+        employment_type: data.employment_type || "Full Time",
+        is_current_employee: data.is_current_employee ?? true,
+        designation: data.designation || "",
+        department: data.department || "",
+        reporting_manager: data.reporting_manager || "",
+        employee_status: data.employee_status || "Active",
+        salary_details: {
+          monthly_salary: data.salary_details?.monthly_salary || "",
+          bank_account_number: data.salary_details?.bank_account_number || "",
+          ifsc_code: data.salary_details?.ifsc_code || "",
+          bank_name: data.salary_details?.bank_name || "",
+          pf_account_number: data.salary_details?.pf_account_number || "",
+        },
+        work_experience: (data.work_experience || []).map(exp => ({
+          company_name: exp.company_name || "",
+          role: exp.role || "",
+          duration: exp.duration || "",
           experience_letter: exp.experience_letter || null,
         })),
         documents: {
@@ -84,7 +109,8 @@ const AddEmployee = () => {
           offer_letter: data.documents?.offer_letter || null,
           joining_letter: data.documents?.joining_letter || null,
           other_docs: data.documents?.other_docs || []
-        }
+        },
+        notes: data.notes || "",
       });
     } catch (err) {
       setError(err.message);
@@ -231,25 +257,16 @@ const AddEmployee = () => {
     });
   
     try {
-      const url = isEditMode 
-        ? `${API_URL}/api/employees/${employeeId}` 
-        : `${API_URL}/api/employees`;
+      const res = isEditMode 
+        ? await axiosInstance.put(`${API_URL}/api/employees/${employeeId}`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        : await axiosInstance.post(`${API_URL}/api/employees`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
       
-      const method = isEditMode ? 'PUT' : 'POST';
-      
-      const res = await fetch(url, { 
-        method, 
-        body: fd
-      });
-      
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || 'Failed to save employee');
-      }
-      
-      const json = await res.json();
-      if (!json.success) {
-        throw new Error(json.message || 'Failed to save employee');
+      if (!res.data.success) {
+        throw new Error(res.data.message || 'Failed to save employee');
       }
       
       navigate('/employees');

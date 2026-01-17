@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import axios from "axios";
+import api from '../utils/axiosConfig';
 import Loader from "../components/Loader";
 
 function ProjectManagement() {
@@ -19,7 +19,7 @@ function ProjectManagement() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/projects`);
+        const response = await api.get('/api/projects');
         const sortedProjects = (response.data || []).sort((a, b) => {
           const dateA = new Date(a.createdAt || 0);
           const dateB = new Date(b.createdAt || 0);

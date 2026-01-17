@@ -4,6 +4,7 @@ import { useAppContext } from "../context/AppContext";
 import axios from "axios";
 import { motion } from "framer-motion";
 
+import api from '../utils/axiosConfig';
 const ContractFormPage = () => {
   const { id } = useParams();
   const { API_URL } = useAppContext();
@@ -162,7 +163,7 @@ const ContractFormPage = () => {
   const handleEditToggle = () => {
     if (!isEditing) {
       // Load contract content for editing
-      fetch(`${API_URL}/api/employees/${id}/contract/content`)
+      api.get('/api/employees/${id}/contract/content')
         .then(res => res.json())
         .then(data => {
           if (data.success) {
