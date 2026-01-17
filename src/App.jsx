@@ -9,6 +9,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Layout from "./components/Layout";
 import Dashboard from "./components/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import DownloadContract from "./components/DownloadContract";
 
 // Pages
 import Login from "./pages/Login";
@@ -21,9 +22,7 @@ import AddEmployee from "./pages/AddEmployee";
 import ContractManagement from "./pages/ContractManagement";
 import EditContract from "./pages/EditContract";
 import AddContract from "./pages/AddContract";
-// import PolicyAcceptance from "./pages/PolicyManagement";
 import InvoiceManagement from "./pages/InvoiceManagement";
-import DownloadContract from "./components/DownloadContract";
 import AddInvoice from "./pages/AddInvoice";
 import CreateInvoice from "./pages/CreateInvoice";
 import EmployeeAttendance from "./pages/EmployeeAttendance";
@@ -34,9 +33,8 @@ import TasksManagement from "./pages/TasksManagement";
 import TaskManagement from "./pages/TaskManagement";
 import TaskAssignment from "./pages/TaskAssignment";
 import Settings from "./pages/Settings";
-// import EmployeeWorkHistory from "./pages/EmployeeWorkHistory";
 
-// 🔔 This component handles FCM registration using context
+// FCM registration component
 function PushManagerInitializer() {
   const { API_URL } = useAppContext();
 
@@ -84,12 +82,12 @@ function AppRoutes() {
         <Route path="contracts/download/:id" element={<DownloadContract />} />
         <Route path="invoices" element={<InvoiceManagement />} />
         <Route path="invoices/add" element={<AddInvoice />} />
-        <Route path="/invoices/edit/:id" element={<AddInvoice />} />
+        <Route path="invoices/edit/:id" element={<AddInvoice />} />
         <Route path="invoices/view/:id" element={<CreateInvoice />} />
         <Route path="attendance" element={<EmployeeAttendance />} />
         <Route path="timesheet" element={<EmployeeTimesheet />} />
-        <Route path="/work-history" element={<WorkHistory />} />
-        <Route path="/work-summary" element={<WorkSummary />} />
+        <Route path="work-history" element={<WorkHistory />} />
+        <Route path="work-summary" element={<WorkSummary />} />
         <Route path="tasks" element={<TasksManagement />} />
         <Route path="task-management" element={<TaskManagement />} />
         <Route path="task-assignment" element={<TaskAssignment />} />
@@ -106,18 +104,13 @@ function App() {
   return (
     <BrowserRouter>
       <AppProvider>
-        <PushManagerInitializer />{" "}
-        {/* 🔔 Register FCM when API_URL is available */}
+        <PushManagerInitializer />
         <AppRoutes />
         <ToastContainer
           position="top-right"
           autoClose={5000}
           hideProgressBar={false}
-          newestOnTop={false}
           closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
           pauseOnHover
           theme="light"
         />
