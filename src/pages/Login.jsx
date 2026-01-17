@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
+import { loginUser } from "../api/apiLogin";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -8,7 +9,7 @@ function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, API_URL } = useAppContext();
+  const { login } = useAppContext();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,26 +17,14 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        login(data.user, data.token);
-        
-        if (data.user.role === 'employee') {
-          navigate("/attendance");
-        } else {
-          navigate("/");
-        }
+      const data = await loginUser(email, password);
+      
+      login(data.user, data.token);
+      
+      if (data.user.role === 'employee') {
+        navigate("/attendance");
       } else {
-        setError(data.message || "Invalid credentials");
+        navigate("/");
       }
     } catch (error) {
       setError(error.message);

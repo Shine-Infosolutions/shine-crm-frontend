@@ -19,14 +19,11 @@ const testAPI = {
       if (data.success && data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        console.log('✅ Login successful!', data);
         return data;
       } else {
-        console.log('❌ Login failed:', data.message);
         return null;
       }
     } catch (error) {
-      console.log('❌ Login error:', error);
       return null;
     }
   },
@@ -34,7 +31,6 @@ const testAPI = {
   async testProtectedRoute() {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('❌ No token found. Please login first.');
       return;
     }
     
@@ -49,14 +45,11 @@ const testAPI = {
       const data = await response.json();
       
       if (response.ok) {
-        console.log('✅ Protected route access successful!', data);
         return data;
       } else {
-        console.log('❌ Protected route access failed:', data.message);
         return null;
       }
     } catch (error) {
-      console.log('❌ Protected route error:', error);
       return null;
     }
   },
@@ -67,10 +60,8 @@ const testAPI = {
       const api = (await import('./axiosConfig.js')).default;
       
       const response = await api.get('/api/employees');
-      console.log('✅ Axios config working!', response.data);
       return response.data;
     } catch (error) {
-      console.log('❌ Axios config error:', error.response?.data || error.message);
       return null;
     }
   }

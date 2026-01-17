@@ -17,7 +17,7 @@ function EmployeeAttendance() {
   const [customCheckoutTime, setCustomCheckoutTime] = useState('');
   const dateInputRef = useRef(null);
 
-  const isAdmin = currentUser?.role !== "employee";
+  const isAdmin = currentUser?.role === "admin";
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -77,13 +77,13 @@ function EmployeeAttendance() {
 
         setAttendanceRecords(recordsWithNames);
       } else {
-        // For employee: only load attendance
-        const employeeId = currentUser?._id || currentUser?.id;
-        const response = await api.get(`/api/attendance?employee_id=${employeeId}`);
+        // For employee: use their own attendance endpoint
+        const response = await api.get('/api/attendance/my-attendance');
 
         if (response.status === 200) {
           const data = response.data;
-          const records = data.data || data || [];
+          const records = data.data || [];
+          
           setAttendanceRecords(records);
 
           // Check attendance status for today

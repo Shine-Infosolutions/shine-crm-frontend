@@ -69,12 +69,13 @@ const CreateInvoice = () => {
     removeAfterPrint: true,
     onAfterPrint: () => console.log("🖨️ Printed successfully"),
     pageStyle: `
-      @page { size: A4 portrait; margin: 5mm; }
+      @page { size: A4 portrait; margin: 10mm; }
       @media print {
         html, body { margin:0; padding:0; -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
-        #print-root, #root { box-sizing:border-box; width:100%; height:auto; }
+        #print-root { box-sizing:border-box; width:100%; height:auto; page-break-inside: avoid; }
         .no-print { display:none!important; }
         * { page-break-inside: avoid; }
+        .page-break { page-break-before: always; }
       }
     `,
   });
@@ -149,7 +150,7 @@ const CreateInvoice = () => {
           id="print-root" 
           className="overflow-x-auto"
         >
-        <div className="border-2 border-black max-w-full md:max-w-5xl mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white/90 backdrop-blur-xl">
+        <div className="border-2 border-black max-w-full mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white print:bg-white" style={{maxWidth: '210mm', minHeight: 'auto'}}>
           {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
