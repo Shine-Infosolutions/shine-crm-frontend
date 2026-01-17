@@ -14,28 +14,28 @@ function TaskManagement() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.id) {
+    if (currentUser?._id) {
       loadTasks();
     }
-  }, [currentUser?.id, activeTab]);
+  }, [currentUser?._id, activeTab]);
 
   // Add visibility change listener to refresh tasks when page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && currentUser?.id) {
+      if (!document.hidden && currentUser?._id) {
         loadTasks();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [currentUser?.id, activeTab]);
+  }, [currentUser?._id, activeTab]);
 
   const loadTasks = async () => {
     setLoading(true);
     try {
       if (activeTab === 'assigned') {
-        const response = await api.get(`/api/tasks/employee/${currentUser?.id}`);
+        const response = await api.get(`/api/tasks/employee/${currentUser?._id}`);
         if (response.status === 200) {
           const data = response.data;
           const taskList = data.tasks || data.data || [];
@@ -64,91 +64,62 @@ function TaskManagement() {
 
   const takeTask = async (taskId) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/take`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employee_id: currentUser?.id })
+      const response = await api.patch(`/api/tasks/${taskId}/take`, {
+        employee_id: currentUser?._id
       });
       
-      if (response.ok) {
-        toast.success('Task taken successfully');
-        // Refresh both tabs to ensure synchronization
-        await loadTasks();
-        // If we're on available tab, also refresh assigned tasks
-        if (activeTab === 'available') {
-          const assignedResponse = await api.get(`/api/tasks/employee/${currentUser?.id}`);
-          if (assignedResponse.status === 200) {
-            const assignedData = assignedResponse.data;
-            const assignedList = assignedData.tasks || assignedData.data || [];
-            setTasks(Array.isArray(assignedList) ? assignedList : []);
-          }
+      toast.success('Task taken successfully');
+      await loadTasks();
+      if (activeTab === 'available') {
+        const assignedResponse = await api.get(`/api/tasks/employee/${currentUser?._id}`);
+        if (assignedResponse.status === 200) {
+          const assignedData = assignedResponse.data;
+          const assignedList = assignedData.tasks || assignedData.data || [];
+          setTasks(Array.isArray(assignedList) ? assignedList : []);
         }
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || 'Failed to take task');
       }
     } catch (error) {
       console.error('Take task error:', error);
-      toast.error('Error taking task');
+      toast.error(error.response?.data?.message || 'Failed to take task');
     }
   };
 
   const updateTaskStatus = async (taskId, status) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
-      });
-      
-      if (response.ok) {
-        toast.success(`Task marked as ${status}`);
-        loadTasks();
-      } else {
-        toast.error('Failed to update task status');
-      }
+      await api.patch(`/api/tasks/${taskId}/status`, { status });
+      toast.success(`Task marked as ${status}`);
+      loadTasks();
     } catch (error) {
-      toast.error('Error updating task status');
+      toast.error(error.response?.data?.message || 'Failed to update task status');
     }
   };
 
   const updateTaskProgress = async (taskId, progress, notes, timeSpent) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/progress`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ progress, notes, time_spent: timeSpent })
+      await api.patch(`/api/tasks/${taskId}/progress`, {
+        progress,
+        notes,
+        time_spent: timeSpent
       });
-      
-      if (response.ok) {
-        toast.success('Task progress updated');
-        loadTasks();
-        setShowProgressModal(false);
-      } else {
-        toast.error('Failed to update progress');
-      }
+      toast.success('Task progress updated');
+      loadTasks();
+      setShowProgressModal(false);
     } catch (error) {
-      toast.error('Error updating progress');
+      toast.error(error.response?.data?.message || 'Failed to update progress');
     }
   };
 
   const updateDailySummary = async (taskId, summaryNotes, isCompleted) => {
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/daily-summary`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summary_notes: summaryNotes, is_completed: isCompleted })
+      await api.patch(`/api/tasks/${taskId}/daily-summary`, {
+        summary_notes: summaryNotes,
+        is_completed: isCompleted
       });
-      
-      if (response.ok) {
-        toast.success('Daily summary updated');
-        loadTasks();
-        setShowSummaryModal(false);
-      } else {
-        toast.error('Failed to update summary');
-      }
+      toast.success('Daily summary updated');
+      loadTasks();
+      setShowSummaryModal(false);
     } catch (error) {
-      toast.error('Error updating summary');
+      toast.error(error.response?.data?.message || 'Failed to update summary');
     }
   };
 

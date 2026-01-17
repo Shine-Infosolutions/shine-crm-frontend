@@ -27,7 +27,7 @@ function ContractManagement() {
 
         if (isEmployee) {
           contractData = contractData.filter(
-            (emp) => emp._id === currentUser.id
+            (emp) => emp._id === currentUser._id
           );
         }
 
@@ -36,6 +36,8 @@ function ContractManagement() {
             new Date(b.created_at || b._id.toString().substring(0, 8)) -
             new Date(a.created_at || a._id.toString().substring(0, 8))
         );
+        
+        console.log('Loaded employee data:', sorted[0]?.contract_agreement?.acceptance);
         setContracts(sorted);
       } catch (error) {
         console.error("Error fetching contracts:", error);
@@ -413,49 +415,43 @@ function ContractManagement() {
       console.log("Saving signature for:", employeeContract.name);
       console.log("Signature data:", signatureData.substring(0, 50) + "...");
 
-      // Convert base64 to blob
-      const response = await fetch(signatureData);
-      const blob = await response.blob();
-
-      // Create FormData
-      const formData = new FormData();
-      formData.append("signature", blob, "signature.png");
-      formData.append("signed_date", new Date().toISOString());
-      formData.append("employee_name", employeeContract.name);
+      // Convert base64 to blob and create signature data
+      const signatureInfo = {
+        acceptance: {
+          signature: signatureData,
+          accepted: true,
+          accepted_at: new Date().toISOString()
+        }
+      };
 
       const apiResponse = await api.put(
         `/api/employees/${employeeContract._id}/contract/update`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        signatureInfo
       );
 
       console.log("Backend response:", apiResponse.data);
 
       if (apiResponse.data.success) {
-        setContracts((prev) =>
-          prev.map((emp) =>
-            emp._id === employeeContract._id
-              ? {
-                  ...emp,
-                  signature: signatureData,
-                  signed_date: new Date().toISOString(),
-                }
-              : emp
-          )
-        );
+        // Refresh employee data from server to get updated contract
+        const updatedResponse = await api.get(`/api/employees/${employeeContract._id}`);
+        if (updatedResponse.data.success) {
+          setContracts((prev) =>
+            prev.map((emp) =>
+              emp._id === employeeContract._id ? updatedResponse.data.data : emp
+            )
+          );
+        }
+        
         setShowSignature(false);
 
         const iframe = document.querySelector(
           'iframe[title="Contract Preview"]'
         );
         if (iframe) {
+          const token = localStorage.getItem('token');
           iframe.src = `${API_URL}/api/employees/${
             employeeContract._id
-          }/contract/preview?t=${Date.now()}`;
+          }/contract/preview?token=${token}&t=${Date.now()}`;
         }
 
         alert("Contract signed successfully!");
@@ -470,6 +466,8 @@ function ContractManagement() {
 
   if (isEmployee && filteredContracts.length > 0) {
     const employeeContract = filteredContracts[0];
+    const token = localStorage.getItem('token');
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20 p-6">
         {isEditing ? (
@@ -521,13 +519,13 @@ function ContractManagement() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3 }}
-            src={`${API_URL}/api/employees/${employeeContract._id}/contract/preview`}
+            src={`${API_URL}/api/employees/${employeeContract._id}/contract/preview?token=${token}`}
             className="w-full h-screen border-0 rounded-xl shadow-xl bg-white/80 backdrop-blur-xl"
             title="Contract Preview"
           />
         )}
 
-        {employeeContract.signature && (
+        {employeeContract.contract_agreement?.acceptance?.signature && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -538,14 +536,14 @@ function ContractManagement() {
               ✅ Signature saved successfully!
             </p>
             <img
-              src={employeeContract.signature}
+              src={employeeContract.contract_agreement.acceptance.signature}
               alt="Saved signature"
               className="h-16 border rounded"
             />
           </motion.div>
         )}
 
-        {!employeeContract.signature && (
+        {!employeeContract.contract_agreement?.acceptance?.signature && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -572,15 +570,6 @@ function ContractManagement() {
           transition={{ duration: 0.3, delay: 0.4 }}
           className="mt-6 flex gap-3"
         >
-          <motion.button
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => handleEditToggle(employeeContract)}
-            className="bg-blue-600/90 text-white px-6 py-2 rounded-lg hover:bg-blue-700/90 backdrop-blur-xl flex items-center transition-all duration-0.3"
-          >
-            {isEditing ? '📝 Exit Edit' : '✏️ Edit Contract'}
-          </motion.button>
-          
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
@@ -722,6 +711,9 @@ function ContractManagement() {
                     Contract Status
                   </th>
                   <th className="px-16 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                    Signature
+                  </th>
+                  <th className="px-16 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
                     Action
                   </th>
                 </tr>
@@ -749,7 +741,7 @@ function ContractManagement() {
                       {emp.employee_id}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {emp.signature ? (
+                      {emp.contract_agreement?.acceptance?.signature ? (
                         <span className="text-green-600 font-medium">
                           Signed
                         </span>
@@ -761,6 +753,18 @@ function ContractManagement() {
                         <span className="text-red-600 font-medium">
                           Pending
                         </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {emp.contract_agreement?.acceptance?.signature && (
+                        <img
+                          src={emp.contract_agreement.acceptance.signature}
+                          alt="Employee signature"
+                          className="h-8 w-16 object-contain border rounded"
+                        />
+                      )}
+                      {!emp.contract_agreement?.acceptance?.signature && (
+                        <span className="text-gray-400 text-sm">No signature</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap space-x-2">
