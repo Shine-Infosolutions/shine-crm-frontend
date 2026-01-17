@@ -85,31 +85,15 @@ const AddLead = () => {
     setError("");
 
     try {
-      const url = isEditMode
-        ? `${API_URL}/api/leads/${leadId}`
-        : `${API_URL}/api/leads`;
-
-      const method = isEditMode ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = response.data;
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || `Failed to ${isEditMode ? "update" : "add"} lead`
-        );
+      if (isEditMode) {
+        await api.put(`/api/leads/${leadId}`, formData);
+      } else {
+        await api.post('/api/leads', formData);
       }
 
       navigate("/leads");
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} lead`);
     } finally {
       setLoading(false);
     }

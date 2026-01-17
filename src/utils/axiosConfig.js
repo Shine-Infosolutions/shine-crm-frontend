@@ -39,7 +39,14 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       handleAuthError();
+      return Promise.reject(new Error('Unauthorized - redirecting to login'));
     }
+    
+    // Ensure error has a message property
+    if (!error.message) {
+      error.message = error.response?.data?.message || 'An error occurred';
+    }
+    
     return Promise.reject(error);
   }
 );

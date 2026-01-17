@@ -1,4 +1,4 @@
-import React from 'react';
+import { Fragment } from 'react';
 
 const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, totalItems }) => {
   const getVisiblePages = () => {
@@ -29,6 +29,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, total
 
   if (totalPages <= 1) return null;
 
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
   return (
     <div className="flex items-center justify-between bg-white dark:bg-gray-800 px-4 py-3 sm:px-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
       <div className="flex flex-1 justify-between sm:hidden">
@@ -50,8 +53,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, total
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-700 dark:text-gray-300">
-            Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-            <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
+            Showing <span className="font-medium">{startItem}</span> to{' '}
+            <span className="font-medium">{endItem}</span> of{' '}
             <span className="font-medium">{totalItems}</span> results
           </p>
         </div>
@@ -68,7 +71,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, total
             </button>
             
             {getVisiblePages().map((page, index) => (
-              <React.Fragment key={index}>
+              <Fragment key={index}>
                 {page === '...' ? (
                   <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:outline-offset-0">
                     ...
@@ -85,7 +88,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, itemsPerPage, total
                     {page}
                   </button>
                 )}
-              </React.Fragment>
+              </Fragment>
             ))}
             
             <button

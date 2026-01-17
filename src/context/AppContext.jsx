@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { isTokenExpired, clearAuthData } from "../utils/tokenUtils";
 
 const AppContext = createContext();
-
 const API_URL = "http://localhost:5000";
 
 export function AppProvider({ children }) {
@@ -12,8 +11,7 @@ export function AppProvider({ children }) {
   const [token, setToken] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     const savedDark = localStorage.getItem("darkMode");
-    if (savedDark !== null) return savedDark === "true";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return savedDark !== null ? savedDark === "true" : window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   const navigate = useNavigate();
@@ -25,6 +23,7 @@ export function AppProvider({ children }) {
     if (savedUser && savedToken) {
       if (isTokenExpired(savedToken)) {
         clearAuthData();
+        navigate('/login');
         return;
       }
       
@@ -33,16 +32,13 @@ export function AppProvider({ children }) {
         setToken(savedToken);
       } catch (error) {
         clearAuthData();
+        navigate('/login');
       }
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
@@ -60,11 +56,19 @@ export function AppProvider({ children }) {
     setCurrentUser(null);
     setToken(null);
     clearAuthData();
+    navigate('/login');
   };
 
   const getAuthHeaders = () => {
     const authToken = token || localStorage.getItem('token');
-    return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+    if (!authToken) return {};
+    
+    if (isTokenExpired(authToken)) {
+      logout();
+      return {};
+    }
+    
+    return { Authorization: `Bearer ${authToken}` };
   };
 
   const contextValue = {
