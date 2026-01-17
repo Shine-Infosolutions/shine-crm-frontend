@@ -29,7 +29,6 @@ function WorkHistory() {
         setTasks(data.data || data.tasks || []);
       }
     } catch (error) {
-      console.error("Error loading tasks:", error);
     }
   };
   const loadWorkHistory = async () => {
@@ -64,7 +63,6 @@ function WorkHistory() {
             const data = JSON.parse(localStorage.getItem(key));
             localRecords.push(data);
           } catch (e) {
-            console.warn(`Invalid localStorage data for key: ${key}`);
           }
         });
         
@@ -76,7 +74,6 @@ function WorkHistory() {
         }
       }
     } catch (error) {
-      console.error("Error loading work history:", error);
       setError("Failed to load work history");
     } finally {
       setLoading(false);

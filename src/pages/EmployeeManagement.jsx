@@ -35,7 +35,6 @@ function EmployeeManagement() {
         throw new Error(response.data?.message || "Failed to load employees");
       }
     } catch (err) {
-      console.error("Error fetching employees:", err);
       setError(err.message || "Failed to load employees");
     } finally {
       setLoading(false);

@@ -97,7 +97,6 @@ function AddProject() {
 
       navigate("/projects");
     } catch (err) {
-      console.error("Error saving project:", err);
       setError(
         err.response?.data?.message ||
           "Failed to save project. Please try again."

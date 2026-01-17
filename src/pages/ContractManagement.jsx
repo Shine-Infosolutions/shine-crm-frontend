@@ -37,10 +37,8 @@ function ContractManagement() {
             new Date(a.created_at || a._id.toString().substring(0, 8))
         );
         
-        console.log('Loaded employee data:', sorted[0]?.contract_agreement?.acceptance);
         setContracts(sorted);
       } catch (error) {
-        console.error("Error fetching contracts:", error);
       } finally {
         setLoading(false);
       }
@@ -275,7 +273,6 @@ function ContractManagement() {
                 \`;
               }
             } catch (error) {
-              console.error('Error fetching employee data:', error);
             }
             return '<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6;"><h1>Employment Contract</h1><p>Unable to load contract content.</p></div>';
           }
@@ -379,7 +376,6 @@ function ContractManagement() {
       alert('Contract content saved successfully!');
       setIsEditing(false);
     } catch (error) {
-      console.error('Error saving content:', error);
       alert('Error saving contract content');
     }
     setSavingContent(false);
@@ -399,7 +395,6 @@ function ContractManagement() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download error:', error);
       alert(`Download failed: ${error.response?.data?.message || error.message}`);
     }
   };
@@ -412,8 +407,6 @@ function ContractManagement() {
   const handleSaveSignature = async (signatureData) => {
     try {
       const employeeContract = filteredContracts[0];
-      console.log("Saving signature for:", employeeContract.name);
-      console.log("Signature data:", signatureData.substring(0, 50) + "...");
 
       // Convert base64 to blob and create signature data
       const signatureInfo = {
@@ -429,7 +422,6 @@ function ContractManagement() {
         signatureInfo
       );
 
-      console.log("Backend response:", apiResponse.data);
 
       if (apiResponse.data.success) {
         // Refresh employee data from server to get updated contract
@@ -457,7 +449,6 @@ function ContractManagement() {
         alert("Contract signed successfully!");
       }
     } catch (error) {
-      console.error("Error saving signature:", error);
       alert("Failed to save signature. Please try again.");
     }
   };

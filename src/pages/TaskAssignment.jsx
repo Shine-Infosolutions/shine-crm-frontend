@@ -27,26 +27,20 @@ function TaskAssignment() {
     try {
       const response = await api.get('/api/employees');
       const data = response.data;
-      console.log('Employees data:', data);
       const employeeList = data.data || data.employees || data || [];
       setEmployees(Array.isArray(employeeList) ? employeeList : []);
     } catch (error) {
-      console.error('Error loading employees:', error);
       setEmployees([]);
     }
   };
 
   const loadTasks = async () => {
     try {
-      console.log('Loading tasks from:', `${API_URL}/api/tasks`);
       const response = await api.get('/api/tasks');
-      console.log('Response status:', response.status);
       const data = response.data;
-      console.log('Tasks data received:', data);
       const taskList = data.data || data.tasks || data || [];
       setTasks(Array.isArray(taskList) ? taskList : []);
     } catch (error) {
-      console.error('Error loading tasks:', error);
       setTasks([]);
     }
   };
@@ -54,7 +48,6 @@ function TaskAssignment() {
   const assignTask = async (e) => {
     e.preventDefault();
     
-    console.log('Current user:', currentUser);
     
     if (!currentUser?.id && !currentUser?._id) {
       toast.error('User not found. Please login again.');
@@ -74,11 +67,9 @@ function TaskAssignment() {
         delete taskData.assigned_to;
       }
       
-      console.log('Task data being sent:', taskData);
       
       const response = await api.post('/api/tasks/assign', taskData);
       const result = response.data;
-      console.log('Task created:', result);
       toast.success('Task assigned successfully');
       setShowAssignModal(false);
       setFormData({
@@ -90,7 +81,6 @@ function TaskAssignment() {
         make_available: true
       });
       await loadTasks();
-      console.log('Tasks after reload:', tasks);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Error assigning task');
     }
@@ -103,7 +93,6 @@ function TaskAssignment() {
       const data = response.data;
       return data.tasks || [];
     } catch (error) {
-      console.error('Error loading employee tasks:', error);
       return [];
     }
   };

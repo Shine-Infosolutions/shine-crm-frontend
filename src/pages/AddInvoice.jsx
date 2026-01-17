@@ -87,7 +87,6 @@ const AddInvoice = () => {
           }));
         }
       } catch (err) {
-        console.error("Invoice fetch error:", err);
         alert("Failed to fetch invoice.");
       }
     };
@@ -233,7 +232,6 @@ const AddInvoice = () => {
       }
       navigate("/invoices");
     } catch (err) {
-      console.error("Submit failed:", err);
       alert("Failed to save invoice.");
     }
   };

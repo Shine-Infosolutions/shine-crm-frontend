@@ -23,22 +23,15 @@ function TasksManagement() {
   const isAdmin = currentUser?.role !== "employee";
 
   useEffect(() => {
-    console.log("TasksManagement useEffect triggered");
-    console.log("currentUser:", currentUser);
-    console.log("isAdmin:", isAdmin);
     
     if (currentUser?._id || currentUser?.id) {
-      console.log("User ID exists, proceeding...");
       if (isAdmin) {
-        console.log("User is admin, loading employees and tasks");
         loadEmployees();
         loadTasks();
       } else {
-        console.log("User is employee, loading my tasks");
         loadMyTasks();
       }
     } else {
-      console.log("No user ID found");
     }
   }, [currentUser, isAdmin]);
 
@@ -60,22 +53,15 @@ function TasksManagement() {
 
   const loadEmployees = async () => {
     try {
-      console.log("API_URL:", API_URL);
-      console.log("Loading employees from:", `${API_URL}/api/employees`);
       const response = await api.get('/api/employees');
-      console.log("Employee response status:", response.status);
       
       if (response.status === 200) {
         const data = response.data;
-        console.log("Employee response data:", data);
-        console.log("Employees array:", data.data);
         setEmployees(data.data || []);
       } else {
-        console.error("Failed to load employees:", response.status);
         setEmployees([]);
       }
     } catch (error) {
-      console.error("Error loading employees:", error);
       setEmployees([]);
     }
   };
@@ -90,11 +76,9 @@ function TasksManagement() {
         const taskList = data.data || data.tasks || [];
         setTasks(Array.isArray(taskList) ? taskList : []);
       } else {
-        console.error('Failed to load tasks:', response.status);
         setTasks([]);
       }
     } catch (error) {
-      console.error("Error loading tasks:", error);
       setTasks([]);
     } finally {
       setLoading(false);
@@ -111,11 +95,9 @@ function TasksManagement() {
         const taskList = data.data || data.tasks || [];
         setTasks(Array.isArray(taskList) ? taskList : []);
       } else {
-        console.error('Failed to load my tasks:', response.status);
         setTasks([]);
       }
     } catch (error) {
-      console.error("Error loading my tasks:", error);
       setTasks([]);
     } finally {
       setLoading(false);
@@ -145,7 +127,6 @@ function TasksManagement() {
         alert(data.message || "Failed to update task status");
       }
     } catch (error) {
-      console.error("Error updating task status:", error);
       alert("Error updating task status");
     }
   };
@@ -181,7 +162,6 @@ function TasksManagement() {
         alert(data.message || "Failed to update task");
       }
     } catch (error) {
-      console.error("Error updating task:", error);
       alert("Error updating task");
     }
   };
@@ -260,7 +240,6 @@ function TasksManagement() {
         }
       }
     } catch (error) {
-      console.error("Error with task:", error);
       alert("Error with task. Please check your connection.");
     } finally {
       setLoading(false);

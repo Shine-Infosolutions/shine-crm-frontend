@@ -271,7 +271,6 @@ const AddEmployee = () => {
       
       navigate('/employees');
     } catch (err) {
-      console.error('Submission error:', err);
       setError(err.message || 'An error occurred while saving');
     } finally {
       setLoading(false);

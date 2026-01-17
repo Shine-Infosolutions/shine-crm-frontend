@@ -43,11 +43,9 @@ function EmployeeTimesheet() {
 
   useEffect(() => {
     if (currentUser?._id && !isAdmin) {
-      console.log('Loading timesheet for user:', currentUser._id, 'date:', selectedDate);
       loadTimesheet();
       loadTasks();
     } else if (!isAdmin) {
-      console.log('Initializing empty timesheet - no user ID');
       initializeTimeEntries();
     }
   }, [selectedDate, currentUser?._id]);
@@ -55,7 +53,6 @@ function EmployeeTimesheet() {
   // Force initialization on component mount
   useEffect(() => {
     if (!isAdmin && timeEntries.length === 0) {
-      console.log('Force initializing time entries');
       initializeTimeEntries();
     }
   }, [isAdmin]);
@@ -86,65 +83,50 @@ function EmployeeTimesheet() {
         }
       }
     } catch (error) {
-      console.log("API check failed, using localStorage", error);
     }
 
     if (savedTimesheet) {
       try {
         const data = JSON.parse(savedTimesheet);
-        console.log('Loaded from localStorage:', data);
         setTimeEntries(data.time_entries || []);
         setTimesheetStatus(data.status || "Draft");
       } catch (error) {
-        console.error("Error parsing saved timesheet:", error);
         initializeTimeEntries();
       }
     } else {
-      console.log('No saved timesheet, initializing new one');
       initializeTimeEntries();
     }
   };
 
   const loadTasks = async () => {
     if (!currentUser?._id) {
-      console.log('No current user ID found');
       return;
     }
     
-    console.log('Loading tasks for user:', currentUser._id);
     
     try {
       // Load available tasks
       const availableResponse = await api.get('/api/tasks/available');
-      console.log('Available tasks response status:', availableResponse.status);
       
       if (availableResponse.status === 200) {
         const availableData = availableResponse.data;
-        console.log('Available tasks data:', availableData);
         const availableList = availableData?.data || availableData?.tasks || availableData || [];
         setAvailableTasks(Array.isArray(availableList) ? availableList : []);
-        console.log('Set available tasks:', availableList);
       } else {
-        console.error('Failed to load available tasks:', availableResponse.status);
         setAvailableTasks([]);
       }
 
       // Load assigned tasks
       const assignedResponse = await api.get(`/api/tasks/employee/${currentUser._id}`);
-      console.log('Assigned tasks response status:', assignedResponse.status);
       
       if (assignedResponse.status === 200) {
         const assignedData = assignedResponse.data;
-        console.log('Assigned tasks data:', assignedData);
         const assignedList = assignedData?.data || assignedData?.tasks || assignedData || [];
         setAssignedTasks(Array.isArray(assignedList) ? assignedList : []);
-        console.log('Set assigned tasks:', assignedList);
       } else {
-        console.error('Failed to load assigned tasks:', assignedResponse.status);
         setAssignedTasks([]);
       }
     } catch (error) {
-      console.error("Error loading tasks:", error);
       setAvailableTasks([]);
       setAssignedTasks([]);
     }
@@ -173,13 +155,11 @@ function EmployeeTimesheet() {
         setShowTaskModal(false);
         
         // Log for admin visibility
-        console.log(`Task ${taskId} taken by employee ${currentUser.name || currentUser.email}`);
       } else {
         const errorData = response.data;
         toast.error(errorData.message || "Failed to take task");
       }
     } catch (error) {
-      console.error("Take task error:", error);
       toast.error("Error taking task");
     }
   };
@@ -193,7 +173,6 @@ function EmployeeTimesheet() {
       hours_worked: 1,
       task_id: null,
     }));
-    console.log('Initializing time entries:', entries);
     setTimeEntries(entries);
     setTimesheetStatus("Draft");
   };
@@ -269,7 +248,6 @@ function EmployeeTimesheet() {
         toast.error(errorData.message || "Failed to submit timesheet");
       }
     } catch (error) {
-      console.error("Submit error:", error);
       toast.error("Network error occurred");
     } finally {
       setLoading(false);

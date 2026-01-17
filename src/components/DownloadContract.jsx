@@ -31,7 +31,6 @@ const DownloadContract = () => {
         navigate('/contracts');
       }, 1000);
     } catch (error) {
-      console.error('Error downloading contract:', error);
       alert('Failed to download contract. Please try again.');
       navigate('/contracts');
     }

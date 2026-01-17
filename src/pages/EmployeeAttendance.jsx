@@ -94,9 +94,6 @@ function EmployeeAttendance() {
             return recordDate === today;
           });
           
-          console.log('Today:', today);
-          console.log('Records:', records);
-          console.log('Today record:', todayRecord);
           
           // Simple logic: show checkout if checked in but not checked out
           const hasCheckedIn = todayRecord && todayRecord.time_in;
@@ -107,7 +104,6 @@ function EmployeeAttendance() {
         }
       }
     } catch (error) {
-      console.error("Error loading attendance records:", error);
       setAttendanceRecords([]);
     } finally {
       setLoading(false);
@@ -166,7 +162,6 @@ function EmployeeAttendance() {
       await loadAttendanceRecords();
       alert("Checked in successfully!");
     } catch (error) {
-      console.error("Error checking in:", error);
       alert("Error checking in: " + error.message);
     } finally {
       setLoading(false);
@@ -235,7 +230,6 @@ function EmployeeAttendance() {
         alert(data.message || "Failed to check out");
       }
     } catch (error) {
-      console.error("Error checking out:", error);
       alert("Error checking out: " + error.message);
     } finally {
       setLoading(false);
@@ -283,7 +277,6 @@ function EmployeeAttendance() {
           await loadAttendanceRecords();
           alert("You have been automatically checked out after 9 hours of work!");
         } catch (error) {
-          console.error("Auto checkout error:", error);
         }
       }
     }
@@ -295,7 +288,6 @@ function EmployeeAttendance() {
       const data = response.data;
       setEmployees(data.data || data || []);
     } catch (error) {
-      console.error("Error loading employees:", error);
     }
   };
 

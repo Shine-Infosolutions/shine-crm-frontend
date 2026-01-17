@@ -24,7 +24,6 @@ export function AppProvider({ children }) {
     
     if (savedUser && savedToken) {
       if (isTokenExpired(savedToken)) {
-        console.log('Token expired on app load, clearing storage');
         clearAuthData();
         return;
       }
@@ -33,7 +32,6 @@ export function AppProvider({ children }) {
         setCurrentUser(JSON.parse(savedUser));
         setToken(savedToken);
       } catch (error) {
-        console.log('Invalid user data, clearing storage');
         clearAuthData();
       }
     }

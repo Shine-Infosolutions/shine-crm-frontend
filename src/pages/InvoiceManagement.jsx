@@ -28,7 +28,6 @@ const InvoiceManagement = () => {
         throw new Error(res.data?.message || "Failed to load invoices");
       }
     } catch (err) {
-      console.error("Error fetching invoices:", err);
       setError(err.response?.data?.message || err.message || "Failed to load invoices");
     } finally {
       setLoading(false);

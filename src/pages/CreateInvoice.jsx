@@ -67,7 +67,6 @@ const CreateInvoice = () => {
     contentRef: componentRef,
     documentTitle: `Invoice-${invoice?.invoiceNumber || "Invoice"}`,
     removeAfterPrint: true,
-    onAfterPrint: () => console.log("🖨️ Printed successfully"),
     pageStyle: `
       @page { size: A4 portrait; margin: 10mm; }
       @media print {
@@ -395,7 +394,6 @@ const CreateInvoice = () => {
                       setInvoice(prev => ({ ...prev, notes }));
                     }
                   } catch (error) {
-                    console.log('Failed to save notes:', error);
                   }
                   setShowNotesEditor(false);
                   setShowNotesInInvoice(true);

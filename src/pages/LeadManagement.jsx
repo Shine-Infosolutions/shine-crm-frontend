@@ -17,7 +17,6 @@ function LeadManagement() {
         await api.delete(`/api/leads/${leadId}`);
         setLeads(leads.filter(lead => lead._id !== leadId));
       } catch (error) {
-        console.error('Error deleting lead:', error);
         alert('Failed to delete lead');
       }
     }
@@ -49,7 +48,6 @@ function LeadManagement() {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Error exporting CSV:', error);
       alert('Failed to export CSV');
     }
   };
@@ -65,7 +63,6 @@ function LeadManagement() {
         });
         setLeads(sortedLeads);
       } catch (error) {
-        console.error("Error fetching leads:", error);
       } finally {
         setLoading(false);
       }

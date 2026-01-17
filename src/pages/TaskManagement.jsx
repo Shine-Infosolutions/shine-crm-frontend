@@ -41,7 +41,6 @@ function TaskManagement() {
           const taskList = data.tasks || data.data || [];
           setTasks(Array.isArray(taskList) ? taskList : []);
         } else {
-          console.error('Failed to load assigned tasks:', response.status);
           setTasks([]);
         }
       } else {
@@ -51,12 +50,10 @@ function TaskManagement() {
           const taskList = data.tasks || data.data || [];
           setAvailableTasks(Array.isArray(taskList) ? taskList : []);
         } else {
-          console.error('Failed to load available tasks:', response.status);
           setAvailableTasks([]);
         }
       }
     } catch (error) {
-      console.error('Error loading tasks:', error);
       toast.error('Error loading tasks');
     }
     setLoading(false);
@@ -79,7 +76,6 @@ function TaskManagement() {
         }
       }
     } catch (error) {
-      console.error('Take task error:', error);
       toast.error(error.response?.data?.message || 'Failed to take task');
     }
   };

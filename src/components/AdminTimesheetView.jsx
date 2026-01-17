@@ -11,10 +11,8 @@ const AdminTimesheetView = () => {
   const loadTimesheets = () => {
     api.get('/api/employee-timesheet/admin/all')
       .then(res => {
-        console.log('Employee timesheet data:', res.data);
         setTimesheets(res.data.timesheets || []);
       })
-      .catch(err => console.error('Error loading timesheets:', err));
   };
 
   useEffect(() => {
@@ -33,7 +31,6 @@ const AdminTimesheetView = () => {
         loadTimesheets(); // Reload timesheets
       }
     } catch (error) {
-      console.error('Error approving timesheet:', error);
       toast.error('Error approving timesheet');
     } finally {
       setLoading(false);

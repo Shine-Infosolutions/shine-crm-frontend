@@ -61,7 +61,6 @@ function Dashboard() {
         const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
         setRecentTasks(tasksArray.slice(0, 3));
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }

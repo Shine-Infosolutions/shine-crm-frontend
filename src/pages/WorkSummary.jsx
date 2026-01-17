@@ -49,7 +49,6 @@ function WorkSummary() {
       const employeeList = data.data || data || [];
       setEmployees(employeeList);
     } catch (error) {
-      console.error("Error loading employees:", error);
       setEmployees([]);
     }
   };
@@ -94,7 +93,6 @@ function WorkSummary() {
       
       setTasks(allTasks);
     } catch (error) {
-      console.error("Error loading task data:", error);
       setTasks([]);
     }
   };
@@ -126,7 +124,6 @@ function WorkSummary() {
             allRecords = apiRecords.filter(record => record.employee_id === userId);
           }
       } catch (apiError) {
-        console.log('API timesheet loading failed, trying localStorage:', apiError);
       }
       
       // If no API data, load from localStorage
@@ -147,7 +144,6 @@ function WorkSummary() {
                   status: data.status || "Pending",
                 });
               } catch (e) {
-                console.warn(`Invalid localStorage data for key: ${key}`);
               }
             });
           });
@@ -167,7 +163,6 @@ function WorkSummary() {
                 status: data.status || "Pending",
               });
             } catch (e) {
-              console.warn(`Invalid localStorage data for key: ${key}`);
             }
           });
         }
@@ -176,7 +171,6 @@ function WorkSummary() {
       allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
       setWorkHistory(allRecords);
     } catch (error) {
-      console.error("Error loading work history:", error);
       setWorkHistory([]);
     } finally {
       setLoading(false);
@@ -196,7 +190,6 @@ function WorkSummary() {
       setWorkHistory(updatedHistory);
       alert("Timesheet approved successfully!");
     } catch (error) {
-      console.error("Error approving timesheet:", error);
       alert("Error approving timesheet");
     }
   };

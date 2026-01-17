@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { loginUser } from "../api/apiLogin";
+import api from "../utils/axiosConfig";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -17,8 +17,12 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const data = await loginUser(email, password);
+      const response = await api.post('/api/auth/login', {
+        email,
+        password
+      });
       
+      const data = response.data;
       login(data.user, data.token);
       
       if (data.user.role === 'employee') {
@@ -27,7 +31,7 @@ function Login() {
         navigate("/");
       }
     } catch (error) {
-      setError(error.message);
+      setError(error.response?.data?.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }

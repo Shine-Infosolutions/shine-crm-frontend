@@ -80,7 +80,6 @@ const ContractFormPage = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
     } catch (error) {
-      console.error("Download failed:", error);
       setError("Failed to download contract");
     }
   };
@@ -103,7 +102,6 @@ const ContractFormPage = () => {
           });
         }
       } catch (error) {
-        console.error("Error fetching employee:", error);
         setError("Failed to load employee data");
       } finally {
         setLoading(false);
@@ -149,7 +147,6 @@ const ContractFormPage = () => {
       );
       navigate("/contracts");
     } catch (error) {
-      console.error("Error updating contract:", error);
       setError("Failed to update contract. Please try again.");
     } finally {
       setSaving(false);
@@ -250,7 +247,6 @@ const ContractFormPage = () => {
         alert('Failed to save contract content');
       }
     } catch (error) {
-      console.error('Error saving content:', error);
       alert('Error saving contract content');
     }
     setSavingContent(false);
@@ -273,7 +269,6 @@ const ContractFormPage = () => {
           },
         }));
       } catch (error) {
-        console.error("Error accepting contract:", error);
         setError("Failed to accept contract");
       }
     }

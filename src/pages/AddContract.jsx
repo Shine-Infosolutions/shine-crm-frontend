@@ -72,7 +72,6 @@ const AddContract = () => {
           }
         }));
       } catch (error) {
-        console.error('Error fetching employee:', error);
         setError('Failed to load employee data');
       } finally {
         setLoading(false);
@@ -130,7 +129,6 @@ const AddContract = () => {
       // Redirect to contracts page
       navigate('/contracts');
     } catch (error) {
-      console.error('Error creating contract:', error);
       setError('Failed to create contract. Please try again.');
     } finally {
       setSaving(false);
@@ -161,7 +159,6 @@ const AddContract = () => {
        window.URL.revokeObjectURL(url);
        document.body.removeChild(link);
      } catch (error) {
-       console.error('Download failed:', error);
        setError('Failed to download contract');
      }
    };
