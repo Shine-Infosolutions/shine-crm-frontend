@@ -42,38 +42,47 @@ function EmployeeTimesheet() {
   };
 
   useEffect(() => {
-    if (currentUser?.id && !isAdmin) {
+    if (currentUser?._id && !isAdmin) {
+      console.log('Loading timesheet for user:', currentUser._id, 'date:', selectedDate);
       loadTimesheet();
       loadTasks();
+    } else if (!isAdmin) {
+      console.log('Initializing empty timesheet - no user ID');
+      initializeTimeEntries();
     }
-  }, [selectedDate, currentUser?.id]);
+  }, [selectedDate, currentUser?._id]);
+
+  // Force initialization on component mount
+  useEffect(() => {
+    if (!isAdmin && timeEntries.length === 0) {
+      console.log('Force initializing time entries');
+      initializeTimeEntries();
+    }
+  }, [isAdmin]);
 
   if (isAdmin) {
     return <AdminTimesheetView />;
   }
 
   const loadTimesheet = async () => {
-    const timesheetKey = `timesheet_${currentUser?.id}_${selectedDate}`;
+    const timesheetKey = `timesheet_${currentUser?._id}_${selectedDate}`;
     const savedTimesheet = localStorage.getItem(timesheetKey);
 
     try {
       const response = await api.get('/api/employee-timesheet');
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const data = response.data;
-          const apiRecord = data.timesheets?.find(
-            (record) =>
-              record.employee_id === currentUser?.id &&
-              new Date(record.date).toDateString() ===
-                new Date(selectedDate).toDateString()
-          );
+      if (response.status === 200) {
+        const data = response.data;
+        const apiRecord = data.timesheets?.find(
+          (record) =>
+            record.employee_id === currentUser?._id &&
+            new Date(record.date).toDateString() ===
+              new Date(selectedDate).toDateString()
+        );
 
-          if (apiRecord) {
-            setTimeEntries(apiRecord.time_entries || []);
-            setTimesheetStatus(apiRecord.status || "Draft");
-            return;
-          }
+        if (apiRecord) {
+          setTimeEntries(apiRecord.time_entries || []);
+          setTimesheetStatus(apiRecord.status || "Draft");
+          return;
         }
       }
     } catch (error) {
@@ -83,6 +92,7 @@ function EmployeeTimesheet() {
     if (savedTimesheet) {
       try {
         const data = JSON.parse(savedTimesheet);
+        console.log('Loaded from localStorage:', data);
         setTimeEntries(data.time_entries || []);
         setTimesheetStatus(data.status || "Draft");
       } catch (error) {
@@ -90,25 +100,26 @@ function EmployeeTimesheet() {
         initializeTimeEntries();
       }
     } else {
+      console.log('No saved timesheet, initializing new one');
       initializeTimeEntries();
     }
   };
 
   const loadTasks = async () => {
-    if (!currentUser?.id) {
+    if (!currentUser?._id) {
       console.log('No current user ID found');
       return;
     }
     
-    console.log('Loading tasks for user:', currentUser.id);
+    console.log('Loading tasks for user:', currentUser._id);
     
     try {
       // Load available tasks
       const availableResponse = await api.get('/api/tasks/available');
       console.log('Available tasks response status:', availableResponse.status);
       
-      if (availableResponse.ok) {
-        const availableData = await availableResponse.json();
+      if (availableResponse.status === 200) {
+        const availableData = availableResponse.data;
         console.log('Available tasks data:', availableData);
         const availableList = availableData?.data || availableData?.tasks || availableData || [];
         setAvailableTasks(Array.isArray(availableList) ? availableList : []);
@@ -119,11 +130,11 @@ function EmployeeTimesheet() {
       }
 
       // Load assigned tasks
-      const assignedResponse = await api.get('/api/tasks/employee/${currentUser.id}');
+      const assignedResponse = await api.get(`/api/tasks/employee/${currentUser._id}`);
       console.log('Assigned tasks response status:', assignedResponse.status);
       
-      if (assignedResponse.ok) {
-        const assignedData = await assignedResponse.json();
+      if (assignedResponse.status === 200) {
+        const assignedData = assignedResponse.data;
         console.log('Assigned tasks data:', assignedData);
         const assignedList = assignedData?.data || assignedData?.tasks || assignedData || [];
         setAssignedTasks(Array.isArray(assignedList) ? assignedList : []);
@@ -140,25 +151,21 @@ function EmployeeTimesheet() {
   };
 
   const takeTask = async (taskId) => {
-    if (!currentUser?.id || !taskId) {
+    if (!currentUser?._id || !taskId) {
       toast.error("Invalid user or task");
       return;
     }
     
     try {
-      const response = await fetch(`${API_URL}/api/tasks/${taskId}/take`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          employee_id: currentUser.id,
-          employee_name: currentUser.name || currentUser.email,
-          status: "In Progress",
-          taken_at: new Date().toISOString()
-        })
+      const response = await api.patch(`/api/tasks/${taskId}/take`, { 
+        employee_id: currentUser._id,
+        employee_name: currentUser.name || currentUser.email,
+        status: "In Progress",
+        taken_at: new Date().toISOString()
       });
       
-      if (response.ok) {
-        const responseData = await response.json();
+      if (response.status === 200) {
+        const responseData = response.data;
         toast.success("Task taken successfully and assigned to you");
         
         // Reload tasks to update both available and assigned lists
@@ -168,7 +175,7 @@ function EmployeeTimesheet() {
         // Log for admin visibility
         console.log(`Task ${taskId} taken by employee ${currentUser.name || currentUser.email}`);
       } else {
-        const errorData = await response.json();
+        const errorData = response.data;
         toast.error(errorData.message || "Failed to take task");
       }
     } catch (error) {
@@ -186,14 +193,15 @@ function EmployeeTimesheet() {
       hours_worked: 1,
       task_id: null,
     }));
+    console.log('Initializing time entries:', entries);
     setTimeEntries(entries);
     setTimesheetStatus("Draft");
   };
 
   const saveToLocalStorage = (entries, status = timesheetStatus) => {
-    const timesheetKey = `timesheet_${currentUser?.id}_${selectedDate}`;
+    const timesheetKey = `timesheet_${currentUser?._id}_${selectedDate}`;
     const timesheetData = {
-      employee_id: currentUser?.id,
+      employee_id: currentUser?._id,
       employee_name: currentUser?.name,
       date: selectedDate,
       time_entries: entries,
@@ -221,7 +229,7 @@ function EmployeeTimesheet() {
   };
 
   const submitProject = async () => {
-    if (!currentUser?.id) {
+    if (!currentUser?._id) {
       toast.error("User information not found. Please login again.");
       return;
     }
@@ -238,7 +246,7 @@ function EmployeeTimesheet() {
     setLoading(true);
     try {
       const timesheetData = {
-        employee_id: currentUser.id,
+        employee_id: currentUser._id,
         employee_name: currentUser.name || currentUser.email,
         date: selectedDate,
         time_entries: timeEntries,
@@ -249,17 +257,11 @@ function EmployeeTimesheet() {
         status: "Submitted",
       };
 
-      const response = await fetch(`${API_URL}/api/employee-timesheet`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(timesheetData),
-      });
+      const response = await api.post('/api/employee-timesheet', timesheetData);
 
-      if (response.ok) {
+      if (response.status === 200 || response.status === 201) {
         setTimesheetStatus("Submitted");
-        const timesheetKey = `timesheet_${currentUser.id}_${selectedDate}`;
+        const timesheetKey = `timesheet_${currentUser._id}_${selectedDate}`;
         localStorage.removeItem(timesheetKey);
         toast.success("Project submitted successfully");
       } else {
