@@ -64,8 +64,8 @@ const ContractFormPage = () => {
 
   const handleDownload = async () => {
     try {
-      const response = await axios.get(
-        `${API_URL}/api/employees/${id}/contract/download`,
+      const response = await api.get(
+        `/api/employees/${id}/contract/download`,
         { responseType: "blob" }
       );
 
@@ -88,7 +88,7 @@ const ContractFormPage = () => {
   useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/employees/${id}`);
+        const response = await api.get(`/api/employees/${id}`);
         const data = response.data.data;
         setEmployee(data);
 
@@ -143,8 +143,8 @@ const ContractFormPage = () => {
     setSaving(true);
     setError("");
     try {
-      await axios.put(
-        `${API_URL}/api/employees/${id}/contract/update`,
+      await api.put(
+        `/api/employees/${id}/contract/update`,
         contract
       );
       navigate("/contracts");
@@ -157,14 +157,16 @@ const ContractFormPage = () => {
   };
 
   const handlePreview = () => {
-    window.open(`${API_URL}/api/employees/${id}/contract/preview`, "_blank");
+    const token = localStorage.getItem('token');
+    const url = `${API_URL}/api/employees/${id}/contract/preview${token ? `?token=${token}` : ''}`;
+    window.open(url, "_blank");
   };
 
   const handleEditToggle = () => {
     if (!isEditing) {
       // Load contract content for editing
-      api.get('/api/employees/${id}/contract/content')
-        .then(res => res.json())
+      api.get(`/api/employees/${id}/contract/content`)
+        .then(res => res.data)
         .then(data => {
           if (data.success) {
             setEditableContent(data.content || generateContractHTML());
@@ -238,15 +240,11 @@ const ContractFormPage = () => {
   const saveEditedContent = async () => {
     setSavingContent(true);
     try {
-      const response = await fetch(`${API_URL}/api/employees/${id}/contract/content`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ editedContent: editableContent }),
+      const response = await api.put(`/api/employees/${id}/contract/content`, {
+        editedContent: editableContent
       });
       
-      if (response.ok) {
+      if (response.data.success) {
         alert('Contract content saved successfully!');
       } else {
         alert('Failed to save contract content');
@@ -265,7 +263,7 @@ const ContractFormPage = () => {
       )
     ) {
       try {
-        await axios.patch(`${API_URL}/api/employees/${id}/contract/accept`);
+        await api.patch(`/api/employees/${id}/contract/accept`);
         setContract((prev) => ({
           ...prev,
           acceptance: {

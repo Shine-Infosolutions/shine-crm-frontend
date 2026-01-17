@@ -51,13 +51,13 @@ function ContractManagement() {
   );
 
   const handlePreview = (id) => {
+    const token = localStorage.getItem('token') || currentUser?.token;
     const previewWindow = window.open('', '_blank');
     previewWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>Contract Preview</title>
-
         <style>
           body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
           .btn-container { 
@@ -86,6 +86,7 @@ function ContractManagement() {
           @media print { .btn-container { display: none !important; } }
           iframe { width: 100%; height: calc(100vh - 80px); border: none; }
           #editor-container { display: none; width: 100%; height: calc(100vh - 80px); padding: 20px; }
+          #loading { text-align: center; padding: 50px; }
         </style>
       </head>
       <body>
@@ -95,18 +96,41 @@ function ContractManagement() {
           <button class="btn btn-secondary" onclick="cancelEdit()" id="cancelBtn" style="display:none;">Cancel</button>
           <button class="btn" onclick="window.print()">🖨️ Print</button>
         </div>
-        <iframe src="${API_URL}/api/employees/${id}/contract/preview" id="previewFrame"></iframe>
+        <div id="loading">Loading contract...</div>
+        <iframe id="previewFrame" style="display:none;"></iframe>
         <div id="editor-container"></div>
         
         <script>
           let isEditing = false;
+          
+          // Load contract content on page load
+          window.onload = async function() {
+            try {
+              const response = await fetch('${API_URL}/api/employees/${id}/contract/preview', {
+                headers: { 'Authorization': 'Bearer ${token}' }
+              });
+              
+              if (response.ok) {
+                const html = await response.text();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('previewFrame').style.display = 'block';
+                document.getElementById('previewFrame').srcdoc = html;
+              } else {
+                document.getElementById('loading').innerHTML = 'Failed to load contract';
+              }
+            } catch (error) {
+              document.getElementById('loading').innerHTML = 'Error loading contract';
+            }
+          };
           
           async function toggleEdit() {
             if (!isEditing) {
               try {
                 let content;
                 try {
-                  const response = await fetch('${API_URL}/api/employees/${id}/contract/content');
+                  const response = await fetch('${API_URL}/api/employees/${id}/contract/content', {
+                    headers: { 'Authorization': 'Bearer ${token}' }
+                  });
                   if (response.status === 404) {
                     content = await getDefaultContent();
                   } else {
@@ -147,14 +171,24 @@ function ContractManagement() {
                 const content = contentEditor.innerHTML;
                 const response = await fetch('${API_URL}/api/employees/${id}/contract/content', {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ${token}'
+                  },
                   body: JSON.stringify({ editedContent: content })
                 });
                 
                 if (response.ok) {
                   alert('Contract saved successfully!');
                   cancelEdit();
-                  document.getElementById('previewFrame').src = '${API_URL}/api/employees/${id}/contract/preview?t=' + Date.now();
+                  // Reload the preview
+                  const previewResponse = await fetch('${API_URL}/api/employees/${id}/contract/preview', {
+                    headers: { 'Authorization': 'Bearer ${token}' }
+                  });
+                  if (previewResponse.ok) {
+                    const html = await previewResponse.text();
+                    document.getElementById('previewFrame').srcdoc = html;
+                  }
                 } else {
                   alert('Failed to save contract');
                 }
@@ -175,7 +209,9 @@ function ContractManagement() {
           
           async function getDefaultContent() {
             try {
-              const response = await fetch('${API_URL}/api/employees/${id}');
+              const response = await fetch('${API_URL}/api/employees/${id}', {
+                headers: { 'Authorization': 'Bearer ${token}' }
+              });
               const data = await response.json();
               if (data.success) {
                 const employee = data.data;
@@ -241,13 +277,6 @@ function ContractManagement() {
             }
             return '<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6;"><h1>Employment Contract</h1><p>Unable to load contract content.</p></div>';
           }
-          
-          // Remove any existing TinyMCE instances on page load
-          window.addEventListener('load', function() {
-            if (typeof tinymce !== 'undefined') {
-              tinymce.remove();
-            }
-          });
         </script>
       </body>
       </html>
@@ -354,8 +383,23 @@ function ContractManagement() {
     setSavingContent(false);
   };
 
-  const handleDownload = (id, name) => {
-    window.open(`${API_URL}/api/employees/${id}/contract/preview?download=1`, '_blank');
+  const handleDownload = async (id, name) => {
+    try {
+      const response = await api.get(`/api/employees/${id}/contract/download`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Employment_Contract_${name}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert(`Download failed: ${error.response?.data?.message || error.message}`);
+    }
   };
 
   const handleCreateForEmployee = (id) => {

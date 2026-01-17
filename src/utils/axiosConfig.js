@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { isTokenExpired, clearAuthData } from './tokenUtils';
+import './testAuth.js'; // Debug auth on load
 
 // Create axios instance with base URL
 const axiosInstance = axios.create({

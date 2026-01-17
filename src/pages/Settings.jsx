@@ -47,15 +47,19 @@ function Settings() {
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
-      const response = await api.put('/api/employees/${currentUser._id}', settings.profile);
+      const response = await api.put('/api/settings/profile', {
+        name: settings.profile.name,
+        email: settings.profile.email,
+        contact1: settings.profile.phone
+      });
       
-      if (response.ok) {
+      if (response.data.success) {
         alert("Profile updated successfully!");
       } else {
         alert("Failed to update profile");
       }
     } catch (error) {
-      alert("Error updating profile: " + error.message);
+      alert("Error updating profile: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -104,11 +108,11 @@ function Settings() {
     setLoading(true);
     try {
       const response = await api.post('/api/settings/change-password', {
-          currentPassword: settings.security.currentPassword,
-          newPassword: settings.security.newPassword
-        });
+        currentPassword: settings.security.currentPassword,
+        newPassword: settings.security.newPassword
+      });
       
-      if (response.ok) {
+      if (response.data.success) {
         alert("Password changed successfully!");
         setSettings(prev => ({
           ...prev,
@@ -118,7 +122,7 @@ function Settings() {
         alert("Failed to change password");
       }
     } catch (error) {
-      alert("Error changing password: " + error.message);
+      alert("Error changing password: " + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -127,13 +131,10 @@ function Settings() {
   const handleBackupData = async (dataType) => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/settings/backup/${dataType}`, {
-        method: "GET",
-        headers: getAuthHeaders()
-      });
+      const response = await api.get(`/api/settings/backup/${dataType}`);
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.data.success) {
+        const data = response.data.data;
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -146,7 +147,7 @@ function Settings() {
         alert(`Failed to backup ${dataType}`);
       }
     } catch (error) {
-      alert(`Error backing up ${dataType}: ` + error.message);
+      alert(`Error backing up ${dataType}: ` + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }

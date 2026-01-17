@@ -391,7 +391,7 @@ const CreateInvoice = () => {
                   setSaving(true);
                   try {
                     const response = await api.put(`/api/invoices/${id}/notes`, { notes });
-                    if (response.ok) {
+                    if (response.data.success) {
                       setInvoice(prev => ({ ...prev, notes }));
                     }
                   } catch (error) {
