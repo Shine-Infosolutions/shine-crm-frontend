@@ -73,18 +73,22 @@ const AddInvoice = () => {
           }));
           setRows(data.productDetails || []);
         } else {
-          // Generate invoice number locally
-          const now = new Date();
-          const year = now.getFullYear();
-          const month = String(now.getMonth() + 1).padStart(2, '0');
-          const day = String(now.getDate()).padStart(2, '0');
-          const time = String(now.getTime()).slice(-4);
-          const invoiceNumber = `INV-${year}${month}${day}-${time}`;
-          
-          setFormData((prev) => ({
-            ...prev,
-            invoiceNumber: invoiceNumber,
-          }));
+          // Fetch next invoice number from backend
+          try {
+            const invoiceRes = await api.get('/api/invoices/next-invoice-number');
+            setFormData((prev) => ({
+              ...prev,
+              invoiceNumber: invoiceRes.data.nextInvoiceNumber,
+            }));
+          } catch (err) {
+            console.error('Failed to fetch next invoice number:', err);
+            // Fallback to current month format
+            const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+            setFormData((prev) => ({
+              ...prev,
+              invoiceNumber: `SI/${currentMonth}/01`,
+            }));
+          }
         }
       } catch (err) {
         alert("Failed to fetch invoice.");
