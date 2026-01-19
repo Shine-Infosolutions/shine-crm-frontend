@@ -258,7 +258,7 @@ function LeadManagement() {
                       </div>
                     )}
 
-                    {/* Follow Up Info */}
+                    {/* Date History */}
                     <div className="mt-auto space-y-2 pt-4 border-t border-gray-200 dark:border-gray-600">
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         <div className="flex justify-between items-center">
@@ -273,20 +273,70 @@ function LeadManagement() {
                             <span className="font-medium">{lead.followUpStatus}</span>
                           </div>
                         )}
-                        <div className="flex justify-between items-center mt-1">
-                          <span>Meeting:</span>
-                          <span className="font-medium">
-                            {lead.meetingDate ? new Date(lead.meetingDate).toLocaleDateString() : "Not Scheduled"}
-                          </span>
+                        
+                        {/* Meeting Dates */}
+                        <div className="mt-2">
+                          <span className="font-medium text-gray-600 dark:text-gray-300">Meeting Dates:</span>
+                          {lead.meetingDates?.length > 0 ? (
+                            <div className="mt-1 space-y-1">
+                              {lead.meetingDates.slice(-2).map((meeting, idx) => (
+                                <div key={idx} className="flex justify-between items-center">
+                                  <span>{idx === lead.meetingDates.length - 1 ? 'Latest:' : 'Previous:'}</span>
+                                  <span className="font-medium">
+                                    {new Date(meeting.dateTime).toLocaleString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+                              ))}
+                              {lead.meetingDates.length > 2 && (
+                                <div className="text-xs text-blue-500">+{lead.meetingDates.length - 2} more</div>
+                              )}
+                            </div>
+                          ) : lead.meetingDate ? (
+                            <div className="flex justify-between items-center mt-1">
+                              <span>Date:</span>
+                              <span className="font-medium">{new Date(lead.meetingDate).toLocaleDateString()}</span>
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 mt-1">Not scheduled</div>
+                          )}
                         </div>
-                        {lead.clientRequestedCallDate && (
-                          <div className="flex justify-between items-center mt-1">
-                            <span>Client Call:</span>
-                            <span className="font-medium">
-                              {new Date(lead.clientRequestedCallDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        )}
+                        
+                        {/* Client Call Dates */}
+                        <div className="mt-2">
+                          <span className="font-medium text-gray-600 dark:text-gray-300">Client Calls:</span>
+                          {lead.clientCallDates?.length > 0 ? (
+                            <div className="mt-1 space-y-1">
+                              {lead.clientCallDates.slice(-2).map((call, idx) => (
+                                <div key={idx} className="flex justify-between items-center">
+                                  <span>{idx === lead.clientCallDates.length - 1 ? 'Latest:' : 'Previous:'}</span>
+                                  <span className="font-medium">
+                                    {new Date(call.dateTime).toLocaleString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+                              ))}
+                              {lead.clientCallDates.length > 2 && (
+                                <div className="text-xs text-blue-500">+{lead.clientCallDates.length - 2} more</div>
+                              )}
+                            </div>
+                          ) : lead.clientRequestedCallDate ? (
+                            <div className="flex justify-between items-center mt-1">
+                              <span>Date:</span>
+                              <span className="font-medium">{new Date(lead.clientRequestedCallDate).toLocaleDateString()}</span>
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 mt-1">Not scheduled</div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
