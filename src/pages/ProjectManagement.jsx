@@ -498,7 +498,7 @@ function ProjectManagement() {
                       </div>
                     )}
                   </div>
-                ))}}
+                ))}
             </motion.div>
           )}
         </AnimatePresence>

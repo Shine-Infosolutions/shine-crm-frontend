@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import api from '../utils/axiosConfig';
@@ -16,7 +16,17 @@ const dashboardCache = {
 // Singleton pattern to prevent multiple simultaneous requests
 let dashboardInstance = null;
 
-function Dashboard() {
+// Constants moved outside component to prevent recreation
+const STATUS_COLORS = {
+  'completed': 'bg-green-500',
+  'in_progress': 'bg-blue-500', 
+  'pending': 'bg-yellow-500',
+  'assigned': 'bg-purple-500'
+};
+
+const AVATAR_COLORS = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500'];
+
+const Dashboard = memo(function Dashboard() {
   const { navigate } = useAppContext();
   const [dashboardData, setDashboardData] = useState({
     totalLeads: 0,
@@ -31,6 +41,13 @@ function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+
+  // Memoized calculations
+  const memoizedMetrics = useMemo(() => {
+    const leadToProjectRate = dashboardData.totalLeads > 0 ? Math.round((dashboardData.projects.length / dashboardData.totalLeads) * 100) : 0;
+    const completionRate = dashboardData.projects.length > 0 ? Math.round((dashboardData.completedProjects / dashboardData.projects.length) * 100) : 0;
+    return { leadToProjectRate, completionRate };
+  }, [dashboardData.totalLeads, dashboardData.projects.length, dashboardData.completedProjects]);
 
   const fetchDashboardData = useCallback(async () => {
     const now = Date.now();
@@ -510,19 +527,12 @@ function Dashboard() {
             <div className="p-6">
               <div className="space-y-4">
                 {dashboardData.recentTasks.length > 0 ? dashboardData.recentTasks.map((task, index) => {
-                  const statusColors = {
-                    'completed': 'bg-green-500',
-                    'in_progress': 'bg-blue-500', 
-                    'pending': 'bg-yellow-500',
-                    'assigned': 'bg-purple-500'
-                  };
-                  const statusColor = statusColors[task.status] || 'bg-gray-500';
+                  const statusColor = STATUS_COLORS[task.status] || 'bg-gray-500';
                   const timeAgo = task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : 'Recently';
                   
                   return (
-                    <motion.div 
+                    <div 
                       key={task._id || index}
-                      whileHover={{ x: 5 }}
                       className="flex items-center space-x-3"
                     >
                       <div className={`w-2 h-2 ${statusColor} rounded-full`}></div>
@@ -530,7 +540,7 @@ function Dashboard() {
                         <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title || task.description || 'Task'}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{timeAgo}</p>
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 }) : (
                   <div className="text-center py-4">
@@ -554,25 +564,19 @@ function Dashboard() {
             
             <div className="p-6">
               <div className="flex items-center justify-center space-x-8">
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="text-center"
-                >
+                <div className="text-center">
                   <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {dashboardData.totalLeads > 0 ? Math.round((dashboardData.projects.length / dashboardData.totalLeads) * 100) : 0}%
+                    {memoizedMetrics.leadToProjectRate}%
                   </div>
                   <p className="text-sm font-medium text-blue-600">Lead to Project</p>
-                </motion.div>
+                </div>
                 
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="text-center"
-                >
+                <div className="text-center">
                   <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {dashboardData.projects.length > 0 ? Math.round((dashboardData.completedProjects / dashboardData.projects.length) * 100) : 0}%
+                    {memoizedMetrics.completionRate}%
                   </div>
                   <p className="text-sm font-medium text-green-600">Project Completion</p>
-                </motion.div>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -668,6 +672,6 @@ function Dashboard() {
       </AnimatePresence>
     </div>
   )
-};
+});
 
 export default Dashboard;

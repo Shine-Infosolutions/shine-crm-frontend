@@ -15,30 +15,17 @@ body {
   min-height: 100vh;
 }
 
-/* Dark mode styles */
 .dark {
   color-scheme: dark;
 }
 
-/* Override Chrome autofill background and text color */
-/* Light mode autofill */
-input:-webkit-autofill,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:active {
+input:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
-  box-shadow: 0 0 0 1000px #fff inset !important;
-  -webkit-text-fill-color: #1f2937 !important; /* Tailwind gray-800 for text */
+  -webkit-text-fill-color: #1f2937 !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Dark mode autofill */
-.dark input:-webkit-autofill,
-.dark input:-webkit-autofill:focus,
-.dark input:-webkit-autofill:hover,
-.dark input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #1f2937 inset !important; /* Tailwind gray-800 */
-  box-shadow: 0 0 0 1000px #1f2937 inset !important;
+.dark input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #1f2937 inset !important;
   -webkit-text-fill-color: #fff !important;
-  transition: background-color 5000s ease-in-out 0s;
 }
