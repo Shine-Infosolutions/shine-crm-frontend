@@ -22,6 +22,9 @@ function ProjectManagement() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        // Update progress for all active projects first
+        await api.put('/api/projects/update-progress');
+        
         const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
         if (response.data.success) {
           setProjects(response.data.data || []);
@@ -45,68 +48,54 @@ function ProjectManagement() {
   }, [currentPage]);
   
 
-  // Calculate progress based on start date and deadline only
-  const calculateProgress = (startDate, handOverDate, deadline) => {
-    const start = new Date(startDate);
-    const today = new Date();
-    const end = new Date(deadline);
+  // Calculate progress and status based on project type
+  const calculateProjectMetrics = (project) => {
+    // Use stored progress from database
+    const progress = project.progress || 0;
     
-    // If project hasn't started yet
-    if (today <= start) return 0;
-    
-    // If past deadline, show 100%
-    if (today >= end) return 100;
-
-    // Calculate time-based progress between start and deadline
-    const totalTime = end.getTime() - start.getTime();
-    const elapsedTime = today.getTime() - start.getTime();
-    
-    const percentage = (elapsedTime / totalTime) * 100;
-    return Math.round(Math.max(0, Math.min(100, percentage)));
+    if (project.projectType === 'ONE_TIME') {
+      // Status-based overrides
+      if (project.status === 'Completed') return { progress: 100, status: 'Completed' };
+      if (project.status === 'Cancelled') return { progress, status: 'Cancelled' };
+      if (project.status === 'On Hold') return { progress, status: 'On Hold' };
+      
+      const start = new Date(project.oneTimeProject?.startDate);
+      const expected = new Date(project.oneTimeProject?.expectedDeliveryDate);
+      const today = new Date();
+      
+      if (!start || !expected || isNaN(start.getTime()) || isNaN(expected.getTime())) {
+        return { progress: 0, status: 'Planning' };
+      }
+      
+      if (today < start) return { progress: 0, status: 'Not Started' };
+      if (today > expected && progress < 100) return { progress, status: 'Overdue' };
+      
+      return { progress, status: 'In Progress' };
+    } else {
+      // Recurring project logic
+      const contractEnd = new Date(project.recurringProject?.contractEndDate);
+      const today = new Date();
+      
+      if (project.status === 'Cancelled') return { progress: 0, status: 'Cancelled' };
+      if (project.status === 'Completed') return { progress: 100, status: 'Completed' };
+      if (project.status === 'On Hold') return { progress: 50, status: 'On Hold' };
+      
+      if (contractEnd && !isNaN(contractEnd.getTime()) && today > contractEnd) {
+        return { progress: 100, status: 'Contract Expired' };
+      }
+      
+      return { progress: 75, status: 'Active Service' };
+    }
   };
 
-  // Determine project status based on progress and handover date
-  const getProjectStatus = (startDate, handOverDate, deadline) => {
-    // If end date is provided, project is completed
-    if (handOverDate && handOverDate.trim() !== "") {
-      return "Completed";
-    }
-
-    const start = new Date(startDate);
-    const targetDate = new Date(deadline);
-    const today = new Date();
-
-    // If project hasn't started yet
-    if (today < start) {
-      return "Not Started";
-    }
-
-    // If project is past deadline but not marked as completed
-    if (today > targetDate) {
-      return "Overdue";
-    }
-
-    return "On Track";
-  };
-
-  // Add calculated progress and status to each project
-  const projectsWithProgress = projects.map((project) => {
-    const progress = calculateProgress(
-      project.startDate,
-      project.handoverDate,
-      project.deadline
-    );
-    const status = getProjectStatus(
-      project.startDate,
-      project.handoverDate,
-      project.deadline
-    );
-    const isCompleted = project.handoverDate && project.handoverDate !== "";
-    return { ...project, progress, status, isCompleted };
+  // Add calculated metrics to each project
+  const projectsWithMetrics = projects.map((project) => {
+    const { progress, status } = calculateProjectMetrics(project);
+    return { ...project, progress, calculatedStatus: status };
   });
 
   // Filter projects based on search term
-  const filteredProjects = projectsWithProgress.filter((project) => {
+  const filteredProjects = projectsWithMetrics.filter((project) => {
     const matchesSearch =
       project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,8 +103,8 @@ function ProjectManagement() {
 
     const matchesFilter =
       projectFilter === "all" ||
-      (projectFilter === "active" && project.progress <= 99.9) ||
-      (projectFilter === "completed" && project.progress === 100);
+      (projectFilter === "active" && ['Active', 'In Progress', 'Active Service', 'Not Started', 'Planning'].includes(project.calculatedStatus)) ||
+      (projectFilter === "completed" && ['Completed', 'Contract Expired'].includes(project.calculatedStatus));
 
     return matchesSearch && matchesFilter;
   });
@@ -261,34 +250,37 @@ function ProjectManagement() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Client: {project.clientName}
                   </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                    {project.projectType === 'ONE_TIME' ? 'One-Time Project' : 'Recurring Service'}
+                  </p>
                   <div className="mt-2 flex justify-between">
                     <span className="text-sm">Progress: {project.progress}%</span>
                     <span
                       className={`text-sm ${
-                        project.status === "Completed"
+                        project.calculatedStatus === "Completed" || project.calculatedStatus === "Contract Expired"
                           ? "text-blue-600"
-                          : project.status === "On Track"
+                          : project.calculatedStatus === "In Progress" || project.calculatedStatus === "Active Service"
                           ? "text-green-600"
-                          : project.status === "Approaching Deadline"
+                          : project.calculatedStatus === "On Hold"
                           ? "text-orange-500"
-                          : project.status === "Overdue"
+                          : project.calculatedStatus === "Overdue"
                           ? "text-red-600"
                           : "text-gray-500"
                       }`}
                     >
-                      {project.status}
+                      {project.calculatedStatus}
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
                     <div
                       className={`${
-                        project.status === "Completed"
+                        project.calculatedStatus === "Completed" || project.calculatedStatus === "Contract Expired"
                           ? "bg-blue-600"
-                          : project.status === "On Track"
+                          : project.calculatedStatus === "In Progress" || project.calculatedStatus === "Active Service"
                           ? "bg-green-600"
-                          : project.status === "Approaching Deadline"
+                          : project.calculatedStatus === "On Hold"
                           ? "bg-orange-500"
-                          : project.status === "Overdue"
+                          : project.calculatedStatus === "Overdue"
                           ? "bg-red-500"
                           : "bg-gray-400"
                       } h-2.5 rounded-full`}
@@ -296,10 +288,10 @@ function ProjectManagement() {
                     ></div>
                   </div>
                   <div className="mt-2 text-xs text-gray-500">
-                    {new Date(project.startDate).toLocaleDateString()} to{" "}
-                    {new Date(
-                      project.deadline || project.handoverDate
-                    ).toLocaleDateString()}
+                    {project.projectType === 'ONE_TIME' 
+                      ? `${project.oneTimeProject?.startDate ? new Date(project.oneTimeProject.startDate).toLocaleDateString() : 'TBD'} to ${project.oneTimeProject?.expectedDeliveryDate ? new Date(project.oneTimeProject.expectedDeliveryDate).toLocaleDateString() : 'TBD'}`
+                      : `${project.recurringProject?.billingCycle || 'Monthly'} • ₹${project.recurringProject?.recurringAmount ? parseFloat(project.recurringProject.recurringAmount).toLocaleString('en-IN') : '0'}`
+                    }
                   </div>
                 </motion.div>
               ))}
@@ -342,11 +334,33 @@ function ProjectManagement() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Project Details</h3>
                 <div className="flex space-x-2">
+                  <select
+                    value={projectsWithMetrics.find(p => p._id === selectedProject)?.status || 'Active'}
+                    onChange={async (e) => {
+                      try {
+                        await api.put(`/api/projects/${selectedProject}`, { status: e.target.value });
+                        setProjects(prev => prev.map(p => p._id === selectedProject ? { ...p, status: e.target.value } : p));
+                        // Refresh projects to get updated progress
+                        const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
+                        if (response.data.success) {
+                          setProjects(response.data.data || []);
+                        }
+                      } catch (err) {
+                        console.error('Failed to update status:', err);
+                      }
+                    }}
+                    className="px-3 py-1 text-sm border rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="On Hold">On Hold</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => {
-                      const project = projectsWithProgress.find(
+                      const project = projectsWithMetrics.find(
                         (p) => p._id === selectedProject
                       );
                       navigate("/projects/add", {
@@ -373,7 +387,7 @@ function ProjectManagement() {
                 </div>
               </div>
 
-              {projectsWithProgress
+              {projectsWithMetrics
                 .filter((p) => p._id === selectedProject)
                 .map((project) => (
                   <div
@@ -381,140 +395,110 @@ function ProjectManagement() {
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4"
                   >
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Project Info
-                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Project Info</p>
                       <p className="font-medium">{project.projectName}</p>
-                      <p className="text-sm">{project.projectType}</p>
+                      <p className="text-sm">{project.projectType === 'ONE_TIME' ? 'One-Time Project' : 'Recurring Service'}</p>
+                      <p className="text-sm">Status: {project.status}</p>
+                      <p className="text-sm">Priority: {project.priority}</p>
                     </div>
 
                     <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Client
-                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Client</p>
                       <p className="font-medium">{project.clientName}</p>
                       <p className="text-sm">{project.clientContact}</p>
                     </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Project Amount
-                      </p>
-                      <p className="font-medium">₹{parseFloat(project.projectAmount || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-sm">Advance: ₹{parseFloat(project.advanceAmount || 0).toLocaleString('en-IN')}</p>
-                    </div>
+                    {project.projectType === 'ONE_TIME' ? (
+                      <>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Project Cost</p>
+                          <p className="font-medium">₹{project.oneTimeProject?.totalAmount ? parseFloat(project.oneTimeProject.totalAmount).toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-sm">Paid: ₹{project.oneTimeProject?.paidAmount ? parseFloat(project.oneTimeProject.paidAmount).toLocaleString('en-IN') : '0'}</p>
+                          <p className="text-sm">Pending: ₹{project.oneTimeProject?.totalAmount && project.oneTimeProject?.paidAmount ? (parseFloat(project.oneTimeProject.totalAmount) - parseFloat(project.oneTimeProject.paidAmount)).toLocaleString('en-IN') : '0'}</p>
+                        </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Timeline
-                      </p>
-                      <p className="text-sm">
-                        Start: {new Date(project.startDate).toLocaleDateString()}
-                      </p>
-                      <p className="text-sm">
-                        Deadline:{" "}
-                        {project.deadline
-                          ? new Date(project.deadline).toLocaleDateString()
-                          : "Not set"}
-                      </p>
-                      <p className="text-sm">
-                        Handover:{" "}
-                        {project.handoverDate
-                          ? new Date(project.handoverDate).toLocaleDateString()
-                          : "Not set"}
-                      </p>
-                      <p className="text-sm font-medium mt-1">
-                        Progress: {project.progress}% ({project.status})
-                      </p>
-                    </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Timeline</p>
+                          <p className="text-sm">
+                            Start: {project.oneTimeProject?.startDate ? new Date(project.oneTimeProject.startDate).toLocaleDateString() : 'Not set'}
+                          </p>
+                          <p className="text-sm">
+                            Expected: {project.oneTimeProject?.expectedDeliveryDate ? new Date(project.oneTimeProject.expectedDeliveryDate).toLocaleDateString() : 'Not set'}
+                          </p>
+                          <p className="text-sm">
+                            Handover: {project.oneTimeProject?.finalHandoverDate ? new Date(project.oneTimeProject.finalHandoverDate).toLocaleDateString() : 'Not set'}
+                          </p>
+                        </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Commission
-                      </p>
-                      <p className="font-medium">
-                        {project.commissionTo || "Not specified"}
-                      </p>
-                      <p className="text-sm">₹{parseFloat(project.commissionAmount || 0).toLocaleString('en-IN')}</p>
-                    </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Delivery Details</p>
+                          {project.oneTimeProject?.sourceCodeLink && (
+                            <a href={project.oneTimeProject.sourceCodeLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline block">
+                              Source Code
+                            </a>
+                          )}
+                          <p className="text-sm">{project.oneTimeProject?.deploymentDetails || 'Not specified'}</p>
+                          <p className="text-sm">Warranty: {project.oneTimeProject?.warrantyPeriod || 'Not specified'}</p>
+                        </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Domain Details
-                      </p>
-                      <p className="font-medium">
-                        {project.domain || "Not specified"}
-                      </p>
-                      {project.domainPurchaseDate && (
-                        <p className="text-sm">
-                          Purchase:{" "}
-                          {new Date(
-                            project.domainPurchaseDate
-                          ).toLocaleDateString()}
-                        </p>
-                      )}
-                      {project.domainCost && (
-                        <p className="text-sm">Cost: ₹{parseFloat(project.domainCost || 0).toLocaleString('en-IN')}</p>
-                      )}
-                      {project.domainExpiryDate && (
-                        <p className="text-sm">
-                          Expires:{" "}
-                          {new Date(project.domainExpiryDate).toLocaleDateString()}
-                        </p>
-                      )}
-                      {project.renewalDate && (
-                        <p className="text-sm">
-                          Renewal:{" "}
-                          {new Date(project.renewalDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
+                        <div className="md:col-span-2 lg:col-span-3">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Project Scope</p>
+                          <p className="text-sm">{project.oneTimeProject?.scope || 'Not specified'}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Service Details</p>
+                          <p className="font-medium">{project.recurringProject?.serviceType || 'Not specified'}</p>
+                          <p className="text-sm">{project.recurringProject?.billingCycle || 'Monthly'} billing</p>
+                          <p className="text-sm">₹{project.recurringProject?.recurringAmount ? parseFloat(project.recurringProject.recurringAmount).toLocaleString('en-IN') : '0'}</p>
+                        </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Access
-                      </p>
-                      <p className="text-sm">
-                        Email: {project.email || "Not specified"}
-                      </p>
-                      <p className="text-sm">
-                        Password: {project.password ? "••••••••" : "Not specified"}
-                      </p>
-                    </div>
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Contract Period</p>
+                          <p className="text-sm">
+                            Start: {project.recurringProject?.contractStartDate ? new Date(project.recurringProject.contractStartDate).toLocaleDateString() : 'Not set'}
+                          </p>
+                          <p className="text-sm">
+                            End: {project.recurringProject?.contractEndDate ? new Date(project.recurringProject.contractEndDate).toLocaleDateString() : 'Not set'}
+                          </p>
+                          <p className="text-sm">
+                            Auto Renew: {project.recurringProject?.autoRenew ? 'Yes' : 'No'}
+                          </p>
+                        </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Links
-                      </p>
-                      <div className="mt-1">
-                        {project.projectLink ? (
-                          <a
-                            href={project.projectLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline block"
-                          >
-                            Live Site
-                          </a>
-                        ) : (
-                          <p className="text-sm">Live Site: Not specified</p>
-                        )}
-                        {project.sourceCodeLink ? (
-                          <a
-                            href={project.sourceCodeLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline block"
-                          >
-                            Source Code
-                          </a>
-                        ) : (
-                          <p className="text-sm">Source Code: Not specified</p>
-                        )}
+                        <div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Billing Info</p>
+                          <p className="text-sm">
+                            Next Billing: {project.recurringProject?.nextBillingDate ? new Date(project.recurringProject.nextBillingDate).toLocaleDateString() : 'Not set'}
+                          </p>
+                          <p className="text-sm">
+                            Last Invoice: {project.recurringProject?.lastInvoiceId || 'None'}
+                          </p>
+                          <p className="text-sm">
+                            Missed Count: {project.recurringProject?.missedBillingCount || 0}
+                          </p>
+                          <p className="text-sm">
+                            Auto Invoice: {project.recurringProject?.autoInvoice ? 'Yes' : 'No'}
+                          </p>
+                        </div>
+
+                        <div className="md:col-span-2 lg:col-span-3">
+                          <p className="text-sm text-gray-500 dark:text-gray-400">SLA & Deliverables</p>
+                          <p className="text-sm">{project.recurringProject?.slaDeliverables || 'Not specified'}</p>
+                        </div>
+                      </>
+                    )}
+
+                    {project.notes && (
+                      <div className="md:col-span-2 lg:col-span-3">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Notes</p>
+                        <p className="text-sm">{project.notes}</p>
                       </div>
-                    </div>
+                    )}
                   </div>
-                ))}
+                ))}}
             </motion.div>
           )}
         </AnimatePresence>
