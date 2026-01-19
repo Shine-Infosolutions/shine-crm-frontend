@@ -21,6 +21,7 @@ function Dashboard() {
   const [dashboardData, setDashboardData] = useState({
     totalLeads: 0,
     activeProjects: 0,
+    completedProjects: 0,
     totalEmployees: 0,
     totalRevenue: 0,
     employees: [],
@@ -52,35 +53,36 @@ function Dashboard() {
       setLoading(true);
       
       try {
-        // Optimized API calls with leads and tasks data
-        const [leadsCountRes, projectsRes, employeesCountRes, recentLeadsRes, recentTasksRes] = await Promise.all([
-          api.get('/api/leads/count'),
-          api.get('/api/projects?limit=10&fields=projectName,clientName,projectAmount,handoverDate'),
-          api.get('/api/employees/count'),
-          api.get('/api/leads?limit=3&fields=name,projectType,createdAt'),
-          api.get('/api/tasks?limit=3&fields=title,description,status,updatedAt')
+        // Get accurate counts with proper API calls
+        const [leadsRes, projectsRes, employeesRes, tasksRes] = await Promise.all([
+          api.get('/api/leads'),
+          api.get('/api/projects'),
+          api.get('/api/employees'),
+          api.get('/api/tasks?limit=3').catch(() => ({ data: { data: [] } }))
         ]);
 
-        const projectsData = projectsRes.data;
-        const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
-        const activeCount = projectsArray.filter(p => !p.handoverDate || p.handoverDate.trim() === "").length;
-        const revenue = projectsArray.reduce((sum, p) => sum + (parseFloat(p.projectAmount) || 0), 0);
+        const projectsData = projectsRes.data.data || [];
+        const leadsData = leadsRes.data.data || [];
+        const employeesData = employeesRes.data.data || [];
+        const tasksData = tasksRes.data.data || [];
         
-        const leadsData = recentLeadsRes.data;
-        const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
-        
-        const tasksData = recentTasksRes.data;
-        const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
+        const activeCount = projectsData.filter(p => p.status === 'Active').length;
+        const completedCount = projectsData.filter(p => p.status === 'Completed').length;
+        const revenue = projectsData.reduce((sum, p) => {
+          const amount = p.oneTimeProject?.totalAmount || p.recurringProject?.recurringAmount || 0;
+          return sum + (parseFloat(amount) || 0);
+        }, 0);
 
         const newDashboardData = {
-          totalLeads: leadsCountRes.data?.count || 0,
+          totalLeads: leadsData.length,
           activeProjects: activeCount,
-          totalEmployees: employeesCountRes.data?.count || 0,
+          completedProjects: completedCount,
+          totalEmployees: employeesData.length,
           totalRevenue: revenue,
-          employees: [],
-          projects: projectsArray,
-          leads: leadsArray.slice(0, 3),
-          recentTasks: tasksArray.slice(0, 3)
+          employees: employeesData.slice(0, 4),
+          projects: projectsData,
+          leads: leadsData.slice(0, 3),
+          recentTasks: tasksData.slice(0, 3)
         };
         
         // Cache the data
@@ -357,7 +359,7 @@ function Dashboard() {
             </div>
             
             <div className="space-y-4">
-              {dashboardData.projects.filter(p => !p.handoverDate || p.handoverDate.trim() === "").slice(0, 2).map((project, index) => {
+              {dashboardData.projects.filter(p => p.status === 'Active').slice(0, 2).map((project, index) => {
                 const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
                 return (
                   <motion.div 
@@ -390,11 +392,11 @@ function Dashboard() {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white">Completed</h3>
-              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length}</span>
+              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.projects.filter(p => p.status === 'Completed').length}</span>
             </div>
             
             <div className="space-y-4">
-              {dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").slice(0, 2).map((project, index) => {
+              {dashboardData.projects.filter(p => p.status === 'Completed').slice(0, 2).map((project, index) => {
                 const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'C';
                 return (
                   <motion.div 
@@ -414,7 +416,7 @@ function Dashboard() {
                   </motion.div>
                 );
               })}
-              {dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length === 0 && (
+              {dashboardData.projects.filter(p => p.status === 'Completed').length === 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No completed projects</p>
               )}
             </div>
@@ -567,7 +569,7 @@ function Dashboard() {
                   className="text-center"
                 >
                   <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {dashboardData.projects.length > 0 ? Math.round((dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length / dashboardData.projects.length) * 100) : 0}%
+                    {dashboardData.projects.length > 0 ? Math.round((dashboardData.completedProjects / dashboardData.projects.length) * 100) : 0}%
                   </div>
                   <p className="text-sm font-medium text-green-600">Project Completion</p>
                 </motion.div>
