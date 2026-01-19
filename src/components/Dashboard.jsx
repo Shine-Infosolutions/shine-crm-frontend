@@ -1,73 +1,135 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import api from '../utils/axiosConfig';
 
+// Global cache with better isolation
+const DASHBOARD_CACHE_KEY = 'dashboard_data';
+const dashboardCache = {
+  data: null,
+  timestamp: null,
+  ttl: 10 * 60 * 1000, // 10 minutes
+  isLoading: false,
+  promise: null
+};
+
+// Singleton pattern to prevent multiple simultaneous requests
+let dashboardInstance = null;
+
 function Dashboard() {
-  const { API_URL, navigate } = useAppContext();
-  const [totalLeads, setTotalLeads] = useState(0);
-  const [activeProjects, setActiveProjects] = useState(0);
-  const [totalEmployees, setTotalEmployees] = useState(0);
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [employees, setEmployees] = useState([]);
+  const { navigate } = useAppContext();
+  const [dashboardData, setDashboardData] = useState({
+    totalLeads: 0,
+    activeProjects: 0,
+    totalEmployees: 0,
+    totalRevenue: 0,
+    employees: [],
+    projects: [],
+    leads: [],
+    recentTasks: []
+  });
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [recentTasks, setRecentTasks] = useState([]);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    const now = Date.now();
+    
+    // Check cache first
+    if (dashboardCache.data && dashboardCache.timestamp && (now - dashboardCache.timestamp) < dashboardCache.ttl) {
+      setDashboardData(dashboardCache.data);
+      setLoading(false);
+      return dashboardCache.data;
+    }
+
+    // Return existing promise if already loading
+    if (dashboardCache.isLoading && dashboardCache.promise) {
+      return dashboardCache.promise;
+    }
+    
+    // Create new promise and cache it
+    dashboardCache.promise = (async () => {
+      dashboardCache.isLoading = true;
+      setLoading(true);
+      
       try {
-        // Fetch leads data with high limit to get all records for accurate metrics
-        const leadsResponse = await api.get('/api/leads?limit=1000');
-        const leadsData = leadsResponse.data;
-        const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
-        setLeads(leadsArray.slice(0, 5));
-        setTotalLeads(leadsData.pagination?.total || leadsArray.length || 0);
+        // Optimized API calls with leads and tasks data
+        const [leadsCountRes, projectsRes, employeesCountRes, recentLeadsRes, recentTasksRes] = await Promise.all([
+          api.get('/api/leads/count'),
+          api.get('/api/projects?limit=10&fields=projectName,clientName,projectAmount,handoverDate'),
+          api.get('/api/employees/count'),
+          api.get('/api/leads?limit=3&fields=name,projectType,createdAt'),
+          api.get('/api/tasks?limit=3&fields=title,description,status,updatedAt')
+        ]);
 
-        // Fetch projects data with high limit to get all records for accurate metrics
-        const projectsResponse = await api.get('/api/projects?limit=1000');
-        const projectsData = projectsResponse.data;
+        const projectsData = projectsRes.data;
         const projectsArray = Array.isArray(projectsData) ? projectsData : projectsData.data || [];
-        setProjects(projectsArray);
+        const activeCount = projectsArray.filter(p => !p.handoverDate || p.handoverDate.trim() === "").length;
+        const revenue = projectsArray.reduce((sum, p) => sum + (parseFloat(p.projectAmount) || 0), 0);
         
-        // Count active projects (not completed)
-        const activeCount = projectsArray.filter(project => {
-          return !project.handoverDate || project.handoverDate.trim() === "";
-        }).length;
-        setActiveProjects(activeCount);
+        const leadsData = recentLeadsRes.data;
+        const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
         
-        // Calculate total revenue from all projects
-        const revenue = projectsArray.reduce((sum, project) => {
-          const amount = parseFloat(project.projectAmount) || 0;
-          return sum + amount;
-        }, 0);
-        setTotalRevenue(revenue);
-
-        // Fetch employees data
-        const employeesResponse = await api.get('/api/employees');
-        const employeesData = employeesResponse.data;
-        if (employeesData?.success) {
-          const data = employeesData.data;
-          const employeeArray = Array.isArray(data) ? data : data.employees || [];
-          setEmployees(employeeArray.slice(0, 4)); // Show first 4 employees
-          setTotalEmployees(employeeArray.length || 0);
-        }
-
-        // Fetch recent tasks
-        const tasksResponse = await api.get('/api/tasks');
-        const tasksData = tasksResponse.data;
+        const tasksData = recentTasksRes.data;
         const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
-        setRecentTasks(tasksArray.slice(0, 3));
+
+        const newDashboardData = {
+          totalLeads: leadsCountRes.data?.count || 0,
+          activeProjects: activeCount,
+          totalEmployees: employeesCountRes.data?.count || 0,
+          totalRevenue: revenue,
+          employees: [],
+          projects: projectsArray,
+          leads: leadsArray.slice(0, 3),
+          recentTasks: tasksArray.slice(0, 3)
+        };
+        
+        // Cache the data
+        dashboardCache.data = newDashboardData;
+        dashboardCache.timestamp = now;
+        
+        setDashboardData(newDashboardData);
+        return newDashboardData;
+        
       } catch (error) {
+        console.error('Dashboard load failed:', error.message);
+        
+        const fallbackData = {
+          totalLeads: 0,
+          activeProjects: 0,
+          totalEmployees: 0,
+          totalRevenue: 0,
+          employees: [],
+          projects: [],
+          leads: [],
+          recentTasks: []
+        };
+
+        setDashboardData(fallbackData);
+        return fallbackData;
+        
       } finally {
+        dashboardCache.isLoading = false;
+        dashboardCache.promise = null;
         setLoading(false);
       }
-    };
+    })();
+    
+    return dashboardCache.promise;
+  }, []);
 
-    fetchDashboardData();
-  }, [API_URL]);
+  useEffect(() => {
+    // Prevent multiple instances
+    if (dashboardInstance) return;
+    dashboardInstance = true;
+    
+    fetchDashboardData().finally(() => {
+      dashboardInstance = null;
+    });
+    
+    return () => {
+      dashboardInstance = null;
+    };
+  }, [fetchDashboardData]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
@@ -111,7 +173,7 @@ function Dashboard() {
             className="flex items-center space-x-2"
           >
             <div className="flex -space-x-2">
-              {employees.map((employee, index) => {
+              {dashboardData.employees.map((employee, index) => {
                 const initials = employee.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
                 const colors = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500'];
                 return (
@@ -129,14 +191,14 @@ function Dashboard() {
                   </motion.div>
                 );
               })}
-              {totalEmployees > 4 && (
+              {dashboardData.totalEmployees > 4 && (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: 0.35 }}
                   className="w-10 h-10 rounded-full bg-gray-500/80 backdrop-blur-sm border-2 border-white/50 shadow-lg flex items-center justify-center text-white text-xs font-medium"
                 >
-                  +{totalEmployees - 4}
+                  +{dashboardData.totalEmployees - 4}
                 </motion.div>
               )}
             </div>
@@ -161,7 +223,7 @@ function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Leads</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : totalLeads.toLocaleString()}
+                  {loading ? '...' : dashboardData.totalLeads.toLocaleString()}
                 </p>
               </div>
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -183,7 +245,7 @@ function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Projects</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : activeProjects}
+                  {loading ? '...' : dashboardData.activeProjects}
                 </p>
               </div>
               <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -205,7 +267,7 @@ function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : `₹${totalRevenue.toLocaleString()}`}
+                  {loading ? '...' : `₹${dashboardData.totalRevenue.toLocaleString()}`}
                 </p>
               </div>
               <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
@@ -227,7 +289,7 @@ function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Employees</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : totalEmployees}
+                  {loading ? '...' : dashboardData.totalEmployees}
                 </p>
               </div>
               <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
@@ -253,11 +315,11 @@ function Dashboard() {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white">Recent Leads</h3>
-              <span className="bg-blue-100/80 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{leads.length}</span>
+              <span className="bg-blue-100/80 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.leads.length}</span>
             </div>
             
             <div className="space-y-4">
-              {leads.slice(0, 2).map((lead, index) => {
+              {dashboardData.leads.slice(0, 2).map((lead, index) => {
                 const initials = lead.name ? lead.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'L';
                 const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500'];
                 return (
@@ -278,7 +340,7 @@ function Dashboard() {
                   </motion.div>
                 );
               })}
-              {leads.length === 0 && (
+              {dashboardData.leads.length === 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No recent leads</p>
               )}
             </div>
@@ -291,11 +353,11 @@ function Dashboard() {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white">Active Projects</h3>
-              <span className="bg-yellow-100/80 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{activeProjects}</span>
+              <span className="bg-yellow-100/80 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.activeProjects}</span>
             </div>
             
             <div className="space-y-4">
-              {projects.filter(p => !p.handoverDate || p.handoverDate.trim() === "").slice(0, 2).map((project, index) => {
+              {dashboardData.projects.filter(p => !p.handoverDate || p.handoverDate.trim() === "").slice(0, 2).map((project, index) => {
                 const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
                 return (
                   <motion.div 
@@ -315,7 +377,7 @@ function Dashboard() {
                   </motion.div>
                 );
               })}
-              {activeProjects === 0 && (
+              {dashboardData.activeProjects === 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No active projects</p>
               )}
             </div>
@@ -328,11 +390,11 @@ function Dashboard() {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white">Completed</h3>
-              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length}</span>
+              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length}</span>
             </div>
             
             <div className="space-y-4">
-              {projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").slice(0, 2).map((project, index) => {
+              {dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").slice(0, 2).map((project, index) => {
                 const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'C';
                 return (
                   <motion.div 
@@ -352,7 +414,7 @@ function Dashboard() {
                   </motion.div>
                 );
               })}
-              {projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length === 0 && (
+              {dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length === 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No completed projects</p>
               )}
             </div>
@@ -445,7 +507,7 @@ function Dashboard() {
             
             <div className="p-6">
               <div className="space-y-4">
-                {recentTasks.length > 0 ? recentTasks.map((task, index) => {
+                {dashboardData.recentTasks.length > 0 ? dashboardData.recentTasks.map((task, index) => {
                   const statusColors = {
                     'completed': 'bg-green-500',
                     'in_progress': 'bg-blue-500', 
@@ -495,7 +557,7 @@ function Dashboard() {
                   className="text-center"
                 >
                   <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {totalLeads > 0 ? Math.round((projects.length / totalLeads) * 100) : 0}%
+                    {dashboardData.totalLeads > 0 ? Math.round((dashboardData.projects.length / dashboardData.totalLeads) * 100) : 0}%
                   </div>
                   <p className="text-sm font-medium text-blue-600">Lead to Project</p>
                 </motion.div>
@@ -505,7 +567,7 @@ function Dashboard() {
                   className="text-center"
                 >
                   <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {projects.length > 0 ? Math.round((projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length / projects.length) * 100) : 0}%
+                    {dashboardData.projects.length > 0 ? Math.round((dashboardData.projects.filter(p => p.handoverDate && p.handoverDate.trim() !== "").length / dashboardData.projects.length) * 100) : 0}%
                   </div>
                   <p className="text-sm font-medium text-green-600">Project Completion</p>
                 </motion.div>
