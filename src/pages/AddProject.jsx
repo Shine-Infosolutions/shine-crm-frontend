@@ -387,9 +387,6 @@ function AddProject() {
         ? await api.put(`/api/projects/${projectId}`, submitData)
         : await api.post(`/api/projects`, submitData);
 
-      console.log('API Response:', response);
-      console.log('Response data:', response.data);
-      
       if (!response.data || !response.data.success) {
         throw new Error('Invalid response from server');
       }
@@ -430,7 +427,6 @@ function AddProject() {
         }
       }
       
-      console.log('Project saved successfully, navigating to projects page');
       navigate("/projects");
     } catch (err) {
       console.error('API Error:', err);
