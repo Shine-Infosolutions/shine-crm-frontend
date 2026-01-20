@@ -83,8 +83,8 @@ const Dashboard = memo(function Dashboard() {
         const employeesData = employeesRes.data.data || [];
         const tasksData = tasksRes.data.data || [];
         
-        const activeCount = projectsData.filter(p => p.status === 'Active').length;
-        const completedCount = projectsData.filter(p => p.status === 'Completed').length;
+        const activeCount = projectsData.filter(p => ['Active', 'Start', 'Progress', 'Pending'].includes(p.status)).length;
+        const completedCount = projectsData.filter(p => ['Completed', 'Close'].includes(p.status)).length;
         const revenue = projectsData.reduce((sum, p) => {
           const amount = p.oneTimeProject?.totalAmount || p.recurringProject?.recurringAmount || 0;
           return sum + (parseFloat(amount) || 0);
@@ -376,7 +376,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
             
             <div className="space-y-4">
-              {dashboardData.projects.filter(p => p.status === 'Active').slice(0, 2).map((project, index) => {
+              {dashboardData.projects.filter(p => ['Active', 'Start', 'Progress', 'Pending'].includes(p.status)).slice(0, 2).map((project, index) => {
                 const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
                 return (
                   <motion.div 
@@ -409,11 +409,11 @@ const Dashboard = memo(function Dashboard() {
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white">Completed</h3>
-              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.projects.filter(p => p.status === 'Completed').length}</span>
+              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.projects.filter(p => ['Completed', 'Close'].includes(p.status)).length}</span>
             </div>
             
             <div className="space-y-4">
-              {dashboardData.projects.filter(p => p.status === 'Completed').slice(0, 2).map((project, index) => {
+              {dashboardData.projects.filter(p => ['Completed', 'Close'].includes(p.status)).slice(0, 2).map((project, index) => {
                 const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'C';
                 return (
                   <motion.div 
@@ -433,7 +433,7 @@ const Dashboard = memo(function Dashboard() {
                   </motion.div>
                 );
               })}
-              {dashboardData.projects.filter(p => p.status === 'Completed').length === 0 && (
+              {dashboardData.projects.filter(p => ['Completed', 'Close'].includes(p.status)).length === 0 && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No completed projects</p>
               )}
             </div>

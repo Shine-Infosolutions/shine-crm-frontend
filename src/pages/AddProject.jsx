@@ -8,8 +8,9 @@ function AddProject() {
   const navigate = useNavigate();
   const location = useLocation();
   const { API_URL } = useAppContext();
-  const isEditing = location.state?.isEditing || false;
-  const projectToEdit = location.state?.project || null;
+  const [isEditing, setIsEditing] = useState(false);
+  const [projectId, setProjectId] = useState(null);
+  const [projectToEdit, setProjectToEdit] = useState(null);
   
   const [formData, setFormData] = useState({
     // Common fields
@@ -23,6 +24,7 @@ function AddProject() {
     status: "Active",
     priority: "Medium",
     notes: "",
+    isLeadProject: false,
     
     // One-time project fields
     oneTimeProject: {
@@ -62,6 +64,47 @@ function AddProject() {
   const [employees, setEmployees] = useState([]);
   const [clients, setClients] = useState([]);
 
+  // Check if we're in edit mode by looking for an ID in the URL
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const id = queryParams.get("id");
+
+    if (id) {
+      setIsEditing(true);
+      setProjectId(id);
+      fetchProjectData(id);
+    } else {
+      // Check for legacy state-based editing
+      const legacyIsEditing = location.state?.isEditing || false;
+      const legacyProject = location.state?.project || null;
+      
+      if (legacyIsEditing && legacyProject) {
+        setIsEditing(true);
+        setProjectId(legacyProject._id);
+        setProjectToEdit(legacyProject);
+      }
+    }
+  }, [location]);
+
+  // Fetch project data if in edit mode
+  const fetchProjectData = async (id) => {
+    try {
+      setIsSubmitting(true);
+      const response = await api.get(`/api/projects/${id}`);
+      const data = response.data;
+
+      if (!data) {
+        throw new Error("Failed to fetch project data");
+      }
+
+      setProjectToEdit(data);
+    } catch (err) {
+      setError(err.message || "Failed to load project data");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Fetch employees and clients
   useEffect(() => {
     const fetchData = async () => {
@@ -98,6 +141,7 @@ function AddProject() {
         status: projectToEdit.status || "Active",
         priority: projectToEdit.priority || "Medium",
         notes: projectToEdit.notes || "",
+        isLeadProject: projectToEdit.isLeadProject || false,
         
         oneTimeProject: {
           scope: projectToEdit.oneTimeProject?.scope || "",
@@ -135,7 +179,27 @@ function AddProject() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    if (name.includes('.')) {
+    if (name === 'isLeadProject' && checked) {
+      // Reset client fields when switching to lead project
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked,
+        clientId: "",
+        clientName: "",
+        clientContact: ""
+      }));
+    } else if (name === 'clientId' && formData.isLeadProject) {
+      // Auto-fill lead data when selecting a lead
+      const selectedLead = clients.find(client => client._id === value);
+      if (selectedLead) {
+        setFormData(prev => ({
+          ...prev,
+          clientId: value,
+          clientName: selectedLead.name,
+          clientContact: selectedLead.number
+        }));
+      }
+    } else if (name.includes('.')) {
       const [section, field] = name.split('.');
       setFormData(prev => ({
         ...prev,
@@ -162,7 +226,6 @@ function AddProject() {
       const submitData = {
         projectName: formData.projectName,
         projectType: formData.projectType,
-        clientId: formData.clientId,
         assignedManager: formData.assignedManager,
         assignedTeam: formData.assignedTeam,
         status: formData.status,
@@ -173,16 +236,81 @@ function AddProject() {
         clientContact: formData.clientContact,
       };
 
-      if (formData.projectType === 'ONE_TIME') {
-        submitData.oneTimeProject = formData.oneTimeProject;
-      } else if (formData.projectType === 'RECURRING') {
-        submitData.recurringProject = formData.recurringProject;
+      // Only include clientId if it's not empty
+      if (formData.clientId) {
+        submitData.clientId = formData.clientId;
       }
 
-      if (isEditing) {
-        await api.put(`/api/projects/${projectToEdit._id}`, submitData);
+      if (formData.projectType === 'ONE_TIME') {
+        if (!formData.oneTimeProject.totalAmount) {
+          setError("Total amount is required for one-time projects");
+          return;
+        }
+        submitData.oneTimeProject = formData.oneTimeProject;
+        submitData.recurringProject = undefined;
+      } else if (formData.projectType === 'RECURRING') {
+        if (!formData.recurringProject.recurringAmount) {
+          setError("Recurring amount is required for recurring projects");
+          return;
+        }
+        submitData.recurringProject = formData.recurringProject;
+        submitData.oneTimeProject = undefined;
+      }
+
+      let projectResponse;
+      if (isEditing && projectId) {
+        projectResponse = await api.put(`/api/projects/${projectId}`, submitData);
       } else {
-        await api.post(`/api/projects`, submitData);
+        projectResponse = await api.post(`/api/projects`, submitData);
+      }
+
+      // Auto create invoice if Auto Invoice is checked for recurring projects
+      if (formData.projectType === 'RECURRING' && formData.recurringProject.autoInvoice) {
+        try {
+          // Get client data from lead if available
+          let clientData = {
+            name: formData.clientName,
+            phone: formData.clientContact,
+            email: 'client@example.com',
+            address: 'N/A'
+          };
+
+          if (formData.clientId) {
+            const clientResponse = await api.get(`/api/leads/${formData.clientId}`);
+            if (clientResponse.data) {
+              clientData = {
+                name: clientResponse.data.name,
+                phone: clientResponse.data.number,
+                email: clientResponse.data.email || 'client@example.com',
+                address: clientResponse.data.address || 'N/A'
+              };
+            }
+          }
+
+          const invoiceData = {
+            isGSTInvoice: false,
+            invoiceDate: new Date().toISOString(),
+            dueDate: formData.recurringProject.nextBillingDate || new Date().toISOString(),
+            customerName: clientData.name,
+            customerAddress: clientData.address,
+            customerPhone: clientData.phone,
+            customerEmail: clientData.email,
+            productDetails: [{
+              description: `${formData.projectName} - ${formData.recurringProject.serviceType || 'Service'} (${formData.recurringProject.billingCycle || 'Monthly'})`,
+              unit: 'Service',
+              quantity: 1,
+              price: formData.recurringProject.recurringAmount || 0,
+              amount: formData.recurringProject.recurringAmount || 0
+            }],
+            amountDetails: {
+              totalAmount: formData.recurringProject.recurringAmount || 0
+            }
+          };
+          
+          await api.post('/api/invoices/create', invoiceData);
+        } catch (invoiceError) {
+          console.error('Failed to create auto invoice:', invoiceError);
+        }
       }
 
       navigate("/projects");
@@ -276,10 +404,20 @@ function AddProject() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                 >
-                  <option value="Active">Active</option>
-                  <option value="On Hold">On Hold</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
+                  {formData.projectType === 'ONE_TIME' ? (
+                    <>
+                      <option value="Pending">Pending</option>
+                      <option value="Start">Start</option>
+                      <option value="Progress">Progress</option>
+                      <option value="Completed">Completed</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Active">Active</option>
+                      <option value="Hold">Hold</option>
+                      <option value="Close">Close</option>
+                    </>
+                  )}
                 </select>
               </div>
               
@@ -315,22 +453,70 @@ function AddProject() {
           {/* Client & Ownership */}
           <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Client & Ownership</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client *</label>
-                <select
-                  name="clientId"
-                  value={formData.clientId}
+            
+            {/* Is Lead Project Checkbox */}
+            <div className="mb-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isLeadProject"
+                  checked={formData.isLeadProject}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                  required
-                >
-                  <option value="">Select client</option>
-                  {clients.map(client => (
-                    <option key={client._id} value={client._id}>{client.name} - {client.number}</option>
-                  ))}
-                </select>
-              </div>
+                  className="mr-2"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Is Lead Project</span>
+              </label>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {formData.isLeadProject ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Lead *</label>
+                  <select
+                    name="clientId"
+                    value={formData.clientId}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
+                    required
+                  >
+                    <option value="">Select lead</option>
+                    {clients.map(client => (
+                      <option key={client._id} value={client._id}>{client.name} - {client.number}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name *</label>
+                    <input
+                      type="text"
+                      name="clientName"
+                      value={formData.clientName}
+                      onChange={handleChange}
+                      placeholder="Client or company name"
+                      className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Contact *</label>
+                    <input
+                      type="text"
+                      name="clientContact"
+                      value={formData.clientContact}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData(prev => ({ ...prev, clientContact: value }));
+                      }}
+                      placeholder="10-digit phone number"
+                      className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
+                      required
+                    />
+                  </div>
+                </>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Manager *</label>
@@ -346,34 +532,6 @@ function AddProject() {
                     <option key={emp._id} value={emp._id}>{emp.name}</option>
                   ))}
                 </select>
-              </div>
-              
-              {/* Backward compatibility fields */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name (Legacy)</label>
-                <input
-                  type="text"
-                  name="clientName"
-                  value={formData.clientName}
-                  onChange={handleChange}
-                  placeholder="Client or company name"
-                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Contact (Legacy)</label>
-                <input
-                  type="text"
-                  name="clientContact"
-                  value={formData.clientContact}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setFormData(prev => ({ ...prev, clientContact: value }));
-                  }}
-                  placeholder="10-digit phone number"
-                  className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                />
               </div>
             </div>
           </div>
@@ -637,29 +795,33 @@ function AddProject() {
                     />
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Invoice ID</label>
-                    <input
-                      type="text"
-                      name="recurringProject.lastInvoiceId"
-                      value={formData.recurringProject.lastInvoiceId}
-                      onChange={handleChange}
-                      placeholder="INV-2024-001"
-                      className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                    />
-                  </div>
+                  {isEditing && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Invoice ID</label>
+                      <input
+                        type="text"
+                        name="recurringProject.lastInvoiceId"
+                        value={formData.recurringProject.lastInvoiceId}
+                        onChange={handleChange}
+                        placeholder="INV-2024-001"
+                        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                  )}
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Missed Billing Count</label>
-                    <input
-                      type="number"
-                      name="recurringProject.missedBillingCount"
-                      value={formData.recurringProject.missedBillingCount}
-                      onChange={handleChange}
-                      placeholder="0"
-                      className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                    />
-                  </div>
+                  {isEditing && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Missed Billing Count</label>
+                      <input
+                        type="number"
+                        name="recurringProject.missedBillingCount"
+                        value={formData.recurringProject.missedBillingCount}
+                        onChange={handleChange}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                  )}
                   
                   <div className="flex items-center space-x-4">
                     <label className="flex items-center">
