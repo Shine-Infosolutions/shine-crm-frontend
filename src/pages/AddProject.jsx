@@ -94,7 +94,8 @@ function AddProject() {
     oneTimeProject: {
       scope: "", totalAmount: "", advanceAmount: "", paidAmount: "",
       startDate: "", expectedDeliveryDate: "", finalHandoverDate: "",
-      sourceCodeLink: "", deploymentDetails: "", warrantyPeriod: "", autoInvoice: false, lastInvoiceId: ""
+      sourceCodeLink: "", deploymentDetails: "", warrantyPeriod: "", autoInvoice: false, lastInvoiceId: "",
+      domainName: "", domainProvider: "", domainExpiryDate: ""
     },
     recurringProject: {
       serviceType: [], billingCycle: "", recurringAmount: "",
@@ -176,7 +177,10 @@ function AddProject() {
         deploymentDetails: projectToEdit.oneTimeProject?.deploymentDetails || "",
         warrantyPeriod: projectToEdit.oneTimeProject?.warrantyPeriod || "",
         autoInvoice: projectToEdit.oneTimeProject?.autoInvoice || false,
-        lastInvoiceId: projectToEdit.oneTimeProject?.lastInvoiceId || ""
+        lastInvoiceId: projectToEdit.oneTimeProject?.lastInvoiceId || "",
+        domainName: projectToEdit.oneTimeProject?.domainName || "",
+        domainProvider: projectToEdit.oneTimeProject?.domainProvider || "",
+        domainExpiryDate: formatDate(projectToEdit.oneTimeProject?.domainExpiryDate)
       },
       recurringProject: {
         ...initialFormData.recurringProject,
@@ -567,6 +571,20 @@ function AddProject() {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deployment Details</label>
                       <textarea name="oneTimeProject.deploymentDetails" value={formData.oneTimeProject.deploymentDetails || ""} onChange={handleChange} rows={2} placeholder="Server details, hosting information, etc." className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Domain Name</label>
+                      <input type="text" name="oneTimeProject.domainName" value={formData.oneTimeProject.domainName || ""} onChange={handleChange} placeholder="example.com" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Domain Provider</label>
+                      <input type="text" name="oneTimeProject.domainProvider" value={formData.oneTimeProject.domainProvider || ""} onChange={handleChange} placeholder="GoDaddy, Namecheap, etc." className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Domain Expiry Date</label>
+                      <input type="date" name="oneTimeProject.domainExpiryDate" value={formData.oneTimeProject.domainExpiryDate || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
                     </div>
                     <div>
                       <label className="flex items-center mt-6">
