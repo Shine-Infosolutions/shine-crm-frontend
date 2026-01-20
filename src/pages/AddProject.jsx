@@ -288,6 +288,34 @@ function AddProject() {
           current = current[parts[i]];
         }
         current[parts[parts.length - 1]] = finalValue;
+        
+        // Auto-calculate next billing date when contract start date changes
+        if (name === 'recurringProject.contractStartDate' || name === 'recurringProject.billingCycle') {
+          const startDate = name === 'recurringProject.contractStartDate' ? value : newData.recurringProject.contractStartDate;
+          const billingCycle = name === 'recurringProject.billingCycle' ? value : newData.recurringProject.billingCycle || 'Monthly';
+          
+          if (startDate) {
+            const start = new Date(startDate);
+            let nextBilling = new Date(start);
+            
+            switch (billingCycle) {
+              case 'Monthly':
+                nextBilling.setMonth(nextBilling.getMonth() + 1);
+                break;
+              case 'Quarterly':
+                nextBilling.setMonth(nextBilling.getMonth() + 3);
+                break;
+              case 'Yearly':
+                nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+                break;
+              default:
+                nextBilling.setMonth(nextBilling.getMonth() + 1);
+            }
+            
+            newData.recurringProject.nextBillingDate = nextBilling.toISOString().split('T')[0];
+          }
+        }
+        
         return newData;
       });
     } else {
@@ -473,16 +501,83 @@ function AddProject() {
               </label>
             </div>
             <ClientSection formData={formData} handleChange={handleChange} clients={clients} setFormData={setFormData} />
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Manager *</label>
-              <select name="assignedManager" value={formData.assignedManager || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required>
-                <option value="">Select manager</option>
-                {employees.map(emp => (<option key={emp._id} value={emp._id}>{emp.name}</option>))}
-              </select>
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Manager *</label>
+                <select name="assignedManager" value={formData.assignedManager || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required>
+                  <option value="">Select manager</option>
+                  {employees.map(emp => (<option key={emp._id} value={emp._id}>{emp.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Team</label>
+                <select multiple name="assignedTeam" value={formData.assignedTeam || []} onChange={(e) => {
+                  const values = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormData(prev => ({ ...prev, assignedTeam: values }));
+                }} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 h-24">
+                  {employees.map(emp => (<option key={emp._id} value={emp._id}>{emp.name}</option>))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple team members</p>
+              </div>
             </div>
           </div>
 
           <AnimatePresence mode="wait">
+            {formData.projectType === 'ONE_TIME' && (
+              <motion.div key="onetime" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">One-Time Project Details</h3>
+                
+                <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <h4 className="text-md font-medium mb-3 text-green-800 dark:text-green-400">Project Scope & Financials</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Scope</label>
+                      <textarea name="oneTimeProject.scope" value={formData.oneTimeProject.scope || ""} onChange={handleChange} rows={3} placeholder="Detailed project scope and requirements" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Amount *</label>
+                      <input type="number" name="oneTimeProject.totalAmount" value={formData.oneTimeProject.totalAmount || ""} onChange={handleChange} placeholder="Total project cost" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Advance Amount</label>
+                      <input type="number" name="oneTimeProject.advanceAmount" value={formData.oneTimeProject.advanceAmount || ""} onChange={handleChange} placeholder="Advance payment received" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid Amount</label>
+                      <input type="number" name="oneTimeProject.paidAmount" value={formData.oneTimeProject.paidAmount || ""} onChange={handleChange} placeholder="Total amount paid" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                      <input type="date" name="oneTimeProject.startDate" value={formData.oneTimeProject.startDate || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Delivery Date</label>
+                      <input type="date" name="oneTimeProject.expectedDeliveryDate" value={formData.oneTimeProject.expectedDeliveryDate || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Final Handover Date</label>
+                      <input type="date" name="oneTimeProject.finalHandoverDate" value={formData.oneTimeProject.finalHandoverDate || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source Code Link</label>
+                      <input type="url" name="oneTimeProject.sourceCodeLink" value={formData.oneTimeProject.sourceCodeLink || ""} onChange={handleChange} placeholder="GitHub, GitLab, etc." className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Warranty Period</label>
+                      <input type="text" name="oneTimeProject.warrantyPeriod" value={formData.oneTimeProject.warrantyPeriod || ""} onChange={handleChange} placeholder="e.g., 6 months, 1 year" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deployment Details</label>
+                      <textarea name="oneTimeProject.deploymentDetails" value={formData.oneTimeProject.deploymentDetails || ""} onChange={handleChange} rows={2} placeholder="Server details, hosting information, etc." className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
             {formData.projectType === 'RECURRING' && (
               <motion.div key="recurring" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
                 <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recurring Service Details</h3>
@@ -510,6 +605,39 @@ function AddProject() {
                         <option value="Paused">Paused</option>
                         <option value="Stopped">Stopped</option>
                       </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract Start Date</label>
+                      <input type="date" name="recurringProject.contractStartDate" value={formData.recurringProject.contractStartDate || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract End Date</label>
+                      <input 
+                        type="date" 
+                        name="recurringProject.contractEndDate" 
+                        value={formData.recurringProject.contractEndDate || ""} 
+                        onChange={handleChange} 
+                        disabled={formData.recurringProject.serviceType.includes('Social Media') || formData.recurringProject.serviceType.includes('GNB SEO')}
+                        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next Billing Date</label>
+                      <input type="date" name="recurringProject.nextBillingDate" value={formData.recurringProject.nextBillingDate || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SLA Deliverables</label>
+                      <textarea name="recurringProject.slaDeliverables" value={formData.recurringProject.slaDeliverables || ""} onChange={handleChange} rows={3} placeholder="Service level agreement and deliverables" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" />
+                    </div>
+                    <div>
+                      <label className="flex items-center mt-6">
+                        <input type="checkbox" name="recurringProject.autoInvoice" checked={formData.recurringProject.autoInvoice} onChange={handleChange} className="mr-2" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Generate Invoice</span>
+                      </label>
                     </div>
                   </div>
                 </div>
