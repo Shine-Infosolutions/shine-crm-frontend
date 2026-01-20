@@ -21,9 +21,6 @@ function ProjectManagement() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        // Update progress for all active projects first
-        await api.put('/api/projects/update-progress');
-        
         const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
         if (response.data.success) {
           setProjects(response.data.data || []);
@@ -47,50 +44,47 @@ function ProjectManagement() {
   }, [currentPage]);
   
 
-  // Calculate progress and status based on project type
+  // Calculate status based on project type
   const calculateProjectMetrics = (project) => {
-    // Use stored progress from database
-    const progress = project.progress || 0;
-    
     if (project.projectType === 'ONE_TIME') {
       // Status-based overrides
-      if (project.status === 'Completed') return { progress: 100, status: 'Completed' };
-      if (project.status === 'Cancelled') return { progress, status: 'Cancelled' };
-      if (project.status === 'On Hold') return { progress, status: 'On Hold' };
+      if (project.status === 'Completed') return { status: 'Completed' };
+      if (project.status === 'Cancelled') return { status: 'Cancelled' };
+      if (project.status === 'On Hold') return { status: 'On Hold' };
       
       const start = new Date(project.oneTimeProject?.startDate);
       const expected = new Date(project.oneTimeProject?.expectedDeliveryDate);
       const today = new Date();
       
       if (!start || !expected || isNaN(start.getTime()) || isNaN(expected.getTime())) {
-        return { progress: 0, status: 'Planning' };
+        return { status: 'Planning' };
       }
       
-      if (today < start) return { progress: 0, status: 'Not Started' };
-      if (today > expected && progress < 100) return { progress, status: 'Overdue' };
+      if (today < start) return { status: 'Not Started' };
+      if (today > expected) return { status: 'Overdue' };
       
-      return { progress, status: 'In Progress' };
+      return { status: 'In Progress' };
     } else {
       // Recurring project logic
       const contractEnd = new Date(project.recurringProject?.contractEndDate);
       const today = new Date();
       
-      if (project.status === 'Cancelled') return { progress: 0, status: 'Cancelled' };
-      if (project.status === 'Completed') return { progress: 100, status: 'Completed' };
-      if (project.status === 'On Hold') return { progress: 50, status: 'On Hold' };
+      if (project.status === 'Cancelled') return { status: 'Cancelled' };
+      if (project.status === 'Completed') return { status: 'Completed' };
+      if (project.status === 'On Hold') return { status: 'On Hold' };
       
       if (contractEnd && !isNaN(contractEnd.getTime()) && today > contractEnd) {
-        return { progress: 100, status: 'Contract Expired' };
+        return { status: 'Contract Expired' };
       }
       
-      return { progress: 75, status: 'Active Service' };
+      return { status: 'Active Service' };
     }
   };
 
   // Add calculated metrics to each project
   const projectsWithMetrics = projects.map((project) => {
-    const { progress, status } = calculateProjectMetrics(project);
-    return { ...project, progress, calculatedStatus: status };
+    const { status } = calculateProjectMetrics(project);
+    return { ...project, calculatedStatus: status };
   });
 
   // Get unique status values for filter options
