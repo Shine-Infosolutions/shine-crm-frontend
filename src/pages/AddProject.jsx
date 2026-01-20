@@ -43,12 +43,11 @@ function AddProject() {
     
     // Recurring project fields
     recurringProject: {
-      serviceType: "",
+      serviceType: [],
       billingCycle: "",
       recurringAmount: "",
       contractStartDate: "",
       contractEndDate: "",
-      autoRenew: false,
       nextBillingDate: "",
       billingStatus: "Active",
       lastInvoiceId: "",
@@ -56,6 +55,16 @@ function AddProject() {
       autoInvoice: false,
       slaDeliverables: "",
       billingHistory: [],
+      
+      // Social Media Configuration
+      socialMediaConfig: {
+        platforms: [],
+        deliverables: {
+          posts: 0,
+          reels: 0,
+          stories: 0
+        }
+      }
     },
   });
   
@@ -158,12 +167,12 @@ function AddProject() {
         },
         
         recurringProject: {
-          serviceType: projectToEdit.recurringProject?.serviceType || "",
+          serviceType: projectToEdit.recurringProject?.serviceType || [],
           billingCycle: projectToEdit.recurringProject?.billingCycle || "",
           recurringAmount: projectToEdit.recurringProject?.recurringAmount || "",
           contractStartDate: formatDate(projectToEdit.recurringProject?.contractStartDate),
           contractEndDate: formatDate(projectToEdit.recurringProject?.contractEndDate),
-          autoRenew: projectToEdit.recurringProject?.autoRenew || false,
+
           nextBillingDate: formatDate(projectToEdit.recurringProject?.nextBillingDate),
           billingStatus: projectToEdit.recurringProject?.billingStatus || "Active",
           lastInvoiceId: projectToEdit.recurringProject?.lastInvoiceId || "",
@@ -171,6 +180,15 @@ function AddProject() {
           autoInvoice: projectToEdit.recurringProject?.autoInvoice || false,
           slaDeliverables: projectToEdit.recurringProject?.slaDeliverables || "",
           billingHistory: projectToEdit.recurringProject?.billingHistory || [],
+          
+          socialMediaConfig: {
+            platforms: projectToEdit.recurringProject?.socialMediaConfig?.platforms || [],
+            deliverables: {
+              posts: projectToEdit.recurringProject?.socialMediaConfig?.deliverables?.posts || 0,
+              reels: projectToEdit.recurringProject?.socialMediaConfig?.deliverables?.reels || 0,
+              stories: projectToEdit.recurringProject?.socialMediaConfig?.deliverables?.stories || 0
+            }
+          }
         },
       });
     }
@@ -200,20 +218,92 @@ function AddProject() {
         }));
       }
     } else if (name.includes('.')) {
-      const [section, field] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [section]: {
-          ...prev[section],
-          [field]: type === 'checkbox' ? checked : value,
-        },
-      }));
+      const parts = name.split('.');
+      const finalValue = type === 'checkbox' ? checked : (type === 'number' ? parseInt(value) || 0 : value);
+      
+      if (parts.length === 4) {
+        // Handle 4-level nested fields like recurringProject.socialMediaConfig.deliverables.posts
+        const [section, subsection, subfield, field] = parts;
+        setFormData(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            [subsection]: {
+              ...prev[section][subsection],
+              [subfield]: {
+                ...prev[section][subsection][subfield],
+                [field]: finalValue,
+              },
+            },
+          },
+        }));
+      } else if (parts.length === 3) {
+        // Handle 3-level nested fields
+        const [section, field, subfield] = parts;
+        setFormData(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            [field]: {
+              ...prev[section][field],
+              [subfield]: finalValue,
+            },
+          },
+        }));
+      } else {
+        // Handle 2-level nested fields
+        const [section, field] = parts;
+        setFormData(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            [field]: finalValue,
+          },
+        }));
+      }
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: type === 'checkbox' ? checked : value,
       }));
     }
+  };
+
+  const handleServiceTypeChange = (serviceType, checked) => {
+    setFormData(prev => {
+      const currentTypes = prev.recurringProject.serviceType;
+      const updatedTypes = checked 
+        ? [...currentTypes, serviceType]
+        : currentTypes.filter(t => t !== serviceType);
+      
+      return {
+        ...prev,
+        recurringProject: {
+          ...prev.recurringProject,
+          serviceType: updatedTypes
+        }
+      };
+    });
+  };
+
+  const handlePlatformChange = (platform, checked) => {
+    setFormData(prev => {
+      const currentPlatforms = prev.recurringProject.socialMediaConfig.platforms;
+      const updatedPlatforms = checked 
+        ? [...currentPlatforms, platform]
+        : currentPlatforms.filter(p => p !== platform);
+      
+      return {
+        ...prev,
+        recurringProject: {
+          ...prev.recurringProject,
+          socialMediaConfig: {
+            ...prev.recurringProject.socialMediaConfig,
+            platforms: updatedPlatforms
+          }
+        }
+      };
+    });
   };
 
   const saveProject = async (e) => {
@@ -244,6 +334,7 @@ function AddProject() {
       if (formData.projectType === 'ONE_TIME') {
         if (!formData.oneTimeProject.totalAmount) {
           setError("Total amount is required for one-time projects");
+          setIsSubmitting(false);
           return;
         }
         submitData.oneTimeProject = formData.oneTimeProject;
@@ -251,12 +342,38 @@ function AddProject() {
       } else if (formData.projectType === 'RECURRING') {
         if (!formData.recurringProject.recurringAmount) {
           setError("Recurring amount is required for recurring projects");
+          setIsSubmitting(false);
           return;
         }
+        
         submitData.recurringProject = formData.recurringProject;
         submitData.oneTimeProject = undefined;
+        
+        // Social Media validation
+        const serviceTypes = formData.recurringProject.serviceType;
+        if (serviceTypes.includes('Social Media')) {
+          const socialConfig = formData.recurringProject.socialMediaConfig;
+          
+          if (!socialConfig.platforms || socialConfig.platforms.length === 0) {
+            setError("At least one social media platform is required for Social Media projects");
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // Ensure at least one deliverable has a value
+          const deliverables = socialConfig.deliverables;
+          const totalDeliverables = (deliverables.posts || 0) + (deliverables.reels || 0) + (deliverables.stories || 0);
+          
+          if (totalDeliverables === 0) {
+            setError("At least one deliverable (posts, reels, or stories) must be greater than 0 for Social Media projects");
+            setIsSubmitting(false);
+            return;
+          }
+        }
       }
 
+      console.log('Submitting data:', submitData);
+      
       let projectResponse;
       if (isEditing && projectId) {
         projectResponse = await api.put(`/api/projects/${projectId}`, submitData);
@@ -296,7 +413,7 @@ function AddProject() {
             customerPhone: clientData.phone,
             customerEmail: clientData.email,
             productDetails: [{
-              description: `${formData.projectName} - ${formData.recurringProject.serviceType || 'Service'} (${formData.recurringProject.billingCycle || 'Monthly'})`,
+              description: `${formData.projectName} - ${formData.recurringProject.serviceType.join(', ') || 'Service'} (${formData.recurringProject.billingCycle || 'Monthly'})`,
               unit: 'Service',
               quantity: 1,
               price: formData.recurringProject.recurringAmount || 0,
@@ -315,6 +432,9 @@ function AddProject() {
 
       navigate("/projects");
     } catch (err) {
+      console.error('API Error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error data:', err.response?.data);
       setError(
         err.response?.data?.message ||
           "Failed to save project. Please try again."
@@ -373,7 +493,7 @@ function AddProject() {
                 <input
                   type="text"
                   name="projectName"
-                  value={formData.projectName}
+                  value={formData.projectName || ""}
                   onChange={handleChange}
                   placeholder="Enter descriptive project title"
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -385,7 +505,7 @@ function AddProject() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Type *</label>
                 <select
                   name="projectType"
-                  value={formData.projectType}
+                  value={formData.projectType || ""}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                   required
@@ -400,7 +520,7 @@ function AddProject() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                 <select
                   name="status"
-                  value={formData.status}
+                  value={formData.status || ""}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                 >
@@ -425,7 +545,7 @@ function AddProject() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
                 <select
                   name="priority"
-                  value={formData.priority}
+                  value={formData.priority || ""}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                 >
@@ -441,7 +561,7 @@ function AddProject() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
               <textarea
                 name="notes"
-                value={formData.notes}
+                value={formData.notes || ""}
                 onChange={handleChange}
                 rows={3}
                 placeholder="Additional project notes or requirements"
@@ -474,7 +594,7 @@ function AddProject() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Lead *</label>
                   <select
                     name="clientId"
-                    value={formData.clientId}
+                    value={formData.clientId || ""}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                     required
@@ -492,7 +612,7 @@ function AddProject() {
                     <input
                       type="text"
                       name="clientName"
-                      value={formData.clientName}
+                      value={formData.clientName || ""}
                       onChange={handleChange}
                       placeholder="Client or company name"
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -505,7 +625,7 @@ function AddProject() {
                     <input
                       type="text"
                       name="clientContact"
-                      value={formData.clientContact}
+                      value={formData.clientContact || ""}
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '').slice(0, 10);
                         setFormData(prev => ({ ...prev, clientContact: value }));
@@ -522,7 +642,7 @@ function AddProject() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned Manager *</label>
                 <select
                   name="assignedManager"
-                  value={formData.assignedManager}
+                  value={formData.assignedManager || ""}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                   required
@@ -557,7 +677,7 @@ function AddProject() {
                       <input
                         type="number"
                         name="oneTimeProject.totalAmount"
-                        value={formData.oneTimeProject.totalAmount}
+                        value={formData.oneTimeProject.totalAmount || ""}
                         onChange={handleChange}
                         placeholder="Total project cost in ₹"
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -570,7 +690,7 @@ function AddProject() {
                       <input
                         type="number"
                         name="oneTimeProject.advanceAmount"
-                        value={formData.oneTimeProject.advanceAmount}
+                        value={formData.oneTimeProject.advanceAmount || ""}
                         onChange={handleChange}
                         placeholder="Advance received in ₹"
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -582,7 +702,7 @@ function AddProject() {
                       <input
                         type="number"
                         name="oneTimeProject.paidAmount"
-                        value={formData.oneTimeProject.paidAmount}
+                        value={formData.oneTimeProject.paidAmount || ""}
                         onChange={handleChange}
                         placeholder="Total amount paid in ₹"
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -605,7 +725,7 @@ function AddProject() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Scope</label>
                     <textarea
                       name="oneTimeProject.scope"
-                      value={formData.oneTimeProject.scope}
+                      value={formData.oneTimeProject.scope || ""}
                       onChange={handleChange}
                       rows={3}
                       placeholder="Detailed project scope and requirements"
@@ -618,7 +738,7 @@ function AddProject() {
                     <input
                       type="date"
                       name="oneTimeProject.startDate"
-                      value={formData.oneTimeProject.startDate}
+                      value={formData.oneTimeProject.startDate || ""}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                     />
@@ -629,7 +749,7 @@ function AddProject() {
                     <input
                       type="date"
                       name="oneTimeProject.expectedDeliveryDate"
-                      value={formData.oneTimeProject.expectedDeliveryDate}
+                      value={formData.oneTimeProject.expectedDeliveryDate || ""}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                     />
@@ -640,7 +760,7 @@ function AddProject() {
                     <input
                       type="date"
                       name="oneTimeProject.finalHandoverDate"
-                      value={formData.oneTimeProject.finalHandoverDate}
+                      value={formData.oneTimeProject.finalHandoverDate || ""}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                     />
@@ -651,7 +771,7 @@ function AddProject() {
                     <input
                       type="url"
                       name="oneTimeProject.sourceCodeLink"
-                      value={formData.oneTimeProject.sourceCodeLink}
+                      value={formData.oneTimeProject.sourceCodeLink || ""}
                       onChange={handleChange}
                       placeholder="https://github.com/repo-link"
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -663,7 +783,7 @@ function AddProject() {
                     <input
                       type="text"
                       name="oneTimeProject.deploymentDetails"
-                      value={formData.oneTimeProject.deploymentDetails}
+                      value={formData.oneTimeProject.deploymentDetails || ""}
                       onChange={handleChange}
                       placeholder="Hosting provider, server details"
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -675,7 +795,7 @@ function AddProject() {
                     <input
                       type="text"
                       name="oneTimeProject.warrantyPeriod"
-                      value={formData.oneTimeProject.warrantyPeriod}
+                      value={formData.oneTimeProject.warrantyPeriod || ""}
                       onChange={handleChange}
                       placeholder="e.g., 6 months, 1 year"
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -704,7 +824,7 @@ function AddProject() {
                       <input
                         type="number"
                         name="recurringProject.recurringAmount"
-                        value={formData.recurringProject.recurringAmount}
+                        value={formData.recurringProject.recurringAmount || ""}
                         onChange={handleChange}
                         placeholder="Monthly/Quarterly/Yearly amount"
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -716,7 +836,7 @@ function AddProject() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Cycle</label>
                       <select
                         name="recurringProject.billingCycle"
-                        value={formData.recurringProject.billingCycle}
+                        value={formData.recurringProject.billingCycle || ""}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                       >
@@ -731,7 +851,7 @@ function AddProject() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Billing Status</label>
                       <select
                         name="recurringProject.billingStatus"
-                        value={formData.recurringProject.billingStatus}
+                        value={formData.recurringProject.billingStatus || ""}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                       >
@@ -743,23 +863,98 @@ function AddProject() {
                   </div>
                 </div>
                 
+                {/* Social Media Configuration */}
+                {formData.recurringProject.serviceType.includes('Social Media') && (
+                  <div className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                    <h4 className="text-md font-medium mb-3 text-purple-800 dark:text-purple-400">Social Media Configuration</h4>
+                    
+                    {/* Platform Selection */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Platforms * (Select at least one)</label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {['Instagram', 'Facebook', 'LinkedIn', 'Twitter/X'].map(platform => (
+                          <label key={platform} className="flex items-center p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={formData.recurringProject.socialMediaConfig.platforms.includes(platform)}
+                              onChange={(e) => handlePlatformChange(platform, e.target.checked)}
+                              className="mr-2 text-purple-600 focus:ring-purple-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{platform}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {formData.recurringProject.socialMediaConfig.platforms.length === 0 && (
+                        <p className="text-xs text-red-500 mt-1">Please select at least one platform</p>
+                      )}
+                    </div>
+                    
+                    {/* Deliverables */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Monthly Deliverables * (At least one must be greater than 0)</label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Posts per month</label>
+                          <input
+                            type="number"
+                            name="recurringProject.socialMediaConfig.deliverables.posts"
+                            value={formData.recurringProject.socialMediaConfig.deliverables.posts || 0}
+                            onChange={handleChange}
+                            min="0"
+                            max="100"
+                            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Reels per month</label>
+                          <input
+                            type="number"
+                            name="recurringProject.socialMediaConfig.deliverables.reels"
+                            value={formData.recurringProject.socialMediaConfig.deliverables.reels || 0}
+                            onChange={handleChange}
+                            min="0"
+                            max="100"
+                            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Stories per month</label>
+                          <input
+                            type="number"
+                            name="recurringProject.socialMediaConfig.deliverables.stories"
+                            value={formData.recurringProject.socialMediaConfig.deliverables.stories || 0}
+                            onChange={handleChange}
+                            min="0"
+                            max="100"
+                            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500/50"
+                          />
+                        </div>
+                      </div>
+                      {((formData.recurringProject.socialMediaConfig.deliverables.posts || 0) + 
+                        (formData.recurringProject.socialMediaConfig.deliverables.reels || 0) + 
+                        (formData.recurringProject.socialMediaConfig.deliverables.stories || 0)) === 0 && (
+                        <p className="text-xs text-red-500 mt-1">At least one deliverable must be greater than 0</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Service Type</label>
-                    <select
-                      name="recurringProject.serviceType"
-                      value={formData.recurringProject.serviceType}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                    >
-                      <option value="">Select service type</option>
-                      <option value="SMM">Social Media Management</option>
-                      <option value="SEO">SEO Services</option>
-                      <option value="Maintenance">Website Maintenance</option>
-                      <option value="Ads">Digital Advertising</option>
-                      <option value="Content">Content Creation</option>
-                      <option value="Other">Other</option>
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Service Types</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['Social Media', 'GNB SEO', 'Website Maintenance', 'Other'].map(serviceType => (
+                        <label key={serviceType} className="flex items-center p-2 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.recurringProject.serviceType.includes(serviceType)}
+                            onChange={(e) => handleServiceTypeChange(serviceType, e.target.checked)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{serviceType}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   
                   <div>
@@ -767,29 +962,58 @@ function AddProject() {
                     <input
                       type="date"
                       name="recurringProject.contractStartDate"
-                      value={formData.recurringProject.contractStartDate}
-                      onChange={handleChange}
+                      value={formData.recurringProject.contractStartDate || ""}
+                      onChange={(e) => {
+                        const startDate = e.target.value;
+                        let nextBillingDate = "";
+                        
+                        if (startDate) {
+                          const date = new Date(startDate);
+                          if (formData.recurringProject.billingCycle === "Monthly") {
+                            date.setMonth(date.getMonth() + 1);
+                          } else if (formData.recurringProject.billingCycle === "Quarterly") {
+                            date.setMonth(date.getMonth() + 3);
+                          } else if (formData.recurringProject.billingCycle === "Yearly") {
+                            date.setFullYear(date.getFullYear() + 1);
+                          } else {
+                            date.setMonth(date.getMonth() + 1);
+                          }
+                          nextBillingDate = date.toISOString().split('T')[0];
+                        }
+                        
+                        setFormData(prev => ({
+                          ...prev,
+                          recurringProject: {
+                            ...prev.recurringProject,
+                            contractStartDate: startDate,
+                            nextBillingDate: nextBillingDate
+                          }
+                        }));
+                      }}
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                     />
                   </div>
+
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract End</label>
-                    <input
-                      type="date"
-                      name="recurringProject.contractEndDate"
-                      value={formData.recurringProject.contractEndDate}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-                    />
-                  </div>
+                  {(!formData.recurringProject.serviceType.includes("Social Media") && formData.recurringProject.serviceType.length > 0) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contract End</label>
+                      <input
+                        type="date"
+                        name="recurringProject.contractEndDate"
+                        value={formData.recurringProject.contractEndDate || ""}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
+                      />
+                    </div>
+                  )}
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Next Billing Date</label>
                     <input
                       type="date"
                       name="recurringProject.nextBillingDate"
-                      value={formData.recurringProject.nextBillingDate}
+                      value={formData.recurringProject.nextBillingDate || ""}
                       onChange={handleChange}
                       className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
                     />
@@ -801,7 +1025,7 @@ function AddProject() {
                       <input
                         type="text"
                         name="recurringProject.lastInvoiceId"
-                        value={formData.recurringProject.lastInvoiceId}
+                        value={formData.recurringProject.lastInvoiceId || ""}
                         onChange={handleChange}
                         placeholder="INV-2024-001"
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -815,7 +1039,7 @@ function AddProject() {
                       <input
                         type="number"
                         name="recurringProject.missedBillingCount"
-                        value={formData.recurringProject.missedBillingCount}
+                        value={formData.recurringProject.missedBillingCount || 0}
                         onChange={handleChange}
                         placeholder="0"
                         className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
@@ -824,17 +1048,6 @@ function AddProject() {
                   )}
                   
                   <div className="flex items-center space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="recurringProject.autoRenew"
-                        checked={formData.recurringProject.autoRenew}
-                        onChange={handleChange}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Auto Renew</span>
-                    </label>
-                    
                     <label className="flex items-center">
                       <input
                         type="checkbox"
@@ -851,7 +1064,7 @@ function AddProject() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SLA & Deliverables</label>
                     <textarea
                       name="recurringProject.slaDeliverables"
-                      value={formData.recurringProject.slaDeliverables}
+                      value={formData.recurringProject.slaDeliverables || ""}
                       onChange={handleChange}
                       rows={3}
                       placeholder="Service level agreements and expected deliverables"
