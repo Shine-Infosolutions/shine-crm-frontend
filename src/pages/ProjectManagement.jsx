@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
@@ -17,40 +17,35 @@ function ProjectManagement() {
   const navigate = useNavigate();
   const { API_URL } = useAppContext();
 
-  // Fetch projects from API
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
-        if (response.data.success) {
-          setProjects(response.data.data || []);
-          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
-        } else {
-          const sortedProjects = (response.data || []).sort((a, b) => {
-            const dateA = new Date(a.createdAt || 0);
-            const dateB = new Date(b.createdAt || 0);
-            return dateB - dateA;
-          });
-          setProjects(sortedProjects);
-        }
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to load projects. Please try again.");
-        setLoading(false);
+  const fetchProjects = useCallback(async () => {
+    try {
+      const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
+      if (response.data.success) {
+        setProjects(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+      } else {
+        const sortedProjects = (response.data || []).sort((a, b) => 
+          new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
+        setProjects(sortedProjects);
       }
-    };
-  
-    fetchProjects();
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load projects. Please try again.");
+      setLoading(false);
+    }
   }, [currentPage]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
   
 
-  // Calculate status based on project type
-  const calculateProjectMetrics = (project) => {
+  const calculateProjectMetrics = useCallback((project) => {
     if (project.projectType === 'ONE_TIME') {
-      // Status-based overrides
-      if (project.status === 'Completed') return { status: 'Completed' };
-      if (project.status === 'Cancelled') return { status: 'Cancelled' };
-      if (project.status === 'On Hold') return { status: 'On Hold' };
+      if (['Completed', 'Cancelled', 'On Hold'].includes(project.status)) {
+        return { status: project.status };
+      }
       
       const start = new Date(project.oneTimeProject?.startDate);
       const expected = new Date(project.oneTimeProject?.expectedDeliveryDate);
@@ -62,16 +57,14 @@ function ProjectManagement() {
       
       if (today < start) return { status: 'Not Started' };
       if (today > expected) return { status: 'Overdue' };
-      
       return { status: 'In Progress' };
     } else {
-      // Recurring project logic
+      if (['Cancelled', 'Completed', 'On Hold'].includes(project.status)) {
+        return { status: project.status };
+      }
+      
       const contractEnd = new Date(project.recurringProject?.contractEndDate);
       const today = new Date();
-      
-      if (project.status === 'Cancelled') return { status: 'Cancelled' };
-      if (project.status === 'Completed') return { status: 'Completed' };
-      if (project.status === 'On Hold') return { status: 'On Hold' };
       
       if (contractEnd && !isNaN(contractEnd.getTime()) && today > contractEnd) {
         return { status: 'Contract Expired' };
@@ -79,28 +72,30 @@ function ProjectManagement() {
       
       return { status: 'Active Service' };
     }
-  };
+  }, []);
 
-  // Add calculated metrics to each project
-  const projectsWithMetrics = projects.map((project) => {
-    const { status } = calculateProjectMetrics(project);
-    return { ...project, calculatedStatus: status };
-  });
+  const projectsWithMetrics = useMemo(() => 
+    projects.map((project) => {
+      const { status } = calculateProjectMetrics(project);
+      return { ...project, calculatedStatus: status };
+    }), [projects, calculateProjectMetrics]
+  );
 
-  // Get unique status values for filter options
-  const uniqueStatuses = [...new Set(projects.map(project => project.status))].filter(Boolean).sort();
+  const uniqueStatuses = useMemo(() => 
+    [...new Set(projects.map(project => project.status))].filter(Boolean).sort(), 
+    [projects]
+  );
 
-  // Filter projects based on search term and status
-  const filteredProjects = projectsWithMetrics.filter((project) => {
-    const matchesSearch =
-      project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (project.clientContact && project.clientContact.includes(searchTerm));
-
-    const matchesStatus = statusFilter === "all" || project.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  });
+  const filteredProjects = useMemo(() => 
+    projectsWithMetrics.filter((project) => {
+      const matchesSearch = 
+        project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (project.clientContact && project.clientContact.includes(searchTerm));
+      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    }), [projectsWithMetrics, searchTerm, statusFilter]
+  );
 
   const deleteProject = async (projectId, e) => {
     e.stopPropagation();

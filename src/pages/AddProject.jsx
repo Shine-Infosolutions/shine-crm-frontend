@@ -1,33 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import api from '../utils/axiosConfig';
-import { useAppContext } from "../context/AppContext";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Memoized form sections
-const ProjectInfo = React.memo(({ formData, handleChange, employees }) => (
+const ProjectInfo = React.memo(({ formData, handleChange }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Name *</label>
-      <input
-        type="text"
-        name="projectName"
-        value={formData.projectName || ""}
-        onChange={handleChange}
-        placeholder="Enter descriptive project title"
-        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-        required
-      />
+      <input type="text" name="projectName" value={formData.projectName || ""} onChange={handleChange} placeholder="Enter project title" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
     </div>
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Type *</label>
-      <select
-        name="projectType"
-        value={formData.projectType || ""}
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-        required
-      >
+      <select name="projectType" value={formData.projectType || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required>
         <option value="">Select project type</option>
         <option value="ONE_TIME">One-Time Project</option>
         <option value="RECURRING">Recurring Service</option>
@@ -35,12 +19,7 @@ const ProjectInfo = React.memo(({ formData, handleChange, employees }) => (
     </div>
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-      <select
-        name="status"
-        value={formData.status || ""}
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-      >
+      <select name="status" value={formData.status || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50">
         {formData.projectType === 'ONE_TIME' ? (
           <>
             <option value="Pending">Pending</option>
@@ -59,12 +38,7 @@ const ProjectInfo = React.memo(({ formData, handleChange, employees }) => (
     </div>
     <div>
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
-      <select
-        name="priority"
-        value={formData.priority || ""}
-        onChange={handleChange}
-        className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-      >
+      <select name="priority" value={formData.priority || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50">
         <option value="Low">Low</option>
         <option value="Medium">Medium</option>
         <option value="High">High</option>
@@ -79,47 +53,23 @@ const ClientSection = React.memo(({ formData, handleChange, clients, setFormData
     {formData.isLeadProject ? (
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Lead *</label>
-        <select
-          name="clientId"
-          value={formData.clientId || ""}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-          required
-        >
+        <select name="clientId" value={formData.clientId || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required>
           <option value="">Select lead</option>
-          {clients.map(client => (
-            <option key={client._id} value={client._id}>{client.name} - {client.number}</option>
-          ))}
+          {clients.map(client => (<option key={client._id} value={client._id}>{client.name} - {client.number}</option>))}
         </select>
       </div>
     ) : (
       <>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name *</label>
-          <input
-            type="text"
-            name="clientName"
-            value={formData.clientName || ""}
-            onChange={handleChange}
-            placeholder="Client or company name"
-            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-            required
-          />
+          <input type="text" name="clientName" value={formData.clientName || ""} onChange={handleChange} placeholder="Client name" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Contact *</label>
-          <input
-            type="text"
-            name="clientContact"
-            value={formData.clientContact || ""}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-              setFormData(prev => ({ ...prev, clientContact: value }));
-            }}
-            placeholder="10-digit phone number"
-            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50"
-            required
-          />
+          <input type="text" name="clientContact" value={formData.clientContact || ""} onChange={(e) => {
+            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+            setFormData(prev => ({ ...prev, clientContact: value }));
+          }} placeholder="10-digit phone" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
         </div>
       </>
     )}
@@ -129,7 +79,6 @@ const ClientSection = React.memo(({ formData, handleChange, clients, setFormData
 function AddProject() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { API_URL } = useAppContext();
   const [isEditing, setIsEditing] = useState(false);
   const [projectId, setProjectId] = useState(null);
   const [projectToEdit, setProjectToEdit] = useState(null);
@@ -138,7 +87,6 @@ function AddProject() {
   const [employees, setEmployees] = useState([]);
   const [clients, setClients] = useState([]);
   
-  // Optimized initial form data
   const initialFormData = useMemo(() => ({
     projectName: "", projectType: "", clientId: "", clientName: "", clientContact: "",
     assignedManager: "", assignedTeam: [], status: "Active", priority: "Medium",
@@ -146,20 +94,18 @@ function AddProject() {
     oneTimeProject: {
       scope: "", totalAmount: "", advanceAmount: "", paidAmount: "",
       startDate: "", expectedDeliveryDate: "", finalHandoverDate: "",
-      sourceCodeLink: "", deploymentDetails: "", warrantyPeriod: "", paymentMilestones: []
+      sourceCodeLink: "", deploymentDetails: "", warrantyPeriod: "", autoInvoice: false, lastInvoiceId: ""
     },
     recurringProject: {
       serviceType: [], billingCycle: "", recurringAmount: "",
       contractStartDate: "", contractEndDate: "", nextBillingDate: "",
-      billingStatus: "Active", lastInvoiceId: "", missedBillingCount: 0,
-      autoInvoice: false, slaDeliverables: "", billingHistory: [],
+      billingStatus: "Active", autoInvoice: false, slaDeliverables: "", lastInvoiceId: "",
       socialMediaConfig: { platforms: [], deliverables: { posts: 0, reels: 0, stories: 0 } }
     }
   }), []);
   
   const [formData, setFormData] = useState(initialFormData);
 
-  // Memoized data fetching
   const fetchData = useCallback(async () => {
     try {
       const [employeesRes, clientsRes] = await Promise.all([
@@ -169,11 +115,10 @@ function AddProject() {
       setEmployees(employeesRes.data.data || []);
       setClients(clientsRes.data.data || []);
     } catch (err) {
-      console.error('Failed to fetch data:', err);
+      setError("Failed to fetch data");
     }
   }, []);
 
-  // Optimized project data fetching
   const fetchProjectData = useCallback(async (id) => {
     try {
       setIsSubmitting(true);
@@ -187,7 +132,6 @@ function AddProject() {
     }
   }, []);
 
-  // Effects
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const id = queryParams.get("id");
@@ -200,11 +144,9 @@ function AddProject() {
       setProjectId(location.state.project._id);
       setProjectToEdit(location.state.project);
     }
-  }, [location, fetchProjectData]);
+    fetchData();
+  }, [location, fetchProjectData, fetchData]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Optimized form pre-fill
   useEffect(() => {
     if (!isEditing || !projectToEdit) return;
     const formatDate = (dateString) => dateString ? new Date(dateString).toISOString().split("T")[0] : "";
@@ -233,7 +175,8 @@ function AddProject() {
         sourceCodeLink: projectToEdit.oneTimeProject?.sourceCodeLink || "",
         deploymentDetails: projectToEdit.oneTimeProject?.deploymentDetails || "",
         warrantyPeriod: projectToEdit.oneTimeProject?.warrantyPeriod || "",
-        paymentMilestones: projectToEdit.oneTimeProject?.paymentMilestones || []
+        autoInvoice: projectToEdit.oneTimeProject?.autoInvoice || false,
+        lastInvoiceId: projectToEdit.oneTimeProject?.lastInvoiceId || ""
       },
       recurringProject: {
         ...initialFormData.recurringProject,
@@ -246,11 +189,9 @@ function AddProject() {
         contractEndDate: formatDate(projectToEdit.recurringProject?.contractEndDate),
         nextBillingDate: formatDate(projectToEdit.recurringProject?.nextBillingDate),
         billingStatus: projectToEdit.recurringProject?.billingStatus || "Active",
-        lastInvoiceId: projectToEdit.recurringProject?.lastInvoiceId || "",
-        missedBillingCount: projectToEdit.recurringProject?.missedBillingCount || 0,
         autoInvoice: projectToEdit.recurringProject?.autoInvoice || false,
         slaDeliverables: projectToEdit.recurringProject?.slaDeliverables || "",
-        billingHistory: projectToEdit.recurringProject?.billingHistory || [],
+        lastInvoiceId: projectToEdit.recurringProject?.lastInvoiceId || "",
         socialMediaConfig: {
           platforms: projectToEdit.recurringProject?.socialMediaConfig?.platforms || [],
           deliverables: {
@@ -415,32 +356,21 @@ function AddProject() {
         ? await api.put(`/api/projects/${projectId}`, submitData)
         : await api.post(`/api/projects`, submitData);
 
-      if (!response.data || !response.data.success) {
+      if (!response.data?.success) {
         throw new Error('Invalid response from server');
       }
 
+      // Handle auto-invoice for RECURRING projects
       if (formData.projectType === 'RECURRING' && formData.recurringProject.autoInvoice) {
         try {
-          let clientData = { name: formData.clientName, phone: formData.clientContact, email: 'client@example.com', address: 'N/A' };
-          if (formData.clientId) {
-            const clientResponse = await api.get(`/api/leads/${formData.clientId}`);
-            if (clientResponse.data) {
-              clientData = {
-                name: clientResponse.data.name,
-                phone: clientResponse.data.number,
-                email: clientResponse.data.email || 'client@example.com',
-                address: clientResponse.data.address || 'N/A'
-              };
-            }
-          }
-          await api.post('/api/invoices/create', {
+          const invoiceData = {
             isGSTInvoice: false,
             invoiceDate: new Date().toISOString(),
             dueDate: formData.recurringProject.nextBillingDate || new Date().toISOString(),
-            customerName: clientData.name,
-            customerAddress: clientData.address,
-            customerPhone: clientData.phone,
-            customerEmail: clientData.email,
+            customerName: formData.clientName,
+            customerAddress: 'N/A',
+            customerPhone: formData.clientContact,
+            customerEmail: 'client@example.com',
             productDetails: [{
               description: `${formData.projectName} - ${formData.recurringProject.serviceType.join(', ') || 'Service'} (${formData.recurringProject.billingCycle || 'Monthly'})`,
               unit: 'Service', quantity: 1,
@@ -448,16 +378,80 @@ function AddProject() {
               amount: formData.recurringProject.recurringAmount || 0
             }],
             amountDetails: { totalAmount: formData.recurringProject.recurringAmount || 0 }
-          });
-          console.log('Auto invoice created successfully');
+          };
+
+          console.log('Invoice check - isEditing:', isEditing, 'lastInvoiceId:', formData.recurringProject?.lastInvoiceId);
+          console.log('Full recurringProject data:', formData.recurringProject);
+          
+          if (isEditing && formData.recurringProject?.lastInvoiceId) {
+            // Update existing invoice
+            console.log('Updating existing invoice:', formData.recurringProject.lastInvoiceId);
+            await api.put(`/api/invoices/${formData.recurringProject.lastInvoiceId}`, invoiceData);
+          } else if (!isEditing || (isEditing && !projectToEdit?.recurringProject?.autoInvoice)) {
+            // Create new invoice for new project OR when enabling auto-invoice for first time
+            console.log('Creating new invoice');
+            const invoiceResponse = await api.post('/api/invoices/create', invoiceData);
+            if (invoiceResponse.data?.invoice?._id) {
+              // Update project with invoice ID
+              const targetProjectId = isEditing ? projectId : response.data.project._id;
+              await api.put(`/api/projects/${targetProjectId}`, {
+                'recurringProject.lastInvoiceId': invoiceResponse.data.invoice._id
+              });
+            }
+          }
         } catch (invoiceError) {
-          console.error('Failed to create auto invoice:', invoiceError);
+          console.error('Invoice error:', invoiceError);
+        }
+      }
+
+      // Handle auto-invoice for ONE_TIME projects
+      if (formData.projectType === 'ONE_TIME' && formData.oneTimeProject.autoInvoice) {
+        // Create invoice if: new project OR editing and checking auto-invoice for first time OR updating existing invoice
+        if (!isEditing || (isEditing && formData.oneTimeProject?.lastInvoiceId) || (isEditing && !projectToEdit?.oneTimeProject?.autoInvoice)) {
+          try {
+            const invoiceData = {
+              isGSTInvoice: false,
+              invoiceDate: new Date().toISOString(),
+              dueDate: formData.oneTimeProject.expectedDeliveryDate || new Date().toISOString(),
+              customerName: formData.clientName,
+              customerAddress: 'N/A',
+              customerPhone: formData.clientContact,
+              customerEmail: 'client@example.com',
+              productDetails: [{
+                description: `${formData.projectName} - One-Time Project`,
+                unit: 'Project', quantity: 1,
+                price: formData.oneTimeProject.totalAmount || 0,
+                amount: formData.oneTimeProject.totalAmount || 0
+              }],
+              amountDetails: { totalAmount: formData.oneTimeProject.totalAmount || 0 }
+            };
+
+            if (isEditing && formData.oneTimeProject?.lastInvoiceId) {
+              // Update existing invoice
+              console.log('Updating existing invoice:', formData.oneTimeProject.lastInvoiceId);
+              await api.put(`/api/invoices/${formData.oneTimeProject.lastInvoiceId}`, invoiceData);
+            } else {
+              // Create new invoice
+              console.log('Creating new invoice');
+              const invoiceResponse = await api.post('/api/invoices/create', invoiceData);
+              if (invoiceResponse.data?.invoice?._id) {
+                // Update project with invoice ID
+                const targetProjectId = isEditing ? projectId : response.data.project._id;
+                await api.put(`/api/projects/${targetProjectId}`, {
+                  'oneTimeProject.lastInvoiceId': invoiceResponse.data.invoice._id
+                });
+              }
+            }
+          } catch (invoiceError) {
+            console.error('Invoice error:', invoiceError);
+          }
+        } else {
+          console.log('Skipping invoice creation for existing project to prevent duplicates');
         }
       }
       
       navigate("/projects");
     } catch (err) {
-      console.error('API Error:', err);
       setError(err.response?.data?.message || "Failed to save project. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -573,6 +567,12 @@ function AddProject() {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deployment Details</label>
                       <textarea name="oneTimeProject.deploymentDetails" value={formData.oneTimeProject.deploymentDetails || ""} onChange={handleChange} rows={2} placeholder="Server details, hosting information, etc." className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" />
+                    </div>
+                    <div>
+                      <label className="flex items-center mt-6">
+                        <input type="checkbox" name="oneTimeProject.autoInvoice" checked={formData.oneTimeProject.autoInvoice} onChange={handleChange} className="mr-2" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Generate Invoice</span>
+                      </label>
                     </div>
                   </div>
                 </div>
