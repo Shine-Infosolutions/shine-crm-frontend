@@ -381,8 +381,8 @@ const Dashboard = memo(function Dashboard() {
               </div>
               <div className="flex justify-between text-xs">
                 <div className="text-center">
-                  <span className="text-gray-600 dark:text-gray-400 block">Previous</span>
-                  <span className="font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0).toLocaleString()}</span>
+                  <span className="text-gray-600 dark:text-gray-400 block">This Month</span>
+                  <span className="font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-gray-600 dark:text-gray-400 block">Next Expected</span>
