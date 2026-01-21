@@ -1,20 +1,18 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import api from '../utils/axiosConfig';
 
-// Global cache with better isolation
-const DASHBOARD_CACHE_KEY = 'dashboard_data';
-const dashboardCache = {
+// Lazy load heavy components
+const EmployeeModal = lazy(() => import('./EmployeeModal'));
+
+// Cache configuration
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+let dashboardCache = {
   data: null,
   timestamp: null,
-  ttl: 10 * 60 * 1000, // 10 minutes
-  isLoading: false,
   promise: null
 };
-
-// Singleton pattern to prevent multiple simultaneous requests
-let dashboardInstance = null;
 
 // Constants moved outside component to prevent recreation
 const STATUS_COLORS = {
@@ -25,6 +23,15 @@ const STATUS_COLORS = {
 };
 
 const AVATAR_COLORS = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500'];
+
+// Loading skeleton component
+const LoadingSkeleton = ({ className }) => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    className={`bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse ${className}`}
+  />
+);
 
 const Dashboard = memo(function Dashboard() {
   const { navigate } = useAppContext();
@@ -37,99 +44,120 @@ const Dashboard = memo(function Dashboard() {
     employees: [],
     projects: [],
     leads: [],
-    recentTasks: []
+    recentTasks: [],
+    upcomingAutoRenewals: []
   });
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  // Memoized calculations
+  // Memoized calculations using analytics data (single source of truth)
   const memoizedMetrics = useMemo(() => {
-    const leadToProjectRate = dashboardData.totalLeads > 0 ? Math.round((dashboardData.projects.length / dashboardData.totalLeads) * 100) : 0;
-    const completionRate = dashboardData.projects.length > 0 ? Math.round((dashboardData.completedProjects / dashboardData.projects.length) * 100) : 0;
-    return { leadToProjectRate, completionRate };
-  }, [dashboardData.totalLeads, dashboardData.projects.length, dashboardData.completedProjects]);
-
-  const fetchDashboardData = useCallback(async () => {
-    const now = Date.now();
+    const analytics = dashboardData.analytics;
+    if (!analytics) return { 
+      leadToProjectRate: 0, 
+      completionRate: 0, 
+      averageProjectValue: 0,
+      monthlyGrowthRate: 0
+    };
     
+    const leadToProjectRate = analytics.leadsFunnel.totalLeads > 0 
+      ? Math.round((analytics.projectsMetrics.totalProjects / analytics.leadsFunnel.totalLeads) * 100) 
+      : 0;
+    const completionRate = analytics.projectsMetrics.totalProjects > 0 
+      ? Math.round((analytics.projectsMetrics.completedProjects / analytics.projectsMetrics.totalProjects) * 100) 
+      : 0;
+    const averageProjectValue = analytics.projectsMetrics.totalProjects > 0
+      ? Math.round(analytics.money.expectedRevenue / analytics.projectsMetrics.totalProjects)
+      : 0;
+    const monthlyGrowthRate = analytics.money.expectedRevenue > 0
+      ? Math.round((analytics.money.thisMonthRevenue / analytics.money.expectedRevenue) * 100)
+      : 0;
+      
+    return { leadToProjectRate, completionRate, averageProjectValue, monthlyGrowthRate };
+  }, [dashboardData.analytics]);
+
+  // Project status counts
+  const projectStatusCounts = useMemo(() => {
+    const analytics = dashboardData.analytics;
+    if (!analytics?.revenueBreakdown?.projectStatusWise) {
+      return { active: 0, pending: 0, completed: 0, onHold: 0, cancelled: 0 };
+    }
+    return {
+      active: analytics.revenueBreakdown.projectStatusWise.active || 0,
+      pending: 0, // Not in API response
+      completed: analytics.revenueBreakdown.projectStatusWise.completed || 0,
+      onHold: analytics.revenueBreakdown.projectStatusWise.onHold || 0,
+      cancelled: 0 // Not in API response
+    };
+  }, [dashboardData.analytics]);
+
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     // Check cache first
-    if (dashboardCache.data && dashboardCache.timestamp && (now - dashboardCache.timestamp) < dashboardCache.ttl) {
+    const now = Date.now();
+    if (!forceRefresh && dashboardCache.data && dashboardCache.timestamp && 
+        (now - dashboardCache.timestamp) < CACHE_DURATION) {
       setDashboardData(dashboardCache.data);
       setLoading(false);
-      return dashboardCache.data;
+      return;
     }
 
     // Return existing promise if already loading
-    if (dashboardCache.isLoading && dashboardCache.promise) {
+    if (dashboardCache.promise && !forceRefresh) {
       return dashboardCache.promise;
     }
+
+    setLoading(true);
     
-    // Create new promise and cache it
     dashboardCache.promise = (async () => {
-      dashboardCache.isLoading = true;
-      setLoading(true);
-      
       try {
-        // Get accurate counts with proper API calls
-        const [leadsRes, projectsRes, employeesRes, tasksRes] = await Promise.all([
-          api.get('/api/leads'),
-          api.get('/api/projects'),
-          api.get('/api/employees'),
-          api.get('/api/tasks?limit=3').catch(() => ({ data: { data: [] } }))
-        ]);
-
-        const projectsData = projectsRes.data.data || [];
-        const leadsData = leadsRes.data.data || [];
-        const employeesData = employeesRes.data.data || [];
-        const tasksData = tasksRes.data.data || [];
+        // Single analytics endpoint call
+        const analyticsRes = await api.get('/api/dashboard/analytics');
+        const analytics = analyticsRes.data.data;
         
-        const activeCount = projectsData.filter(p => ['Active', 'Start', 'Progress', 'Pending'].includes(p.status)).length;
-        const completedCount = projectsData.filter(p => ['Completed', 'Close'].includes(p.status)).length;
-        const revenue = projectsData.reduce((sum, p) => {
-          const amount = p.oneTimeProject?.totalAmount || p.recurringProject?.recurringAmount || 0;
-          return sum + (parseFloat(amount) || 0);
-        }, 0);
-
+        // Get upcoming auto-renewals
+        const autoRenewalsRes = await api.get('/api/dashboard/upcoming-auto-renewals');
+        const upcomingAutoRenewals = autoRenewalsRes.data.data || [];
+        
+        console.log('Auto-renewals API Response:', autoRenewalsRes.data); // Debug log
+        
         const newDashboardData = {
-          totalLeads: leadsData.length,
-          activeProjects: activeCount,
-          completedProjects: completedCount,
-          totalEmployees: employeesData.length,
-          totalRevenue: revenue,
-          employees: employeesData.slice(0, 4),
-          projects: projectsData,
-          leads: leadsData.slice(0, 3),
-          recentTasks: tasksData.slice(0, 3)
+          totalLeads: analytics.leadsFunnel?.totalLeads || 0,
+          activeProjects: analytics.projectsMetrics?.activeProjects || 0,
+          completedProjects: analytics.projectsMetrics?.completedProjects || 0,
+          totalEmployees: analytics.summary?.totalEmployees || 0,
+          totalRevenue: analytics.money?.expectedRevenue || 0,
+          employees: analytics.recentData?.employees || [],
+          leads: analytics.recentData?.leads || [],
+          recentTasks: analytics.recentData?.tasks || [],
+          projects: analytics.recentData?.projects || [],
+          upcomingAutoRenewals: upcomingAutoRenewals,
+          analytics: analytics
         };
+        
+        console.log('Processed Dashboard Data:', newDashboardData); // Debug log
         
         // Cache the data
         dashboardCache.data = newDashboardData;
         dashboardCache.timestamp = now;
         
         setDashboardData(newDashboardData);
-        return newDashboardData;
         
       } catch (error) {
         console.error('Dashboard load failed:', error.message);
+        console.error('Full error:', error); // More detailed error logging
         
-        const fallbackData = {
-          totalLeads: 0,
-          activeProjects: 0,
-          totalEmployees: 0,
-          totalRevenue: 0,
-          employees: [],
-          projects: [],
-          leads: [],
-          recentTasks: []
-        };
-
-        setDashboardData(fallbackData);
-        return fallbackData;
+        // Try to get auto-renewals separately if main call fails
+        try {
+          const autoRenewalsRes = await api.get('/api/dashboard/upcoming-auto-renewals');
+          console.log('Separate auto-renewals call:', autoRenewalsRes.data);
+        } catch (renewalError) {
+          console.error('Auto-renewals API failed:', renewalError);
+        }
         
+        // Keep existing data on error
       } finally {
-        dashboardCache.isLoading = false;
-        dashboardCache.promise = null;
         setLoading(false);
+        dashboardCache.promise = null;
       }
     })();
     
@@ -137,17 +165,7 @@ const Dashboard = memo(function Dashboard() {
   }, []);
 
   useEffect(() => {
-    // Prevent multiple instances
-    if (dashboardInstance) return;
-    dashboardInstance = true;
-    
-    fetchDashboardData().finally(() => {
-      dashboardInstance = null;
-    });
-    
-    return () => {
-      dashboardInstance = null;
-    };
+    fetchDashboardData();
   }, [fetchDashboardData]);
 
   return (
@@ -189,22 +207,34 @@ const Dashboard = memo(function Dashboard() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-4"
           >
+            {/* Refresh Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => fetchDashboardData(true)}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+            >
+              <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{loading ? 'Loading...' : 'Refresh'}</span>
+            </motion.button>
+            
             <div className="flex -space-x-2">
-              {dashboardData.employees.map((employee, index) => {
+              {dashboardData.employees.slice(0, 4).map((employee, index) => {
                 const initials = employee.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-                const colors = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500'];
                 return (
                   <motion.div 
                     key={employee._id || index}
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.15 + index * 0.05 }}
-                    whileHover={{ scale: 1.15, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
+                    transition={{ duration: 0.2, delay: 0.1 + index * 0.03 }}
+                    whileHover={{ scale: 1.1, y: -1 }}
                     onClick={() => setSelectedEmployee(employee)}
-                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${colors[index % colors.length]} border-2 border-white/50 backdrop-blur-sm shadow-lg flex items-center justify-center text-white text-sm font-medium cursor-pointer`}
+                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${AVATAR_COLORS[index]} border-2 border-white/50 backdrop-blur-sm shadow-lg flex items-center justify-center text-white text-sm font-medium cursor-pointer`}
                   >
                     {initials}
                   </motion.div>
@@ -214,7 +244,7 @@ const Dashboard = memo(function Dashboard() {
                 <motion.div 
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: 0.35 }}
+                  transition={{ duration: 0.2, delay: 0.2 }}
                   className="w-10 h-10 rounded-full bg-gray-500/80 backdrop-blur-sm border-2 border-white/50 shadow-lg flex items-center justify-center text-white text-xs font-medium"
                 >
                   +{dashboardData.totalEmployees - 4}
@@ -224,360 +254,318 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Key Metrics Cards */}
+        {/* Row 1: Leads, Projects, Revenue, Team */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
         >
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Leads</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : dashboardData.totalLeads.toLocaleString()}
-                </p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Leads</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalLeads}</p>
               </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 616 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 616 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
             </div>
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.25 }}
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Projects</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : dashboardData.activeProjects}
-                </p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Projects</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.activeProjects}</p>
               </div>
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
             </div>
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : `₹${dashboardData.totalRevenue.toLocaleString()}`}
-                </p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">₹{dashboardData.totalRevenue.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.35 }}
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Employees</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {loading ? '...' : dashboardData.totalEmployees}
-                </p>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Team</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalEmployees}</p>
               </div>
-              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded">
+                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 515 0z" />
                 </svg>
               </div>
             </div>
           </motion.div>
         </motion.div>
 
-        {/* Main Kanban Board - Project Workflow */}
+        {/* Row 2: Payments, Expected, Projects Status, Revenue Type */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
-          className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8"
+          transition={{ duration: 0.3, delay: 0.2 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
         >
-          {/* Recent Leads */}
-          <motion.div 
-            whileHover={{ y: -3 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Recent Leads</h3>
-              <span className="bg-blue-100/80 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.leads.length}</span>
-            </div>
-            
-            <div className="space-y-4">
-              {dashboardData.leads.slice(0, 2).map((lead, index) => {
-                const initials = lead.name ? lead.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'L';
-                const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500'];
-                return (
-                  <motion.div 
-                    key={lead._id || index}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-blue-50/80 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500 backdrop-blur-sm"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className={`w-8 h-8 rounded-full ${colors[index % colors.length]} flex items-center justify-center text-white text-sm font-medium`}>
-                        {initials}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{lead.projectType || 'New Lead'}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{lead.name}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              {dashboardData.leads.length === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No recent leads</p>
-              )}
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Payments</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-green-600">Paid</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.paidAmount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-red-600">Due</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.dueAmount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-blue-600">Advance</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.advanceAmount || 0).toLocaleString()}</span>
+              </div>
             </div>
           </motion.div>
 
-          {/* Active Projects */}
-          <motion.div 
-            whileHover={{ y: -3 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Active Projects</h3>
-              <span className="bg-yellow-100/80 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.activeProjects}</span>
-            </div>
-            
-            <div className="space-y-4">
-              {dashboardData.projects.filter(p => ['Active', 'Start', 'Progress', 'Pending'].includes(p.status)).slice(0, 2).map((project, index) => {
-                const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'P';
-                return (
-                  <motion.div 
-                    key={project._id || index}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-yellow-500 backdrop-blur-sm"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-white text-sm font-medium">
-                        {initials}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{project.projectName || 'Unnamed Project'}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{project.clientName || 'Unknown Client'}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              {dashboardData.activeProjects === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No active projects</p>
-              )}
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-yellow-50/80 to-orange-50/80 dark:from-yellow-900/20 dark:to-orange-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-yellow-200/50">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Expected</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-yellow-600">This Month</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.thisMonthRevenue || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-orange-600">This Year</span>
+                <span className="text-sm font-bold">₹{(() => {
+                  const baseRevenue = dashboardData.analytics?.money?.expectedRevenue || 0;
+                  const monthlyRecurring = dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.RECURRING?.monthly || 0;
+                  const yearlyRecurring = monthlyRecurring * 12;
+                  return (baseRevenue + yearlyRecurring - monthlyRecurring).toLocaleString();
+                })()}</span>
+              </div>
             </div>
           </motion.div>
 
-          {/* Completed Projects */}
-          <motion.div 
-            whileHover={{ y: -3 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Completed</h3>
-              <span className="bg-green-100/80 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded-full backdrop-blur-sm">{dashboardData.projects.filter(p => ['Completed', 'Close'].includes(p.status)).length}</span>
-            </div>
-            
-            <div className="space-y-4">
-              {dashboardData.projects.filter(p => ['Completed', 'Close'].includes(p.status)).slice(0, 2).map((project, index) => {
-                const initials = project.clientName ? project.clientName.split(' ').map(n => n[0]).join('').toUpperCase() : 'C';
-                return (
-                  <motion.div 
-                    key={project._id || index}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-gray-50/80 dark:bg-gray-700/50 p-4 rounded-lg border-l-4 border-green-500 backdrop-blur-sm"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-medium">
-                        {initials}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{project.projectName || 'Completed Project'}</p>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{project.clientName || 'Unknown Client'}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-              {dashboardData.projects.filter(p => ['Completed', 'Close'].includes(p.status)).length === 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No completed projects</p>
-              )}
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Projects Status</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-green-600">Active</span>
+                <span className="text-sm font-bold">{projectStatusCounts.active}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-blue-600">Completed</span>
+                <span className="text-sm font-bold">{projectStatusCounts.completed}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-orange-600">Hold</span>
+                <span className="text-sm font-bold">{projectStatusCounts.onHold}</span>
+              </div>
             </div>
           </motion.div>
 
-          {/* Quick Actions */}
-          <motion.div 
-            whileHover={{ y: -3 }}
-            className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
-            </div>
-            
-            <div className="space-y-3">
-              <motion.button 
-                whileHover={{ scale: 1.02, x: 5 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/leads/add')}
-                className="w-full text-left p-3 rounded-lg bg-blue-50/80 dark:bg-blue-900/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/30 transition-colors backdrop-blur-sm"
-              >
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-500 rounded-lg mr-3">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Revenue Type</h4>
+            <div className="space-y-2">
+              {(() => {
+                const analytics = dashboardData.analytics;
+                if (!analytics?.revenueBreakdown?.projectTypeWise) {
+                  return <p className="text-sm text-gray-500">No data</p>;
+                }
+                const recurring = analytics.revenueBreakdown.projectTypeWise.RECURRING;
+                const oneTime = analytics.revenueBreakdown.projectTypeWise.ONE_TIME;
+                
+                return [
+                  { type: 'Recurring', amount: (recurring?.due || recurring?.monthly || 0), color: 'text-purple-600' },
+                  { type: 'One Time', amount: (oneTime?.total || 0), color: 'text-indigo-600' }
+                ].map((item, index) => (
+                  <div key={item.type} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{item.type}</span>
+                    <span className={`text-sm font-bold ${item.color}`}>
+                      ₹{item.amount.toLocaleString()}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">Add New Lead</span>
-                </div>
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02, x: 5 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/projects/add')}
-                className="w-full text-left p-3 rounded-lg bg-green-50/80 dark:bg-green-900/20 hover:bg-green-100/80 dark:hover:bg-green-900/30 transition-colors backdrop-blur-sm"
-              >
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-500 rounded-lg mr-3">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">Create Project</span>
-                </div>
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02, x: 5 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/invoices')}
-                className="w-full text-left p-3 rounded-lg bg-purple-50/80 dark:bg-purple-900/20 hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors backdrop-blur-sm"
-              >
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-500 rounded-lg mr-3">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">Generate Invoice</span>
-                </div>
-              </motion.button>
+                ));
+              })()
+              }
             </div>
           </motion.div>
         </motion.div>
 
-        {/* Bottom Section */}
+        {/* Row 3: Performance, Meetings, Employees, Tasks */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.5 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+          transition={{ duration: 0.3, delay: 0.25 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
         >
-          {/* Recent Tasks */}
-          <motion.div 
-            whileHover={{ y: -3 }}
-            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
-            <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Tasks</h3>
-                <motion.button 
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  className="p-2 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-lg backdrop-blur-sm"
-                >
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                </motion.button>
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold mb-2 mx-auto">
+                  {memoizedMetrics.leadToProjectRate}%
+                </div>
+                <p className="text-sm text-blue-600">Lead Conv.</p>
               </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="space-y-4">
-                {dashboardData.recentTasks.length > 0 ? dashboardData.recentTasks.map((task, index) => {
-                  const statusColor = STATUS_COLORS[task.status] || 'bg-gray-500';
-                  const timeAgo = task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : 'Recently';
-                  
-                  return (
-                    <div 
-                      key={task._id || index}
-                      className="flex items-center space-x-3"
-                    >
-                      <div className={`w-2 h-2 ${statusColor} rounded-full`}></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title || task.description || 'Task'}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{timeAgo}</p>
-                      </div>
-                    </div>
-                  );
-                }) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No recent tasks</p>
-                  </div>
-                )}
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold mb-2 mx-auto">
+                  {memoizedMetrics.completionRate}%
+                </div>
+                <p className="text-sm text-green-600">Completion</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Performance Overview */}
-          <motion.div 
-            whileHover={{ y: -3 }}
-            className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50"
-          >
-            <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance Overview</h3>
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Meetings</h4>
+            <div className="space-y-2">
+              {(dashboardData.analytics?.alerts?.upcomingMeetings || []).slice(0, 3).map((meeting, index) => {
+                const meetingDate = new Date(meeting.meetingDate).toLocaleDateString();
+                return (
+                  <div key={index} className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <div className="flex-1">
+                      <span className="text-sm text-gray-900 dark:text-white truncate block">{meeting.leadName}</span>
+                      <span className="text-sm text-gray-500">{meetingDate}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {(dashboardData.analytics?.alerts?.upcomingMeetings || []).length === 0 && (
+                <p className="text-sm text-gray-500">No upcoming meetings</p>
+              )}
+            </div>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Employees</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-green-600">Active</span>
+                <span className="text-sm font-bold">{(dashboardData.employees || []).filter(e => e.employee_status === 'Active').length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-red-600">Inactive</span>
+                <span className="text-sm font-bold">{(dashboardData.employees || []).filter(e => e.employee_status !== 'Active').length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-blue-600">Total</span>
+                <span className="text-sm font-bold">{dashboardData.totalEmployees}</span>
               </div>
             </div>
-            
-            <div className="p-6">
-              <div className="flex items-center justify-center space-x-8">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {memoizedMetrics.leadToProjectRate}%
-                  </div>
-                  <p className="text-sm font-medium text-blue-600">Lead to Project</p>
-                </div>
-                
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white text-xl font-bold mb-2">
-                    {memoizedMetrics.completionRate}%
-                  </div>
-                  <p className="text-sm font-medium text-green-600">Project Completion</p>
-                </div>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Tasks</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-green-600">Completed</span>
+                <span className="text-sm font-bold">1</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-blue-600">In Progress</span>
+                <span className="text-sm font-bold">1</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-yellow-600">Pending</span>
+                <span className="text-sm font-bold">0</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-red-600">Overdue</span>
+                <span className="text-sm font-bold">1</span>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Row 4: Invoices, Domains, Auto Renewals */}
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          className="grid grid-cols-3 gap-6 mb-8"
+        >
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Invoices</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-green-600">Sent</span>
+                <span className="text-sm font-bold">{dashboardData.analytics?.invoiceMetrics?.totalInvoices || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-blue-600">Total Amount</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.invoiceMetrics?.totalInvoiceAmount || dashboardData.analytics?.money?.totalInvoiceValue || dashboardData.analytics?.summary?.totalInvoiceAmount || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Domains</h4>
+            <div className="space-y-2">
+              {(dashboardData.analytics?.alerts?.domainExpiries || []).slice(0, 3).map((domain, index) => {
+                const expiryDate = new Date(domain.expiryDate);
+                const today = new Date();
+                const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                const isExpiring = daysLeft <= 30;
+                return (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate">{domain.projectName || 'Project'}</span>
+                    <span className={`text-sm font-bold ${isExpiring ? 'text-red-600' : 'text-green-600'}`}>
+                      {daysLeft > 0 ? `${daysLeft}d` : 'Expired'}
+                    </span>
+                  </div>
+                );
+              })}
+              {(dashboardData.analytics?.alerts?.domainExpiries || []).length === 0 && (
+                <p className="text-sm text-gray-500">No domain data</p>
+              )}
+            </div>
+          </motion.div>
+
+          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-green-200/50">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <svg className="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Auto Renewals
+            </h4>
+            <div className="space-y-2 max-h-20 overflow-y-auto">
+              {dashboardData.upcomingAutoRenewals.slice(0, 3).map((renewal, index) => {
+                const isUrgent = renewal.daysUntilRenewal <= 7;
+                return (
+                  <div key={index} className="flex justify-between items-center">
+                    <div className="flex-1">
+                      <span className="text-sm text-gray-900 dark:text-white truncate block">{renewal.projectName}</span>
+                      <span className="text-xs text-gray-500">₹{renewal.amount?.toLocaleString()}</span>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      isUrgent ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                    }`}>
+                      {renewal.daysUntilRenewal}d
+                    </span>
+                  </div>
+                );
+              })}
+              {dashboardData.upcomingAutoRenewals.length === 0 && (
+                <p className="text-sm text-gray-500">No upcoming renewals</p>
+              )}
             </div>
           </motion.div>
         </motion.div>
@@ -586,88 +574,12 @@ const Dashboard = memo(function Dashboard() {
       {/* Employee Details Modal */}
       <AnimatePresence>
         {selectedEmployee && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedEmployee(null)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              transition={{ duration: 0.3, type: "spring", damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl p-6 max-w-md w-full shadow-2xl border border-white/20 dark:border-gray-700/50"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <motion.h3 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-lg font-semibold text-gray-900 dark:text-white"
-                >
-                  Employee Details
-                </motion.h3>
-                <motion.button 
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSelectedEmployee(null)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100/50 dark:hover:bg-gray-700/50"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </motion.button>
-              </div>
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="space-y-4"
-              >
-                {[
-                  { label: 'Name', value: selectedEmployee.name },
-                  { label: 'Email', value: selectedEmployee.email },
-                  { label: 'Contact', value: selectedEmployee.contact1 },
-                  { label: 'Employee ID', value: selectedEmployee.employee_id }
-                ].map((field, index) => (
-                  <motion.div 
-                    key={field.label}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + index * 0.1 }}
-                    className="group"
-                  >
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{field.label}</p>
-                    <p className="font-medium text-gray-900 dark:text-white bg-gray-50/50 dark:bg-gray-700/50 rounded-lg px-3 py-2 backdrop-blur-sm">
-                      {field.value || 'N/A'}
-                    </p>
-                  </motion.div>
-                ))}
-                <motion.div 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 }}
-                >
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Status</p>
-                  <motion.span 
-                    whileHover={{ scale: 1.05 }}
-                    className={`inline-block px-3 py-2 rounded-lg text-xs font-medium backdrop-blur-sm ${
-                      selectedEmployee.employee_status === 'Active' 
-                        ? 'bg-green-100/80 text-green-800 border border-green-200/50' 
-                        : 'bg-red-100/80 text-red-800 border border-red-200/50'
-                    }`}
-                  >
-                    {selectedEmployee.employee_status || 'N/A'}
-                  </motion.span>
-                </motion.div>
-              </motion.div>
-            </motion.div>
-          </motion.div>
+          <Suspense fallback={null}>
+            <EmployeeModal 
+              selectedEmployee={selectedEmployee} 
+              setSelectedEmployee={setSelectedEmployee} 
+            />
+          </Suspense>
         )}
       </AnimatePresence>
     </div>

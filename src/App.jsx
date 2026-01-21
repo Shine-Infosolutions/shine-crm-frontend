@@ -17,6 +17,7 @@ const LeadManagement = lazy(() => import("./pages/LeadManagement"));
 const AddLead = lazy(() => import("./pages/AddLead"));
 const ProjectManagement = lazy(() => import("./pages/ProjectManagement"));
 const AddProject = lazy(() => import("./pages/AddProject"));
+const ProjectView = lazy(() => import("./pages/ProjectView"));
 const EmployeeManagement = lazy(() => import("./pages/EmployeeManagement"));
 const AddEmployee = lazy(() => import("./pages/AddEmployee"));
 const ContractManagement = lazy(() => import("./pages/ContractManagement"));
@@ -60,6 +61,7 @@ const AppRoutes = () => (
         {/* Project Management */}
         <Route path="projects" element={<ProjectManagement />} />
         <Route path="projects/add" element={<AddProject />} />
+        <Route path="projects/view/:id" element={<ProjectView />} />
         
         {/* Employee Management */}
         <Route path="employees" element={<EmployeeManagement />} />

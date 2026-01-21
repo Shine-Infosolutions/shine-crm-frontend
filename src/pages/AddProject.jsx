@@ -49,30 +49,75 @@ const ProjectInfo = React.memo(({ formData, handleChange }) => (
 ));
 
 const ClientSection = React.memo(({ formData, handleChange, clients, setFormData }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {formData.isLeadProject ? (
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Lead *</label>
-        <select name="clientId" value={formData.clientId || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required>
-          <option value="">Select lead</option>
-          {clients.map(client => (<option key={client._id} value={client._id}>{client.name} - {client.number}</option>))}
-        </select>
+  <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {formData.isLeadProject ? (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Select Lead *</label>
+          <select name="clientId" value={formData.clientId || ""} onChange={handleChange} className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required>
+            <option value="">Select lead</option>
+            {clients.map(client => (<option key={client._id} value={client._id}>{client.name} - {client.number}</option>))}
+          </select>
+        </div>
+      ) : (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name *</label>
+            <input type="text" name="clientName" value={formData.clientName || ""} onChange={handleChange} placeholder="Client name" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Contact *</label>
+            <input type="text" name="clientContact" value={formData.clientContact || ""} onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormData(prev => ({ ...prev, clientContact: value }));
+            }} placeholder="10-digit phone" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
+          </div>
+        </>
+      )}
+    </div>
+    
+    {/* Additional Client Details for Better Invoice Generation */}
+    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
+      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-3">Additional Client Details (Required for Invoice Generation)</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email *</label>
+          <input 
+            type="email" 
+            name="clientEmail" 
+            value={formData.clientEmail || ""} 
+            onChange={handleChange} 
+            placeholder="client@example.com" 
+            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 text-sm" 
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client GST Number</label>
+          <input 
+            type="text" 
+            name="clientGST" 
+            value={formData.clientGST || ""} 
+            onChange={handleChange} 
+            placeholder="GST Number (if applicable)" 
+            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 text-sm" 
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client Address *</label>
+          <textarea 
+            name="clientAddress" 
+            value={formData.clientAddress || ""} 
+            onChange={handleChange} 
+            rows={2}
+            placeholder="Complete address for invoice" 
+            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 text-sm" 
+            required
+          />
+        </div>
       </div>
-    ) : (
-      <>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Name *</label>
-          <input type="text" name="clientName" value={formData.clientName || ""} onChange={handleChange} placeholder="Client name" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Contact *</label>
-          <input type="text" name="clientContact" value={formData.clientContact || ""} onChange={(e) => {
-            const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-            setFormData(prev => ({ ...prev, clientContact: value }));
-          }} placeholder="10-digit phone" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" required />
-        </div>
-      </>
-    )}
+      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">These details are required for proper invoice generation</p>
+    </div>
   </div>
 ));
 
@@ -89,6 +134,7 @@ function AddProject() {
   
   const initialFormData = useMemo(() => ({
     projectName: "", projectType: "", clientId: "", clientName: "", clientContact: "",
+    clientEmail: "", clientGST: "", clientAddress: "", // Added new client fields
     assignedManager: "", assignedTeam: [], status: "Active", priority: "Medium",
     notes: "", isLeadProject: false,
     oneTimeProject: {
@@ -100,7 +146,7 @@ function AddProject() {
     recurringProject: {
       serviceType: [], billingCycle: "", recurringAmount: "",
       contractStartDate: "", contractEndDate: "", nextBillingDate: "",
-      billingStatus: "Active", autoInvoice: false, slaDeliverables: "", lastInvoiceId: "",
+      billingStatus: "Active", autoInvoice: false, autoRenew: false, slaDeliverables: "", lastInvoiceId: "",
       socialMediaConfig: { platforms: [], deliverables: { posts: 0, reels: 0, stories: 0 } }
     }
   }), []);
@@ -158,6 +204,9 @@ function AddProject() {
       clientId: projectToEdit.clientId || "",
       clientName: projectToEdit.clientName || "",
       clientContact: projectToEdit.clientContact || "",
+      clientEmail: projectToEdit.clientEmail || "",
+      clientGST: projectToEdit.clientGST || "",
+      clientAddress: projectToEdit.clientAddress || "",
       assignedManager: projectToEdit.assignedManager || "",
       assignedTeam: projectToEdit.assignedTeam || [],
       status: projectToEdit.status || "Active",
@@ -194,6 +243,7 @@ function AddProject() {
         nextBillingDate: formatDate(projectToEdit.recurringProject?.nextBillingDate),
         billingStatus: projectToEdit.recurringProject?.billingStatus || "Active",
         autoInvoice: projectToEdit.recurringProject?.autoInvoice || false,
+        autoRenew: projectToEdit.recurringProject?.autoRenew || false,
         slaDeliverables: projectToEdit.recurringProject?.slaDeliverables || "",
         lastInvoiceId: projectToEdit.recurringProject?.lastInvoiceId || "",
         socialMediaConfig: {
@@ -213,12 +263,17 @@ function AddProject() {
     const { name, value, type, checked } = e.target;
     
     if (name === 'isLeadProject' && checked) {
-      setFormData(prev => ({ ...prev, [name]: checked, clientId: "", clientName: "", clientContact: "" }));
+      setFormData(prev => ({ ...prev, [name]: checked, clientId: "", clientName: "", clientContact: "", clientEmail: "", clientGST: "", clientAddress: "" }));
     } else if (name === 'clientId' && formData.isLeadProject) {
       const selectedLead = clients.find(client => client._id === value);
       if (selectedLead) {
         setFormData(prev => ({
-          ...prev, clientId: value, clientName: selectedLead.name, clientContact: selectedLead.number
+          ...prev, 
+          clientId: value, 
+          clientName: selectedLead.name, 
+          clientContact: selectedLead.number,
+          clientEmail: selectedLead.email || "",
+          clientAddress: selectedLead.address || ""
         }));
       }
     } else if (name.includes('.')) {
@@ -311,9 +366,25 @@ function AddProject() {
         notes: formData.notes,
         clientName: formData.clientName,
         clientContact: formData.clientContact,
+        clientEmail: formData.clientEmail,
+        clientGST: formData.clientGST,
+        clientAddress: formData.clientAddress,
         ...(formData.clientId && { clientId: formData.clientId })
       };
 
+      // Additional validation for auto-invoice projects
+      if ((formData.projectType === 'ONE_TIME' && formData.oneTimeProject.autoInvoice) ||
+          (formData.projectType === 'RECURRING' && formData.recurringProject.autoInvoice)) {
+        if (!formData.clientEmail || formData.clientEmail.trim() === '') {
+          setError("Client email is required when auto-invoice is enabled");
+          return;
+        }
+        if (!formData.clientAddress || formData.clientAddress.trim() === '') {
+          setError("Client address is required when auto-invoice is enabled");
+          return;
+        }
+      }
+      
       if (formData.projectType === 'ONE_TIME') {
         if (!formData.oneTimeProject.totalAmount) {
           setError("Total amount is required for one-time projects");
@@ -367,21 +438,34 @@ function AddProject() {
       // Handle auto-invoice for RECURRING projects
       if (formData.projectType === 'RECURRING' && formData.recurringProject.autoInvoice) {
         try {
+          // Get client details from selected lead if available
+          const selectedClient = formData.clientId ? clients.find(c => c._id === formData.clientId) : null;
+          
           const invoiceData = {
-            isGSTInvoice: false,
+            isGSTInvoice: formData.clientGST && formData.clientGST !== 'N/A' ? true : false,
+            customerGST: formData.clientGST || 'N/A',
             invoiceDate: new Date().toISOString(),
             dueDate: formData.recurringProject.nextBillingDate || new Date().toISOString(),
-            customerName: formData.clientName,
-            customerAddress: 'N/A',
-            customerPhone: formData.clientContact,
-            customerEmail: 'client@example.com',
+            customerName: formData.clientName || selectedClient?.name || 'Customer Name Required',
+            customerAddress: formData.clientAddress || selectedClient?.address || 'Complete address required for invoice',
+            customerPhone: formData.clientContact || selectedClient?.number || 'Phone number required',
+            customerEmail: formData.clientEmail || selectedClient?.email || 'email@required.com',
+            dispatchThrough: 'Email',
+            customerAadhar: '',
             productDetails: [{
               description: `${formData.projectName} - ${formData.recurringProject.serviceType.join(', ') || 'Service'} (${formData.recurringProject.billingCycle || 'Monthly'})`,
-              unit: 'Service', quantity: 1,
-              price: formData.recurringProject.recurringAmount || 0,
-              amount: formData.recurringProject.recurringAmount || 0
+              unit: 'Service',
+              quantity: 1,
+              price: parseFloat(formData.recurringProject.recurringAmount) || 0,
+              discountPercentage: 0,
+              amount: parseFloat(formData.recurringProject.recurringAmount) || 0
             }],
-            amountDetails: { totalAmount: formData.recurringProject.recurringAmount || 0 }
+            amountDetails: {
+              gstPercentage: formData.clientGST && formData.clientGST !== 'N/A' ? 18 : 0,
+              discountOnTotal: 0,
+              totalAmount: parseFloat(formData.recurringProject.recurringAmount) || 0
+            },
+            notes: `Auto-generated invoice for ${formData.projectName} recurring service.`
           };
 
           console.log('Invoice check - isEditing:', isEditing, 'lastInvoiceId:', formData.recurringProject?.lastInvoiceId);
@@ -413,21 +497,34 @@ function AddProject() {
         // Create invoice if: new project OR editing and checking auto-invoice for first time OR updating existing invoice
         if (!isEditing || (isEditing && formData.oneTimeProject?.lastInvoiceId) || (isEditing && !projectToEdit?.oneTimeProject?.autoInvoice)) {
           try {
+            // Get client details from selected lead if available
+            const selectedClient = formData.clientId ? clients.find(c => c._id === formData.clientId) : null;
+            
             const invoiceData = {
-              isGSTInvoice: false,
+              isGSTInvoice: formData.clientGST && formData.clientGST !== 'N/A' ? true : false,
+              customerGST: formData.clientGST || 'N/A',
               invoiceDate: new Date().toISOString(),
               dueDate: formData.oneTimeProject.expectedDeliveryDate || new Date().toISOString(),
-              customerName: formData.clientName,
-              customerAddress: 'N/A',
-              customerPhone: formData.clientContact,
-              customerEmail: 'client@example.com',
+              customerName: formData.clientName || selectedClient?.name || 'Customer Name Required',
+              customerAddress: formData.clientAddress || selectedClient?.address || 'Complete address required for invoice',
+              customerPhone: formData.clientContact || selectedClient?.number || 'Phone number required',
+              customerEmail: formData.clientEmail || selectedClient?.email || 'email@required.com',
+              dispatchThrough: 'Email',
+              customerAadhar: '',
               productDetails: [{
-                description: `${formData.projectName} - One-Time Project`,
-                unit: 'Project', quantity: 1,
-                price: formData.oneTimeProject.totalAmount || 0,
-                amount: formData.oneTimeProject.totalAmount || 0
+                description: `${formData.projectName} - One-Time Project${formData.oneTimeProject.scope ? ' - ' + formData.oneTimeProject.scope.substring(0, 100) : ''}`,
+                unit: 'Project',
+                quantity: 1,
+                price: parseFloat(formData.oneTimeProject.totalAmount) || 0,
+                discountPercentage: 0,
+                amount: parseFloat(formData.oneTimeProject.totalAmount) || 0
               }],
-              amountDetails: { totalAmount: formData.oneTimeProject.totalAmount || 0 }
+              amountDetails: {
+                gstPercentage: formData.clientGST && formData.clientGST !== 'N/A' ? 18 : 0,
+                discountOnTotal: 0,
+                totalAmount: parseFloat(formData.oneTimeProject.totalAmount) || 0
+              },
+              notes: `Auto-generated invoice for ${formData.projectName} one-time project.`
             };
 
             if (isEditing && formData.oneTimeProject?.lastInvoiceId) {
@@ -592,6 +689,19 @@ function AddProject() {
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Generate Invoice</span>
                       </label>
                     </div>
+                    {isEditing && (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Previous Invoice ID</label>
+                        <input 
+                          type="text" 
+                          name="oneTimeProject.lastInvoiceId" 
+                          value={formData.oneTimeProject.lastInvoiceId || ""} 
+                          onChange={handleChange} 
+                          placeholder="Enter previous invoice ID" 
+                          className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-green-500/50" 
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -652,10 +762,29 @@ function AddProject() {
                       <textarea name="recurringProject.slaDeliverables" value={formData.recurringProject.slaDeliverables || ""} onChange={handleChange} rows={3} placeholder="Service level agreement and deliverables" className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" />
                     </div>
                     <div>
-                      <label className="flex items-center mt-6">
-                        <input type="checkbox" name="recurringProject.autoInvoice" checked={formData.recurringProject.autoInvoice} onChange={handleChange} className="mr-2" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Generate Invoice</span>
-                      </label>
+                      <div className="flex gap-6">
+                        <label className="flex items-center">
+                          <input type="checkbox" name="recurringProject.autoInvoice" checked={formData.recurringProject.autoInvoice} onChange={handleChange} className="mr-2" />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Generate Invoice</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input type="checkbox" name="recurringProject.autoRenew" checked={formData.recurringProject.autoRenew || false} onChange={handleChange} className="mr-2" />
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Renew</span>
+                        </label>
+                      </div>
+                      {isEditing && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Previous Invoice ID</label>
+                          <input 
+                            type="text" 
+                            name="recurringProject.lastInvoiceId" 
+                            value={formData.recurringProject.lastInvoiceId || ""} 
+                            onChange={handleChange} 
+                            placeholder="Enter previous invoice ID" 
+                            className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50" 
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
