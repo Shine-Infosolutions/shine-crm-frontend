@@ -406,7 +406,7 @@ const Dashboard = memo(function Dashboard() {
               <svg className="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Payments
+              Payments & Revenue
             </h4>
             <div className="space-y-3">
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200/50">
@@ -415,7 +415,7 @@ const Dashboard = memo(function Dashboard() {
                   <span className="text-lg font-bold text-green-800 dark:text-green-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.totalPaid || 0).toLocaleString()}</span>
                 </div>
                 <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Includes ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.advanceAmount || 0).toLocaleString()} advance + ₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0).toLocaleString()} recurring
+                  Advance: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.advanceAmount || 0).toLocaleString()}
                 </div>
               </div>
               <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200/50">
@@ -423,6 +423,30 @@ const Dashboard = memo(function Dashboard() {
                   <span className="text-sm font-medium text-red-700 dark:text-red-400">Due</span>
                   <span className="text-lg font-bold text-red-800 dark:text-red-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.dueAmount || 0).toLocaleString()}</span>
                 </div>
+              </div>
+              <div className="space-y-2 pt-2 border-t">
+                <h5 className="text-xs font-medium text-gray-700 dark:text-gray-400">Revenue Type</h5>
+                {(() => {
+                  const analytics = dashboardData.analytics;
+                  if (!analytics?.revenueBreakdown?.projectTypeWise) {
+                    return <p className="text-xs text-gray-500">No data</p>;
+                  }
+                  const recurring = analytics.revenueBreakdown.projectTypeWise.RECURRING;
+                  const oneTime = analytics.revenueBreakdown.projectTypeWise.ONE_TIME;
+
+                  return [
+                    { type: 'Recurring', amount: (recurring?.due || recurring?.monthly || 0), color: 'text-purple-600' },
+                    { type: 'One Time', amount: (oneTime?.total || 0), color: 'text-indigo-600' }
+                  ].map((item, index) => (
+                    <div key={item.type} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">{item.type}</span>
+                      <span className={`text-sm font-bold ${item.color}`}>
+                        ₹{item.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ));
+                })()
+                }
               </div>
             </div>
           </motion.div>
@@ -464,12 +488,12 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 3: Next 4 cards */}
+        {/* Row 3: Next 3 cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 1.8 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md rounded-lg p-3 sm:p-4 shadow-lg border border-blue-200/50">
             <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center">
@@ -513,33 +537,7 @@ const Dashboard = memo(function Dashboard() {
               <div className="text-xs text-purple-600 dark:text-purple-400 px-2">vs Previous Month</div>
             </div>
           </motion.div>
-          
-          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Revenue Type</h4>
-            <div className="space-y-2">
-              {(() => {
-                const analytics = dashboardData.analytics;
-                if (!analytics?.revenueBreakdown?.projectTypeWise) {
-                  return <p className="text-sm text-gray-500">No data</p>;
-                }
-                const recurring = analytics.revenueBreakdown.projectTypeWise.RECURRING;
-                const oneTime = analytics.revenueBreakdown.projectTypeWise.ONE_TIME;
 
-                return [
-                  { type: 'Recurring', amount: (recurring?.due || recurring?.monthly || 0), color: 'text-purple-600' },
-                  { type: 'One Time', amount: (oneTime?.total || 0), color: 'text-indigo-600' }
-                ].map((item, index) => (
-                  <div key={item.type} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{item.type}</span>
-                    <span className={`text-sm font-bold ${item.color}`}>
-                      ₹{item.amount.toLocaleString()}
-                    </span>
-                  </div>
-                ));
-              })()
-              }
-            </div>
-          </motion.div>
 
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
