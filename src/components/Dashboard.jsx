@@ -627,10 +627,7 @@ const Dashboard = memo(function Dashboard() {
                   );
                 })}
                 {(dashboardData.analytics?.alerts?.domainExpiries || []).length === 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Shine Crm</span>
-                    <span className="text-sm font-bold text-green-600">10d</span>
-                  </div>
+                  <p className="text-sm text-gray-500">No domain expiries</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -652,13 +649,7 @@ const Dashboard = memo(function Dashboard() {
                   );
                 })}
                 {dashboardData.upcomingAutoRenewals.length === 0 && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-900 dark:text-white">budha SMM</span>
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-600">25d</span>
-                    </div>
-                    <div className="text-xs text-gray-500">₹2,000</div>
-                  </div>
+                  <p className="text-sm text-gray-500">No auto renewals</p>
                 )}
               </div>
             </div>
@@ -676,34 +667,34 @@ const Dashboard = memo(function Dashboard() {
                 <h5 className="text-xs font-medium text-purple-700 dark:text-purple-400 mb-2">Employees</h5>
                 <div className="flex justify-between">
                   <span className="text-sm text-green-600">Active</span>
-                  <span className="text-sm font-bold">2</span>
+                  <span className="text-sm font-bold">{(dashboardData.employees || []).filter(e => e.employee_status === 'Active').length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Inactive</span>
-                  <span className="text-sm font-bold">0</span>
+                  <span className="text-sm font-bold">{(dashboardData.employees || []).filter(e => e.employee_status !== 'Active').length}</span>
                 </div>
                 <div className="flex justify-between border-t pt-1">
                   <span className="text-sm font-medium text-purple-700 dark:text-purple-400">Total</span>
-                  <span className="text-sm font-bold">2</span>
+                  <span className="text-sm font-bold">{dashboardData.totalEmployees}</span>
                 </div>
               </div>
               <div className="space-y-2">
                 <h5 className="text-xs font-medium text-purple-700 dark:text-purple-400 mb-2">Tasks</h5>
                 <div className="flex justify-between">
                   <span className="text-sm text-green-600">Completed</span>
-                  <span className="text-sm font-bold">1</span>
+                  <span className="text-sm font-bold">{taskStatusCounts.completed}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-blue-600">In Progress</span>
-                  <span className="text-sm font-bold">1</span>
+                  <span className="text-sm font-bold">{taskStatusCounts.inProgress}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-yellow-600">Pending</span>
-                  <span className="text-sm font-bold">1</span>
+                  <span className="text-sm font-bold">{taskStatusCounts.pending}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-red-600">Overdue</span>
-                  <span className="text-sm font-bold">0</span>
+                  <span className="text-sm font-bold">{taskStatusCounts.overdue}</span>
                 </div>
               </div>
             </div>
