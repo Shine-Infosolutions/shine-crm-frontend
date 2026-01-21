@@ -279,7 +279,7 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 1: Projects, Revenue, Team, Clients */}
+        {/* Row 1: First 4 cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -347,7 +347,7 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 2: Monthly Earnings, Payments, Expected, Projects Status */}
+        {/* Row 2: Next 4 cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -464,13 +464,90 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 3: Performance, Meetings, Employees, Tasks */}
+        {/* Row 3: Next 4 cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 2.0 }}
+          transition={{ duration: 0.6, delay: 1.8 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
+          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md rounded-lg p-3 sm:p-5 shadow-lg border border-blue-200/50">
+            <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span className="truncate">Monthly Revenue Trend</span>
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
+              <div className="bg-blue-100/50 dark:bg-blue-900/30 rounded-lg p-2 sm:p-3 min-w-0">
+                <div className="text-center">
+                  <span className="text-xs font-medium text-blue-700 dark:text-blue-400 block mb-1">Previous Month</span>
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-blue-800 dark:text-blue-300 block leading-tight break-all">₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0).toLocaleString()}</span>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 space-y-0.5 sm:space-y-1">
+                    <div className="break-all">Recurring: ₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.recurring || 0).toLocaleString()}</div>
+                    <div className="break-all">One-time: ₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.oneTime || 0).toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-green-100/50 dark:bg-green-900/30 rounded-lg p-2 sm:p-3 min-w-0">
+                <div className="text-center">
+                  <span className="text-xs font-medium text-green-700 dark:text-green-400 block mb-1">This Month</span>
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-green-800 dark:text-green-300 block leading-tight break-all">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 sm:mt-2">
+                    <div className="break-all">Auto-renewal: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.autoRenewalRevenue || 0).toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-purple-100/50 dark:bg-purple-900/30 rounded-lg p-2 sm:p-3 min-w-0">
+                <div className="text-center">
+                  <span className="text-xs font-medium text-purple-700 dark:text-purple-400 block mb-1">Growth Rate</span>
+                  <span className="text-sm sm:text-base font-bold text-purple-800 dark:text-purple-300 block leading-tight">
+                    {(() => {
+                      const current = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
+                      const previous = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
+                      if (previous === 0 && current > 0) return '+100%';
+                      if (previous === 0 && current === 0) return '0%';
+                      const growth = ((current - previous) / previous * 100).toFixed(1);
+                      return `${growth > 0 ? '+' : ''}${growth}%`;
+                    })()
+                    }
+                  </span>
+                  <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                    <span className="hidden md:inline">vs Previous Month</span>
+                    <span className="md:hidden">vs Prev</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+          
+          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Revenue Type</h4>
+            <div className="space-y-2">
+              {(() => {
+                const analytics = dashboardData.analytics;
+                if (!analytics?.revenueBreakdown?.projectTypeWise) {
+                  return <p className="text-sm text-gray-500">No data</p>;
+                }
+                const recurring = analytics.revenueBreakdown.projectTypeWise.RECURRING;
+                const oneTime = analytics.revenueBreakdown.projectTypeWise.ONE_TIME;
+
+                return [
+                  { type: 'Recurring', amount: (recurring?.due || recurring?.monthly || 0), color: 'text-purple-600' },
+                  { type: 'One Time', amount: (oneTime?.total || 0), color: 'text-indigo-600' }
+                ].map((item, index) => (
+                  <div key={item.type} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{item.type}</span>
+                    <span className={`text-sm font-bold ${item.color}`}>
+                      ₹{item.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ));
+              })()
+              }
+            </div>
+          </motion.div>
+
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
             <div className="grid grid-cols-2 gap-3">
@@ -490,7 +567,7 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
 
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Meetings</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Upcoming Meetings</h4>
             <div className="space-y-2">
               {(dashboardData.analytics?.alerts?.upcomingMeetings || []).slice(0, 3).map((meeting, index) => {
                 const meetingDate = new Date(meeting.meetingDate).toLocaleDateString();
@@ -509,53 +586,13 @@ const Dashboard = memo(function Dashboard() {
               )}
             </div>
           </motion.div>
-
-          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Employees</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-green-600">Active</span>
-                <span className="text-sm font-bold">{(dashboardData.employees || []).filter(e => e.employee_status === 'Active').length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-red-600">Inactive</span>
-                <span className="text-sm font-bold">{(dashboardData.employees || []).filter(e => e.employee_status !== 'Active').length}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-blue-600">Total</span>
-                <span className="text-sm font-bold">{dashboardData.totalEmployees}</span>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Tasks</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-green-600">Completed</span>
-                <span className="text-sm font-bold">{taskStatusCounts.completed}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-blue-600">In Progress</span>
-                <span className="text-sm font-bold">{taskStatusCounts.inProgress}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-yellow-600">Pending</span>
-                <span className="text-sm font-bold">{taskStatusCounts.pending}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-red-600">Overdue</span>
-                <span className="text-sm font-bold">{taskStatusCounts.overdue}</span>
-              </div>
-            </div>
-          </motion.div>
         </motion.div>
 
-        {/* Row 4: Invoices, Domains, Auto Renewals */}
+        {/* Row 4: Last 3 cards */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 2.8 }}
+          transition={{ duration: 0.6, delay: 2.4 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
@@ -572,56 +609,110 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Domains</h4>
-            <div className="space-y-2">
-              {(dashboardData.analytics?.alerts?.domainExpiries || []).slice(0, 3).map((domain, index) => {
-                const expiryDate = new Date(domain.expiryDate);
-                const today = new Date();
-                const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-                const isExpiring = daysLeft <= 30;
-                return (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400 truncate">{domain.projectName || 'Project'}</span>
-                    <span className={`text-sm font-bold ${isExpiring ? 'text-red-600' : 'text-green-600'}`}>
-                      {daysLeft > 0 ? `${daysLeft}d` : 'Expired'}
-                    </span>
+          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-orange-50/80 to-red-50/80 dark:from-orange-900/20 dark:to-red-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-orange-200/50">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <svg className="w-4 h-4 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Domains & Renewals
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h5 className="text-xs font-medium text-orange-700 dark:text-orange-400 mb-2">Domain Expiries</h5>
+                {(dashboardData.analytics?.alerts?.domainExpiries || []).slice(0, 2).map((domain, index) => {
+                  const expiryDate = new Date(domain.expiryDate);
+                  const today = new Date();
+                  const daysLeft = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                  const isExpiring = daysLeft <= 30;
+                  return (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 truncate">{domain.projectName || 'Project'}</span>
+                      <span className={`text-sm font-bold ${isExpiring ? 'text-red-600' : 'text-green-600'}`}>
+                        {daysLeft > 0 ? `${daysLeft}d` : 'Expired'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {(dashboardData.analytics?.alerts?.domainExpiries || []).length === 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Shine Crm</span>
+                    <span className="text-sm font-bold text-green-600">10d</span>
                   </div>
-                );
-              })}
-              {(dashboardData.analytics?.alerts?.domainExpiries || []).length === 0 && (
-                <p className="text-sm text-gray-500">No domain data</p>
-              )}
+                )}
+              </div>
+              <div className="space-y-2">
+                <h5 className="text-xs font-medium text-orange-700 dark:text-orange-400 mb-2">Auto Renewals</h5>
+                {dashboardData.upcomingAutoRenewals.slice(0, 2).map((renewal, index) => {
+                  const isUrgent = renewal.daysUntilRenewal <= 7;
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-900 dark:text-white truncate">{renewal.projectName}</span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                          isUrgent ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                        }`}>
+                          {renewal.daysUntilRenewal}d
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">₹{renewal.amount?.toLocaleString()}</div>
+                    </div>
+                  );
+                })}
+                {dashboardData.upcomingAutoRenewals.length === 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-900 dark:text-white">budha SMM</span>
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-600">25d</span>
+                    </div>
+                    <div className="text-xs text-gray-500">₹2,000</div>
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-green-50/80 to-emerald-50/80 dark:from-green-900/20 dark:to-emerald-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-green-200/50">
+          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-purple-200/50">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-              <svg className="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg className="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 515 0z" />
               </svg>
-              Auto Renewals
+              Employees & Tasks
             </h4>
-            <div className="space-y-2 max-h-20 overflow-y-auto">
-              {dashboardData.upcomingAutoRenewals.slice(0, 3).map((renewal, index) => {
-                const isUrgent = renewal.daysUntilRenewal <= 7;
-                return (
-                  <div key={index} className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <span className="text-sm text-gray-900 dark:text-white truncate block">{renewal.projectName}</span>
-                      <span className="text-xs text-gray-500">₹{renewal.amount?.toLocaleString()}</span>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                      isUrgent ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-                    }`}>
-                      {renewal.daysUntilRenewal}d
-                    </span>
-                  </div>
-                );
-              })}
-              {dashboardData.upcomingAutoRenewals.length === 0 && (
-                <p className="text-sm text-gray-500">No upcoming renewals</p>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h5 className="text-xs font-medium text-purple-700 dark:text-purple-400 mb-2">Employees</h5>
+                <div className="flex justify-between">
+                  <span className="text-sm text-green-600">Active</span>
+                  <span className="text-sm font-bold">2</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Inactive</span>
+                  <span className="text-sm font-bold">0</span>
+                </div>
+                <div className="flex justify-between border-t pt-1">
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-400">Total</span>
+                  <span className="text-sm font-bold">2</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h5 className="text-xs font-medium text-purple-700 dark:text-purple-400 mb-2">Tasks</h5>
+                <div className="flex justify-between">
+                  <span className="text-sm text-green-600">Completed</span>
+                  <span className="text-sm font-bold">1</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-blue-600">In Progress</span>
+                  <span className="text-sm font-bold">1</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-yellow-600">Pending</span>
+                  <span className="text-sm font-bold">1</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-red-600">Overdue</span>
+                  <span className="text-sm font-bold">0</span>
+                </div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
