@@ -466,20 +466,34 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-yellow-50/80 to-orange-50/80 dark:from-yellow-900/20 dark:to-orange-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-yellow-200/50">
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-yellow-50/80 to-orange-50/80 dark:from-yellow-900/20 dark:to-orange-900/20 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-yellow-200/50">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Expected</h4>
             <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-yellow-600">This Month</span>
-                <span className="text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-yellow-600">This Month</span>
+                <span className="text-xs sm:text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-green-600">Next Month</span>
-                <span className="text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0).toLocaleString()}</span>
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-green-600">Next Month</span>
+                <span className="text-xs sm:text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-orange-600">This Year</span>
-                <span className="text-sm font-bold">₹{((dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0) + (dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0) * 11).toLocaleString()}</span>
+              <div className="bg-orange-50 dark:bg-orange-900/20 rounded p-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs sm:text-sm text-orange-600 font-medium">This Year (All)</span>
+                  <span className="text-xs sm:text-sm font-bold">₹{(() => {
+                    const oneTime = dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.ONE_TIME?.total || 0;
+                    const recurring = dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0;
+                    return (oneTime + (recurring * 12)).toLocaleString();
+                  })()}</span>
+                </div>
+                <div className="text-xs text-orange-600 mt-1">One-time + Recurring</div>
+              </div>
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs sm:text-sm text-purple-600 font-medium">Recurring Only</span>
+                  <span className="text-xs sm:text-sm font-bold">₹{((dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0) * 12).toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-purple-600 mt-1">Sustainable income</div>
               </div>
             </div>
           </motion.div>
