@@ -471,53 +471,46 @@ const Dashboard = memo(function Dashboard() {
           transition={{ duration: 0.6, delay: 1.8 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
-          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md rounded-lg p-3 sm:p-5 shadow-lg border border-blue-200/50">
-            <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">
+          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-md rounded-lg p-3 sm:p-4 shadow-lg border border-blue-200/50">
+            <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center">
               <svg className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <span className="truncate">Monthly Revenue Trend</span>
+              Monthly Revenue Trend
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3">
-              <div className="bg-blue-100/50 dark:bg-blue-900/30 rounded-lg p-2 sm:p-3 min-w-0">
-                <div className="text-center">
-                  <span className="text-xs font-medium text-blue-700 dark:text-blue-400 block mb-1">Previous Month</span>
-                  <span className="text-sm sm:text-base md:text-lg font-bold text-blue-800 dark:text-blue-300 block leading-tight break-all">₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0).toLocaleString()}</span>
-                  <div className="text-xs text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 space-y-0.5 sm:space-y-1">
-                    <div className="break-all">Recurring: ₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.recurring || 0).toLocaleString()}</div>
-                    <div className="break-all">One-time: ₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.oneTime || 0).toLocaleString()}</div>
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-blue-100/50 dark:bg-blue-900/30 rounded">
+                <span className="text-xs text-blue-700 dark:text-blue-400">Previous</span>
+                <span className="text-sm font-bold text-blue-800 dark:text-blue-300">₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0).toLocaleString()}</span>
               </div>
-              <div className="bg-green-100/50 dark:bg-green-900/30 rounded-lg p-2 sm:p-3 min-w-0">
-                <div className="text-center">
-                  <span className="text-xs font-medium text-green-700 dark:text-green-400 block mb-1">This Month</span>
-                  <span className="text-sm sm:text-base md:text-lg font-bold text-green-800 dark:text-green-300 block leading-tight break-all">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
-                  <div className="text-xs text-green-600 dark:text-green-400 mt-1 sm:mt-2">
-                    <div className="break-all">Auto-renewal: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.autoRenewalRevenue || 0).toLocaleString()}</div>
-                  </div>
-                </div>
+              <div className="text-xs text-blue-600 dark:text-blue-400 px-2 space-y-1">
+                <div>Recurring: ₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.recurring || 0).toLocaleString()}</div>
+                <div>One-time: ₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.oneTime || 0).toLocaleString()}</div>
               </div>
-              <div className="bg-purple-100/50 dark:bg-purple-900/30 rounded-lg p-2 sm:p-3 min-w-0">
-                <div className="text-center">
-                  <span className="text-xs font-medium text-purple-700 dark:text-purple-400 block mb-1">Growth Rate</span>
-                  <span className="text-sm sm:text-base font-bold text-purple-800 dark:text-purple-300 block leading-tight">
-                    {(() => {
-                      const current = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
-                      const previous = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
-                      if (previous === 0 && current > 0) return '+100%';
-                      if (previous === 0 && current === 0) return '0%';
-                      const growth = ((current - previous) / previous * 100).toFixed(1);
-                      return `${growth > 0 ? '+' : ''}${growth}%`;
-                    })()
-                    }
-                  </span>
-                  <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                    <span className="hidden md:inline">vs Previous Month</span>
-                    <span className="md:hidden">vs Prev</span>
-                  </div>
-                </div>
+              
+              <div className="flex justify-between items-center p-2 bg-green-100/50 dark:bg-green-900/30 rounded">
+                <span className="text-xs text-green-700 dark:text-green-400">This Month</span>
+                <span className="text-sm font-bold text-green-800 dark:text-green-300">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
               </div>
+              <div className="text-xs text-green-600 dark:text-green-400 px-2">
+                Auto-renewal: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.autoRenewalRevenue || 0).toLocaleString()}
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-purple-100/50 dark:bg-purple-900/30 rounded">
+                <span className="text-xs text-purple-700 dark:text-purple-400">Growth Rate</span>
+                <span className="text-sm font-bold text-purple-800 dark:text-purple-300">
+                  {(() => {
+                    const current = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
+                    const previous = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
+                    if (previous === 0 && current > 0) return '+100%';
+                    if (previous === 0 && current === 0) return '0%';
+                    const growth = ((current - previous) / previous * 100).toFixed(1);
+                    return `${growth > 0 ? '+' : ''}${growth}%`;
+                  })()
+                  }
+                </span>
+              </div>
+              <div className="text-xs text-purple-600 dark:text-purple-400 px-2">vs Previous Month</div>
             </div>
           </motion.div>
           
