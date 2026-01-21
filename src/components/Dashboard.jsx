@@ -17,7 +17,7 @@ let dashboardCache = {
 // Constants moved outside component to prevent recreation
 const STATUS_COLORS = {
   'completed': 'bg-green-500',
-  'in_progress': 'bg-blue-500', 
+  'in_progress': 'bg-blue-500',
   'pending': 'bg-yellow-500',
   'assigned': 'bg-purple-500'
 };
@@ -26,7 +26,7 @@ const AVATAR_COLORS = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-50
 
 // Loading skeleton component
 const LoadingSkeleton = ({ className }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     className={`bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse ${className}`}
@@ -53,18 +53,18 @@ const Dashboard = memo(function Dashboard() {
   // Memoized calculations using analytics data (single source of truth)
   const memoizedMetrics = useMemo(() => {
     const analytics = dashboardData.analytics;
-    if (!analytics) return { 
-      leadToProjectRate: 0, 
-      completionRate: 0, 
+    if (!analytics) return {
+      leadToProjectRate: 0,
+      completionRate: 0,
       averageProjectValue: 0,
       monthlyGrowthRate: 0
     };
-    
-    const leadToProjectRate = analytics.leadsFunnel.totalLeads > 0 
-      ? Math.round((analytics.projectsMetrics.totalProjects / analytics.leadsFunnel.totalLeads) * 100) 
+
+    const leadToProjectRate = analytics.leadsFunnel.totalLeads > 0
+      ? Math.round((analytics.projectsMetrics.totalProjects / analytics.leadsFunnel.totalLeads) * 100)
       : 0;
-    const completionRate = analytics.projectsMetrics.totalProjects > 0 
-      ? Math.round((analytics.projectsMetrics.completedProjects / analytics.projectsMetrics.totalProjects) * 100) 
+    const completionRate = analytics.projectsMetrics.totalProjects > 0
+      ? Math.round((analytics.projectsMetrics.completedProjects / analytics.projectsMetrics.totalProjects) * 100)
       : 0;
     const averageProjectValue = analytics.projectsMetrics.totalProjects > 0
       ? Math.round(analytics.money.expectedRevenue / analytics.projectsMetrics.totalProjects)
@@ -72,7 +72,7 @@ const Dashboard = memo(function Dashboard() {
     const monthlyGrowthRate = analytics.money.expectedRevenue > 0
       ? Math.round((analytics.money.thisMonthRevenue / analytics.money.expectedRevenue) * 100)
       : 0;
-      
+
     return { leadToProjectRate, completionRate, averageProjectValue, monthlyGrowthRate };
   }, [dashboardData.analytics]);
 
@@ -94,7 +94,7 @@ const Dashboard = memo(function Dashboard() {
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     // Check cache first
     const now = Date.now();
-    if (!forceRefresh && dashboardCache.data && dashboardCache.timestamp && 
+    if (!forceRefresh && dashboardCache.data && dashboardCache.timestamp &&
         (now - dashboardCache.timestamp) < CACHE_DURATION) {
       setDashboardData(dashboardCache.data);
       setLoading(false);
@@ -107,19 +107,17 @@ const Dashboard = memo(function Dashboard() {
     }
 
     setLoading(true);
-    
+
     dashboardCache.promise = (async () => {
       try {
         // Single analytics endpoint call
         const analyticsRes = await api.get('/api/dashboard/analytics');
         const analytics = analyticsRes.data.data;
-        
+
         // Get upcoming auto-renewals
         const autoRenewalsRes = await api.get('/api/dashboard/upcoming-auto-renewals');
         const upcomingAutoRenewals = autoRenewalsRes.data.data || [];
-        
-        console.log('Auto-renewals API Response:', autoRenewalsRes.data); // Debug log
-        
+
         const newDashboardData = {
           totalLeads: analytics.leadsFunnel?.totalLeads || 0,
           activeProjects: analytics.projectsMetrics?.activeProjects || 0,
@@ -133,34 +131,33 @@ const Dashboard = memo(function Dashboard() {
           upcomingAutoRenewals: upcomingAutoRenewals,
           analytics: analytics
         };
-        
-        console.log('Processed Dashboard Data:', newDashboardData); // Debug log
-        
+
         // Cache the data
         dashboardCache.data = newDashboardData;
         dashboardCache.timestamp = now;
-        
+
         setDashboardData(newDashboardData);
-        
+
       } catch (error) {
-        console.error('Dashboard load failed:', error.message);
-        console.error('Full error:', error); // More detailed error logging
-        
+
         // Try to get auto-renewals separately if main call fails
         try {
           const autoRenewalsRes = await api.get('/api/dashboard/upcoming-auto-renewals');
-          console.log('Separate auto-renewals call:', autoRenewalsRes.data);
-        } catch (renewalError) {
-          console.error('Auto-renewals API failed:', renewalError);
+          setDashboardData(prev => ({
+            ...prev,
+            upcomingAutoRenewals: autoRenewalsRes.data.data || []
+          }));
+        } catch (autoRenewalError) {
+          // Ignore auto-renewal errors
         }
-        
+
         // Keep existing data on error
       } finally {
         setLoading(false);
         dashboardCache.promise = null;
       }
     })();
-    
+
     return dashboardCache.promise;
   }, []);
 
@@ -170,21 +167,21 @@ const Dashboard = memo(function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className="p-6"
       >
         {/* Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
           className="flex items-center justify-between mb-8"
         >
           <div>
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.1 }}
@@ -192,7 +189,7 @@ const Dashboard = memo(function Dashboard() {
             >
               Dashboard Overview
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3, delay: 0.15 }}
@@ -201,9 +198,9 @@ const Dashboard = memo(function Dashboard() {
               Monitor your business performance and key metrics
             </motion.p>
           </div>
-          
+
           {/* Team Avatars */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
@@ -222,12 +219,12 @@ const Dashboard = memo(function Dashboard() {
               </svg>
               <span>{loading ? 'Loading...' : 'Refresh'}</span>
             </motion.button>
-            
+
             <div className="flex -space-x-2">
               {dashboardData.employees.slice(0, 4).map((employee, index) => {
                 const initials = employee.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
                 return (
-                  <motion.div 
+                  <motion.div
                     key={employee._id || index}
                     initial={{ opacity: 0, scale: 0 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -241,7 +238,7 @@ const Dashboard = memo(function Dashboard() {
                 );
               })}
               {dashboardData.totalEmployees > 4 && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.2, delay: 0.2 }}
@@ -255,7 +252,7 @@ const Dashboard = memo(function Dashboard() {
         </motion.div>
 
         {/* Row 1: Leads, Projects, Revenue, Team */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
@@ -319,7 +316,7 @@ const Dashboard = memo(function Dashboard() {
         </motion.div>
 
         {/* Row 2: Payments, Expected, Projects Status, Revenue Type */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
@@ -390,7 +387,7 @@ const Dashboard = memo(function Dashboard() {
                 }
                 const recurring = analytics.revenueBreakdown.projectTypeWise.RECURRING;
                 const oneTime = analytics.revenueBreakdown.projectTypeWise.ONE_TIME;
-                
+
                 return [
                   { type: 'Recurring', amount: (recurring?.due || recurring?.monthly || 0), color: 'text-purple-600' },
                   { type: 'One Time', amount: (oneTime?.total || 0), color: 'text-indigo-600' }
@@ -409,7 +406,7 @@ const Dashboard = memo(function Dashboard() {
         </motion.div>
 
         {/* Row 3: Performance, Meetings, Employees, Tasks */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
@@ -496,7 +493,7 @@ const Dashboard = memo(function Dashboard() {
         </motion.div>
 
         {/* Row 4: Invoices, Domains, Auto Renewals */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
@@ -575,9 +572,9 @@ const Dashboard = memo(function Dashboard() {
       <AnimatePresence>
         {selectedEmployee && (
           <Suspense fallback={null}>
-            <EmployeeModal 
-              selectedEmployee={selectedEmployee} 
-              setSelectedEmployee={setSelectedEmployee} 
+            <EmployeeModal
+              selectedEmployee={selectedEmployee}
+              setSelectedEmployee={setSelectedEmployee}
             />
           </Suspense>
         )}

@@ -21,9 +21,7 @@ function ProjectView() {
         setProject(projectRes.data.data || projectRes.data);
         setEmployees(employeesRes.data.data || employeesRes.data || []);
         setLoading(false);
-      } catch (error) {
-        console.error('Failed to fetch project data:', error);
-        setLoading(false);
+      } catch (error) {setLoading(false);
       }
     };
 
@@ -224,7 +222,7 @@ function ProjectView() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
             {project.projectType === 'ONE_TIME' ? 'One-Time Project Details' : 'Recurring Service Details'}
           </h2>
-          
+
           {project.projectType === 'ONE_TIME' ? (
             <div className="space-y-6">
               {/* Financial Overview */}
