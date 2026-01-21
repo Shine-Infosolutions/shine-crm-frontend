@@ -94,11 +94,28 @@ const Dashboard = memo(function Dashboard() {
   // Task status counts
   const taskStatusCounts = useMemo(() => {
     const tasks = dashboardData.recentTasks || [];
+    console.log('Tasks data:', tasks); // Debug log
+    
     return {
-      completed: tasks.filter(task => task.status === 'completed').length,
-      inProgress: tasks.filter(task => task.status === 'in_progress').length,
-      pending: tasks.filter(task => task.status === 'pending').length,
-      overdue: tasks.filter(task => task.status === 'overdue').length
+      completed: tasks.filter(task => 
+        task.status?.toLowerCase() === 'completed' || 
+        task.status?.toLowerCase() === 'complete' ||
+        task.status?.toLowerCase() === 'done'
+      ).length,
+      inProgress: tasks.filter(task => 
+        task.status?.toLowerCase() === 'in_progress' || 
+        task.status?.toLowerCase() === 'in progress' ||
+        task.status?.toLowerCase() === 'progress' ||
+        task.status?.toLowerCase() === 'active'
+      ).length,
+      pending: tasks.filter(task => 
+        task.status?.toLowerCase() === 'pending' ||
+        task.status?.toLowerCase() === 'assigned'
+      ).length,
+      overdue: tasks.filter(task => 
+        task.status?.toLowerCase() === 'overdue' ||
+        task.status?.toLowerCase() === 'delayed'
+      ).length
     };
   }, [dashboardData.recentTasks]);
 
@@ -267,7 +284,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
@@ -330,12 +347,12 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 2: Monthly Earnings, Payments, Expected, Projects Status, Revenue Type */}
+        {/* Row 2: Monthly Earnings, Payments, Expected, Projects Status */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           {/* Monthly Earnings Card - Enhanced */}
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 dark:from-emerald-900/20 dark:to-green-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-emerald-200/50">
@@ -445,33 +462,6 @@ const Dashboard = memo(function Dashboard() {
               </div>
             </div>
           </motion.div>
-
-          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Revenue Type</h4>
-            <div className="space-y-2">
-              {(() => {
-                const analytics = dashboardData.analytics;
-                if (!analytics?.revenueBreakdown?.projectTypeWise) {
-                  return <p className="text-sm text-gray-500">No data</p>;
-                }
-                const recurring = analytics.revenueBreakdown.projectTypeWise.RECURRING;
-                const oneTime = analytics.revenueBreakdown.projectTypeWise.ONE_TIME;
-
-                return [
-                  { type: 'Recurring', amount: (recurring?.due || recurring?.monthly || 0), color: 'text-purple-600' },
-                  { type: 'One Time', amount: (oneTime?.total || 0), color: 'text-indigo-600' }
-                ].map((item, index) => (
-                  <div key={item.type} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{item.type}</span>
-                    <span className={`text-sm font-bold ${item.color}`}>
-                      ₹{item.amount.toLocaleString()}
-                    </span>
-                  </div>
-                ));
-              })()
-              }
-            </div>
-          </motion.div>
         </motion.div>
 
         {/* Row 3: Performance, Meetings, Employees, Tasks */}
@@ -479,7 +469,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
@@ -566,7 +556,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Invoices</h4>
