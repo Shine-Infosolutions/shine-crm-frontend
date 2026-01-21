@@ -7,11 +7,11 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Layout and components
 import Layout from "./components/Layout";
-import Dashboard from "./components/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Loader from "./components/Loader";
 
 // Lazy load pages
+const Dashboard = lazy(() => import("./components/Dashboard"));
 const Login = lazy(() => import("./pages/Login"));
 const LeadManagement = lazy(() => import("./pages/LeadManagement"));
 const AddLead = lazy(() => import("./pages/AddLead"));
