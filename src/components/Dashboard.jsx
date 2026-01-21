@@ -91,6 +91,17 @@ const Dashboard = memo(function Dashboard() {
     };
   }, [dashboardData.analytics]);
 
+  // Task status counts
+  const taskStatusCounts = useMemo(() => {
+    const tasks = dashboardData.recentTasks || [];
+    return {
+      completed: tasks.filter(task => task.status === 'completed').length,
+      inProgress: tasks.filter(task => task.status === 'in_progress').length,
+      pending: tasks.filter(task => task.status === 'pending').length,
+      overdue: tasks.filter(task => task.status === 'overdue').length
+    };
+  }, [dashboardData.recentTasks]);
+
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     // Check cache first
     const now = Date.now();
@@ -319,12 +330,12 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 2: Monthly Earnings, Payments, Expected, Projects Status */}
+        {/* Row 2: Monthly Earnings, Payments, Expected, Projects Status, Revenue Type */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8"
         >
           {/* Monthly Earnings Card - Enhanced */}
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 dark:from-emerald-900/20 dark:to-green-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-emerald-200/50">
@@ -468,7 +479,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
@@ -532,19 +543,19 @@ const Dashboard = memo(function Dashboard() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-green-600">Completed</span>
-                <span className="text-sm font-bold">1</span>
+                <span className="text-sm font-bold">{taskStatusCounts.completed}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-blue-600">In Progress</span>
-                <span className="text-sm font-bold">1</span>
+                <span className="text-sm font-bold">{taskStatusCounts.inProgress}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-yellow-600">Pending</span>
-                <span className="text-sm font-bold">0</span>
+                <span className="text-sm font-bold">{taskStatusCounts.pending}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-red-600">Overdue</span>
-                <span className="text-sm font-bold">1</span>
+                <span className="text-sm font-bold">{taskStatusCounts.overdue}</span>
               </div>
             </div>
           </motion.div>
@@ -555,7 +566,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          className="grid grid-cols-3 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Invoices</h4>
