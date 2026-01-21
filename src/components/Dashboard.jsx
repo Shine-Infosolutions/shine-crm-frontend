@@ -484,37 +484,40 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Projects, Meetings & Invoices - Merged Card */}
+          {/* Business Overview - Redesigned */}
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
               <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               Business Overview
             </h4>
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-                <div className="text-center">
-                  <span className="text-xs text-gray-600 dark:text-gray-400 block">Active Projects</span>
-                  <span className="text-lg font-bold text-green-600">{projectStatusCounts.active}</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-xs text-gray-600 dark:text-gray-400 block">Completed</span>
-                  <span className="text-lg font-bold text-blue-600">{projectStatusCounts.completed}</span>
-                </div>
-                <div className="text-center">
-                  <span className="text-xs text-gray-600 dark:text-gray-400 block">On Hold</span>
-                  <span className="text-lg font-bold text-orange-600">{projectStatusCounts.onHold}</span>
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                <h5 className="text-xs font-medium text-gray-700 dark:text-gray-400 mb-3">Projects Status</h5>
+                <div className="flex justify-between items-center">
+                  <div className="text-center">
+                    <span className="text-lg font-bold text-green-600">{projectStatusCounts.active}</span>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Active</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-lg font-bold text-blue-600">{projectStatusCounts.completed}</span>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Done</p>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-lg font-bold text-orange-600">{projectStatusCounts.onHold}</span>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">Hold</p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+              <div className="flex justify-between items-start">
+                <div className="flex-1 mr-3">
                   <h5 className="text-xs font-medium text-orange-700 dark:text-orange-400 mb-2">Next Meeting</h5>
                   {(dashboardData.analytics?.alerts?.upcomingMeetings || []).slice(0, 1).map((meeting, index) => {
-                    const meetingDate = new Date(meeting.meetingDate).toLocaleDateString();
+                    const meetingDate = new Date(meeting.meetingDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
                     return (
                       <div key={index} className="bg-orange-50 dark:bg-orange-900/20 rounded p-2">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white block">{meeting.leadName}</span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">{meeting.leadName}</span>
                         <span className="text-xs text-orange-600">{meetingDate}</span>
                       </div>
                     );
@@ -523,16 +526,15 @@ const Dashboard = memo(function Dashboard() {
                     <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-700/50 rounded p-2">No meetings</p>
                   )}
                 </div>
-                <div>
+                <div className="flex-1">
                   <h5 className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">Invoices</h5>
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-green-600">Sent</span>
-                      <span className="text-xs font-bold">{dashboardData.analytics?.invoiceMetrics?.totalInvoices || 0}</span>
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded p-2">
+                    <div className="text-center">
+                      <span className="text-lg font-bold text-green-600">{dashboardData.analytics?.invoiceMetrics?.totalInvoices || 0}</span>
+                      <p className="text-xs text-green-600">Sent</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-green-600">Amount</span>
-                      <span className="text-xs font-bold">₹{(dashboardData.analytics?.invoiceMetrics?.totalInvoiceAmount || dashboardData.analytics?.money?.totalInvoiceValue || dashboardData.analytics?.summary?.totalInvoiceAmount || 0).toLocaleString()}</span>
+                    <div className="text-xs text-green-600 text-center mt-1">
+                      ₹{(dashboardData.analytics?.invoiceMetrics?.totalInvoiceAmount || dashboardData.analytics?.money?.totalInvoiceValue || dashboardData.analytics?.summary?.totalInvoiceAmount || 0).toLocaleString()}
                     </div>
                   </div>
                 </div>
