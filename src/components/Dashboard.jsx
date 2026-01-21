@@ -251,7 +251,7 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
         </motion.div>
 
-        {/* Row 1: Leads, Projects, Revenue, Team */}
+        {/* Row 1: Projects, Revenue, Team, Clients */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -261,22 +261,9 @@ const Dashboard = memo(function Dashboard() {
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Leads</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalLeads}</p>
-              </div>
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 616 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <div className="flex items-center justify-between">
-              <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Projects</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.activeProjects}</p>
+                <p className="text-xs text-gray-500 mt-1">{dashboardData.completedProjects} completed</p>
               </div>
               <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
                 <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,7 +277,8 @@ const Dashboard = memo(function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">₹{dashboardData.totalRevenue.toLocaleString()}</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || dashboardData.totalRevenue || 0).toLocaleString()}</p>
+                <p className="text-xs text-gray-500 mt-1">This month</p>
               </div>
               <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,6 +293,7 @@ const Dashboard = memo(function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Team</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalEmployees}</p>
+                <p className="text-xs text-gray-500 mt-1">{(dashboardData.employees || []).filter(e => e.employee_status === 'Active').length} active</p>
               </div>
               <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded">
                 <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,29 +302,99 @@ const Dashboard = memo(function Dashboard() {
               </div>
             </div>
           </motion.div>
+
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Clients</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalLeads}</p>
+                <p className="text-xs text-gray-500 mt-1">Total leads</p>
+              </div>
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 515.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
 
-        {/* Row 2: Payments, Expected, Projects Status, Revenue Type */}
+        {/* Row 2: Monthly Earnings, Payments, Expected, Projects Status */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
         >
+          {/* Monthly Earnings Card - Enhanced */}
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 dark:from-emerald-900/20 dark:to-green-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-emerald-200/50">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <svg className="w-4 h-4 text-emerald-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              Monthly Earnings
+            </h4>
+            <div className="space-y-3">
+              <div className="bg-emerald-100/50 dark:bg-emerald-900/30 rounded-lg p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">This Month Total</span>
+                  <span className="text-xl font-bold text-emerald-800 dark:text-emerald-300">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded p-2">
+                    <span className="text-emerald-600 dark:text-emerald-400 block">Recurring</span>
+                    <span className="font-bold text-emerald-800 dark:text-emerald-300">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="bg-white/50 dark:bg-gray-800/50 rounded p-2">
+                    <span className="text-emerald-600 dark:text-emerald-400 block">One-time</span>
+                    <span className="font-bold text-emerald-800 dark:text-emerald-300">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.oneTime || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-between text-xs">
+                <div className="text-center">
+                  <span className="text-gray-600 dark:text-gray-400 block">Previous</span>
+                  <span className="font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0).toLocaleString()}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-gray-600 dark:text-gray-400 block">Next Expected</span>
+                  <span className="font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0).toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg p-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-yellow-700 dark:text-yellow-400">Outstanding Due</span>
+                  <span className="text-sm font-bold text-yellow-800 dark:text-yellow-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.dueAmount || 0).toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                  Net amount after advance
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Payments</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-green-600">Paid</span>
-                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.paidAmount || 0).toLocaleString()}</span>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+              <svg className="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Payments
+            </h4>
+            <div className="space-y-3">
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200/50">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">Total Paid</span>
+                  <span className="text-lg font-bold text-green-800 dark:text-green-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.totalPaid || 0).toLocaleString()}</span>
+                </div>
+                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Includes ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.advanceAmount || 0).toLocaleString()} advance + ₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0).toLocaleString()} recurring
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-red-600">Due</span>
-                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.dueAmount || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-blue-600">Advance</span>
-                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.advanceAmount || 0).toLocaleString()}</span>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200/50">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-red-700 dark:text-red-400">Due</span>
+                  <span className="text-lg font-bold text-red-800 dark:text-red-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.dueAmount || 0).toLocaleString()}</span>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -345,16 +404,15 @@ const Dashboard = memo(function Dashboard() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-yellow-600">This Month</span>
-                <span className="text-sm font-bold">₹{(dashboardData.analytics?.money?.thisMonthRevenue || 0).toLocaleString()}</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-green-600">Next Month</span>
+                <span className="text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0).toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-orange-600">This Year</span>
-                <span className="text-sm font-bold">₹{(() => {
-                  const baseRevenue = dashboardData.analytics?.money?.expectedRevenue || 0;
-                  const monthlyRecurring = dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.RECURRING?.monthly || 0;
-                  const yearlyRecurring = monthlyRecurring * 12;
-                  return (baseRevenue + yearlyRecurring - monthlyRecurring).toLocaleString();
-                })()}</span>
+                <span className="text-sm font-bold">₹{((dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0) + (dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0) * 11).toLocaleString()}</span>
               </div>
             </div>
           </motion.div>
