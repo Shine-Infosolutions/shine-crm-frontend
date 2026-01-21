@@ -20,7 +20,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['framer-motion', 'react-icons'],
-          utils: ['axios', 'react-hot-toast']
+          utils: ['axios', 'react-toastify']
         }
       }
     },
