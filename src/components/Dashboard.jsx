@@ -414,8 +414,13 @@ const Dashboard = memo(function Dashboard() {
                   <span className="text-sm font-medium text-green-700 dark:text-green-400">Total Paid</span>
                   <span className="text-lg font-bold text-green-800 dark:text-green-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.totalPaid || 0).toLocaleString()}</span>
                 </div>
-                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
-                  Advance: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.advanceAmount || 0).toLocaleString()}
+                <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+                  <div className="text-green-600 dark:text-green-400">
+                    One-time: ₹{(dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.ONE_TIME?.paid || 0).toLocaleString()}
+                  </div>
+                  <div className="text-green-600 dark:text-green-400">
+                    Recurring: ₹{((dashboardData.analytics?.monthlyEarnings?.actualPayments?.totalPaid || 0) - (dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.ONE_TIME?.paid || 0)).toLocaleString()}
+                  </div>
                 </div>
               </div>
               <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200/50">
