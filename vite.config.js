@@ -11,6 +11,10 @@ export default defineConfig({
     open: true,
   },
   build: {
+    minify: "esbuild",
+    cssCodeSplit: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
@@ -22,14 +26,6 @@ export default defineConfig({
           ui: ['framer-motion', 'react-icons'],
           utils: ['axios', 'react-toastify']
         }
-      }
-    },
-    chunkSizeWarningLimit: 1000,
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true
       }
     }
   },
