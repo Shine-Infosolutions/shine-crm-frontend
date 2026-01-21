@@ -24,7 +24,9 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['framer-motion', 'react-icons'],
-          utils: ['axios', 'react-toastify']
+          utils: ['axios', 'react-toastify'],
+          firebase: ['firebase'],
+          tinymce: ['@tinymce/tinymce-react']
         }
       }
     }

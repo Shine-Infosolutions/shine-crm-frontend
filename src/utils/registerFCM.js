@@ -1,7 +1,4 @@
 // utils/registerFCM.js
-import { getToken, onMessage } from "firebase/messaging";
-import { messaging } from "../firebase";
-
 const VAPID_KEY = "BOnE-4YZrJGAijICE9aOGB89f78TWYk_yxGlgbQKJVU4fQjgEiTuLJyUlSsGUD9zWgkecsnv_Ug3a76tXUNrl4g";
 
 export const registerFCM = async (API_URL) => {
@@ -19,6 +16,12 @@ export const registerFCM = async (API_URL) => {
     if (permission !== "granted") {
       return;
     }
+
+    // Lazy load Firebase
+    const { loadFirebase } = await import("../firebase");
+    const { messaging } = await loadFirebase();
+    
+    const { getToken, onMessage } = await import("firebase/messaging");
 
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
