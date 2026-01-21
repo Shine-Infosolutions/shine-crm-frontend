@@ -182,14 +182,14 @@ const Dashboard = memo(function Dashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="p-6"
+        className="p-4 sm:p-6"
       >
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
-          className="flex items-center justify-between mb-8"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4"
         >
           <div>
             <motion.h1
@@ -215,7 +215,7 @@ const Dashboard = memo(function Dashboard() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            className="flex items-center space-x-4"
+            className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4"
           >
             {/* Refresh Button */}
             <motion.button
@@ -223,7 +223,7 @@ const Dashboard = memo(function Dashboard() {
               whileTap={{ scale: 0.95 }}
               onClick={() => fetchDashboardData(true)}
               disabled={loading}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
+              className="px-3 py-2 sm:px-4 sm:py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg text-sm font-medium transition-colors flex items-center space-x-2"
             >
               <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -267,13 +267,13 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Projects</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.activeProjects}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Projects</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.activeProjects}</p>
                 <p className="text-xs text-gray-500 mt-1">{dashboardData.completedProjects} completed</p>
               </div>
               <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
@@ -284,11 +284,11 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || dashboardData.totalRevenue || 0).toLocaleString()}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || dashboardData.totalRevenue || 0).toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </div>
               <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
@@ -299,11 +299,11 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Team</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalEmployees}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Team</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalEmployees}</p>
                 <p className="text-xs text-gray-500 mt-1">{(dashboardData.employees || []).filter(e => e.employee_status === 'Active').length} active</p>
               </div>
               <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded">
@@ -314,11 +314,11 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Clients</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalLeads}</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Clients</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{dashboardData.totalLeads}</p>
                 <p className="text-xs text-gray-500 mt-1">Total leads</p>
               </div>
               <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
@@ -335,7 +335,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
           {/* Monthly Earnings Card - Enhanced */}
           <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 dark:from-emerald-900/20 dark:to-green-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-emerald-200/50">
@@ -479,7 +479,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
@@ -566,7 +566,7 @@ const Dashboard = memo(function Dashboard() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
         >
           <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Invoices</h4>
