@@ -56,7 +56,8 @@ function EmployeeManagement() {
     emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.contact1?.includes(searchTerm) ||
-    emp.contact2?.includes(searchTerm)
+    emp.contact2?.includes(searchTerm) ||
+    emp.designation?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) return <Loader message="Loading employees..." />;
@@ -81,7 +82,7 @@ function EmployeeManagement() {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search employees by name, email or phone..."
+            placeholder="Search employees by name, email, phone, or designation..."
             className="w-full px-3 py-2 pl-10 border border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -119,6 +120,7 @@ function EmployeeManagement() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">PAN</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Start</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Designation</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Experience</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Salary</th>
@@ -219,6 +221,11 @@ function EmployeeManagement() {
                     {/* Employment Type */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
                       {emp.employment_type}
+                    </td>
+                  
+                    {/* Designation */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white cursor-pointer" onClick={() => navigate(`/employees/add?id=${emp._id}`)}>
+                      {emp.designation || "N/A"}
                     </td>
                   
                     {/* Employee Status */}

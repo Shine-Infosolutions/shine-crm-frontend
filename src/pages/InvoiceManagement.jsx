@@ -159,6 +159,12 @@ const InvoiceManagement = () => {
                         >
                           View
                         </Link>
+                        <Link
+                          to={`/invoices/edit/${inv._id}`}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800"
+                        >
+                          Edit
+                        </Link>
                         <button
                           onClick={() => handleDelete(inv._id)}
                           className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full hover:bg-red-200 dark:hover:bg-red-800"

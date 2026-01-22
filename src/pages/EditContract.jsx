@@ -91,8 +91,32 @@ const ContractFormPage = () => {
         const data = response.data.data;
         setEmployee(data);
 
+        // Always reset contract state first, then populate with fresh data
+        const freshContract = {
+          job_title: data.designation || '',
+          contract_type: data.employment_type || 'Full Time',
+          start_date: '',
+          end_date: '',
+          working_hours: {
+            timing: '10 AM – 6 PM',
+            days_per_week: 6,
+            location: 'Head Office Gorahpur'
+          },
+          compensation: {
+            monthly_salary: data.salary_details?.monthly_salary || 0,
+            salary_date: '5th'
+          },
+          termination: {
+            notice_period_days: 30
+          },
+          acceptance: {
+            accepted: false
+          }
+        };
+
         if (data.contract_agreement) {
-          setContract({
+          // Merge existing contract data with fresh structure
+          Object.assign(freshContract, {
             ...data.contract_agreement,
             start_date: formatDateForInput(data.contract_agreement.start_date),
             end_date: formatDateForInput(data.contract_agreement.end_date),
@@ -101,6 +125,8 @@ const ContractFormPage = () => {
             ),
           });
         }
+        
+        setContract(freshContract);
       } catch (error) {
         setError("Failed to load employee data");
       } finally {
@@ -139,13 +165,32 @@ const ContractFormPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
+    setError('');
     try {
-      await api.put(
+      const response = await api.put(
         `/api/employees/${id}/contract/update`,
         contract
       );
-      navigate("/contracts");
+      
+      if (response.data.success) {
+        // Refresh employee data to show updated contract
+        const updatedResponse = await api.get(`/api/employees/${id}`);
+        const updatedData = updatedResponse.data.data;
+        setEmployee(updatedData);
+        
+        if (updatedData.contract_agreement) {
+          setContract({
+            ...updatedData.contract_agreement,
+            start_date: formatDateForInput(updatedData.contract_agreement.start_date),
+            end_date: formatDateForInput(updatedData.contract_agreement.end_date),
+            effective_date: formatDateForInput(
+              updatedData.contract_agreement.effective_date
+            ),
+          });
+        }
+        
+        navigate("/contracts");
+      }
     } catch (error) {
       setError("Failed to update contract. Please try again.");
     } finally {

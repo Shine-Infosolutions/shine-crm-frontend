@@ -215,6 +215,7 @@ const CreateInvoice = () => {
             className="border-b-2 border-black p-3"
           >
             <p className="text-xs font-semibold mb-1">Customer Details:</p>
+            <p className="text-xs">Name: {invoice.customerName || 'Customer Name'}</p>
             {isGSTInvoice && <p className="text-xs">GSTIN: {invoice.customerGST}</p>}
             <p className="text-xs">Billing Address: {invoice.customerAddress}</p>
           </motion.div>

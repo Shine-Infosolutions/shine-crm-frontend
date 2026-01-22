@@ -15,7 +15,7 @@ function Sidebar() {
       initial={{ x: -256 }}
       animate={{ x: 0 }}
       transition={{ type: "spring", damping: 25, stiffness: 300 }}
-      className={`bg-slate-300/90 dark:bg-gray-800/90 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 shadow-2xl transition-all duration-300 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent ${sidebarOpen ? 'w-64' : 'w-20'}`}
+      className={`bg-slate-300/90 dark:bg-gray-800/90 backdrop-blur-xl text-gray-800 dark:text-white border-r border-white/20 dark:border-gray-700/50 h-screen fixed top-0 left-0 z-10 shadow-2xl transition-all duration-300 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent ${sidebarOpen ? 'w-64' : 'w-20'}`}
     >
       <div className="p-4 relative">
         {/* Hamburger/Close button */}
@@ -57,7 +57,9 @@ function Sidebar() {
                 >
                   <Link
                     to="/"
-                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
                     title="Dashboard"
                   >
                     <FaTachometerAlt className="text-lg" />
@@ -75,7 +77,9 @@ function Sidebar() {
                 >
                   <Link
                     to="/leads"
-                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
                     title="Lead Management"
                   >
                     <FaUsers className="text-lg" />
@@ -93,7 +97,9 @@ function Sidebar() {
                 >
                   <Link
                     to="/projects"
-                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
                     title="Project Management"
                   >
                     <FaProjectDiagram className="text-lg" />
@@ -111,7 +117,9 @@ function Sidebar() {
                 >
                   <Link
                     to="/invoices"
-                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
                     title="Invoice Management"
                   >
                     <FaFileInvoiceDollar className="text-lg" />
@@ -129,7 +137,9 @@ function Sidebar() {
                 >
                   <Link
                     to="/task-assignment"
-                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
                     title="Task Assignment"
                   >
                     <FaTasks className="text-lg" />
@@ -147,7 +157,9 @@ function Sidebar() {
                 >
                   <Link
                     to="/timesheet"
-                    className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
                     title="Employee Timesheets"
                   >
                     <FaClock className="text-lg" />
@@ -164,7 +176,9 @@ function Sidebar() {
               >
                 <Link
                   to="/attendance"
-                  className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                    sidebarOpen ? "px-4 gap-3" : "justify-center"
+                  }`}
                   title="Employee Attendance"
                 >
                   <FaCalendarCheck className="text-lg" />
@@ -295,18 +309,22 @@ function Sidebar() {
                         setEmployeeDropdownOpen(!employeeDropdownOpen);
                       }
                     }}
-                    className="flex items-center justify-between w-full py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                    className={`flex items-center w-full py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "justify-between" : "justify-center"
+                    }`}
                     title="Employee Management"
                   >
-                    <span className="flex items-center gap-3">
-                      <FaUserTie className="text-lg" />
-                      {sidebarOpen && <span>Employee Management</span>}
-                    </span>
-                    {sidebarOpen && <FaChevronDown
-                      className={`transition-transform ${
-                        employeeDropdownOpen ? "rotate-180" : ""
-                      }`}
-                    />}
+                    <FaUserTie className="text-lg" />
+                    {sidebarOpen && (
+                      <>
+                        <span className="">Employee Management</span>
+                        <FaChevronDown
+                          className={`transition-transform ${
+                            employeeDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </>
+                    )}
                   </button>
                 </motion.div>
                 {employeeDropdownOpen && sidebarOpen && (
@@ -351,7 +369,9 @@ function Sidebar() {
               >
                 <Link
                   to="/settings"
-                  className="flex items-center gap-3 py-2 px-4 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200"
+                  className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                    sidebarOpen ? "px-4 gap-3" : "justify-center"
+                  }`}
                   title="Settings"
                 >
                   <FaCog className="text-lg" />

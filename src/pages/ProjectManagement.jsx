@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
@@ -7,118 +7,107 @@ import Loader from "../components/Loader";
 import Pagination from "../components/Pagination";
 
 function ProjectManagement() {
-  const [selectedProject, setSelectedProject] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [projects, setProjects] = useState([]);
-  const [projectFilter, setProjectFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const navigate = useNavigate();
   const { API_URL } = useAppContext();
 
-  // Fetch projects from API
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
-        if (response.data.success) {
-          setProjects(response.data.data || []);
-          setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
-        } else {
-          const sortedProjects = (response.data || []).sort((a, b) => {
-            const dateA = new Date(a.createdAt || 0);
-            const dateB = new Date(b.createdAt || 0);
-            return dateB - dateA;
-          });
-          setProjects(sortedProjects);
-        }
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to load projects. Please try again.");
-        setLoading(false);
+  const fetchProjects = useCallback(async () => {
+    try {
+      const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
+      if (response.data.success) {
+        setProjects(response.data.data || []);
+        setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+      } else {
+        const sortedProjects = (response.data || []).sort((a, b) => 
+          new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
+        setProjects(sortedProjects);
       }
-    };
-  
-    fetchProjects();
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load projects. Please try again.");
+      setLoading(false);
+    }
   }, [currentPage]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
   
 
-  // Calculate progress based on start date and deadline only
-  const calculateProgress = (startDate, handOverDate, deadline) => {
-    const start = new Date(startDate);
-    const today = new Date();
-    const end = new Date(deadline);
-    
-    // If project hasn't started yet
-    if (today <= start) return 0;
-    
-    // If past deadline, show 100%
-    if (today >= end) return 100;
+  const calculateProjectMetrics = useCallback((project) => {
+    if (project.projectType === 'ONE_TIME') {
+      if (['Completed', 'Cancelled', 'On Hold'].includes(project.status)) {
+        return { status: project.status };
+      }
+      
+      const start = new Date(project.oneTimeProject?.startDate);
+      const expected = new Date(project.oneTimeProject?.expectedDeliveryDate);
+      const today = new Date();
+      
+      if (!start || !expected || isNaN(start.getTime()) || isNaN(expected.getTime())) {
+        return { status: 'Planning' };
+      }
+      
+      if (today < start) return { status: 'Not Started' };
+      if (today > expected) return { status: 'Overdue' };
+      return { status: 'In Progress' };
+    } else {
+      if (['Cancelled', 'Completed', 'On Hold'].includes(project.status)) {
+        return { status: project.status };
+      }
+      
+      const contractEnd = new Date(project.recurringProject?.contractEndDate);
+      const today = new Date();
+      
+      if (contractEnd && !isNaN(contractEnd.getTime()) && today > contractEnd) {
+        return { status: 'Contract Expired' };
+      }
+      
+      return { status: 'Active Service' };
+    }
+  }, []);
 
-    // Calculate time-based progress between start and deadline
-    const totalTime = end.getTime() - start.getTime();
-    const elapsedTime = today.getTime() - start.getTime();
-    
-    const percentage = (elapsedTime / totalTime) * 100;
-    return Math.round(Math.max(0, Math.min(100, percentage)));
+  const projectsWithMetrics = useMemo(() => 
+    projects.map((project) => {
+      const { status } = calculateProjectMetrics(project);
+      return { ...project, calculatedStatus: status };
+    }), [projects, calculateProjectMetrics]
+  );
+
+  const uniqueStatuses = useMemo(() => 
+    [...new Set(projects.map(project => project.status))].filter(Boolean).sort(), 
+    [projects]
+  );
+
+  const filteredProjects = useMemo(() => 
+    projectsWithMetrics.filter((project) => {
+      const matchesSearch = 
+        project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (project.clientContact && project.clientContact.includes(searchTerm));
+      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    }), [projectsWithMetrics, searchTerm, statusFilter]
+  );
+
+  const deleteProject = async (projectId, e) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        await api.delete(`/api/projects/${projectId}`);
+        setProjects(projects.filter(project => project._id !== projectId));
+      } catch (error) {
+        alert('Failed to delete project');
+      }
+    }
   };
-
-  // Determine project status based on progress and handover date
-  const getProjectStatus = (startDate, handOverDate, deadline) => {
-    // If end date is provided, project is completed
-    if (handOverDate && handOverDate.trim() !== "") {
-      return "Completed";
-    }
-
-    const start = new Date(startDate);
-    const targetDate = new Date(deadline);
-    const today = new Date();
-
-    // If project hasn't started yet
-    if (today < start) {
-      return "Not Started";
-    }
-
-    // If project is past deadline but not marked as completed
-    if (today > targetDate) {
-      return "Overdue";
-    }
-
-    return "On Track";
-  };
-
-  // Add calculated progress and status to each project
-  const projectsWithProgress = projects.map((project) => {
-    const progress = calculateProgress(
-      project.startDate,
-      project.handoverDate,
-      project.deadline
-    );
-    const status = getProjectStatus(
-      project.startDate,
-      project.handoverDate,
-      project.deadline
-    );
-    const isCompleted = project.handoverDate && project.handoverDate !== "";
-    return { ...project, progress, status, isCompleted };
-  });
-
-  // Filter projects based on search term
-  const filteredProjects = projectsWithProgress.filter((project) => {
-    const matchesSearch =
-      project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (project.clientContact && project.clientContact.includes(searchTerm));
-
-    const matchesFilter =
-      projectFilter === "all" ||
-      (projectFilter === "active" && project.progress <= 99.9) ||
-      (projectFilter === "completed" && project.progress === 100);
-
-    return matchesSearch && matchesFilter;
-  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
@@ -137,14 +126,14 @@ function ProjectManagement() {
           Project Management
         </motion.h2>
 
-        {/* Search Bar */}
+        {/* Search Bar and Add Button */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="mb-6 relative z-0"
+          className="flex flex-col md:flex-row gap-4 mb-6"
         >
-          <div className="relative">
+          <div className="relative flex-grow">
             <input
               type="text"
               placeholder="Search by project name, client name or phone..."
@@ -169,152 +158,226 @@ function ProjectManagement() {
               </svg>
             </div>
           </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/projects/add")}
+            className="bg-gray-800/80 backdrop-blur-md text-white px-4 py-2 rounded-lg hover:bg-gray-700/80 whitespace-nowrap shadow-lg border border-white/10"
+          >
+            Add New Project
+          </motion.button>
         </motion.div>
 
+        {/* Status Filter Buttons */}
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl p-6 mb-6 border border-white/20 dark:border-gray-700/50"
+          className="flex flex-wrap justify-center sm:justify-start gap-2 mb-6"
         >
-          <div className="mb-4 flex flex-col gap-3">
-            {/* Add Project Button at Top Right */}
-            <div className="flex justify-center sm:justify-end">
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/projects/add")}
-                className="bg-gray-800/80 backdrop-blur-md text-white px-5 py-2 rounded-lg hover:bg-gray-700/80 transition shadow-lg border border-white/10"
-              >
-                Add New Project
-              </motion.button>
-            </div>
-
-            {/* Filter Buttons in One Line Below */}
-            <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition backdrop-blur-sm ${
-                  projectFilter === "all"
-                    ? "bg-blue-600/80 text-white shadow-lg"
-                    : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80 shadow-md"
-                }`}
-                onClick={() => setProjectFilter("all")}
-              >
-                All Projects
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition backdrop-blur-sm ${
-                  projectFilter === "active"
-                    ? "bg-blue-600/80 text-white shadow-lg"
-                    : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80 shadow-md"
-                }`}
-                onClick={() => setProjectFilter("active")}
-              >
-                Active Projects
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition backdrop-blur-sm ${
-                  projectFilter === "completed"
-                    ? "bg-blue-600/80 text-white shadow-lg"
-                    : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80 shadow-md"
-                }`}
-                onClick={() => setProjectFilter("completed")}
-              >
-                Completed Projects
-              </motion.button>
-            </div>
-          </div>
-
-          {loading ? (
-            <Loader message="Fetching projects..." />
-          ) : error ? (
-            <div className="text-center py-8">
-              <p className="text-red-500">{error}</p>
-            </div>
-          ) : filteredProjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((project, index) => (
-                <motion.div
-                  key={project._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                  className={`border backdrop-blur-md rounded-xl p-4 cursor-pointer transition shadow-lg ${
-                    project._id === selectedProject
-                      ? "ring-2 ring-blue-500 bg-blue-50/80 border-blue-500/50 dark:bg-blue-900/30"
-                      : "bg-white/70 dark:bg-gray-800/70 border-white/20 dark:border-gray-700/50 hover:bg-gray-100/80 dark:hover:bg-gray-700/80"
-                  }`}
-                  onClick={() => {
-                    if (project._id !== selectedProject) {
-                      setSelectedProject(project._id);
-                    }
-                  }}
-                >
-                  <h4 className="font-bold">{project.projectName}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Client: {project.clientName}
-                  </p>
-                  <div className="mt-2 flex justify-between">
-                    <span className="text-sm">Progress: {project.progress}%</span>
-                    <span
-                      className={`text-sm ${
-                        project.status === "Completed"
-                          ? "text-blue-600"
-                          : project.status === "On Track"
-                          ? "text-green-600"
-                          : project.status === "Approaching Deadline"
-                          ? "text-orange-500"
-                          : project.status === "Overdue"
-                          ? "text-red-600"
-                          : "text-gray-500"
-                      }`}
-                    >
-                      {project.status}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
-                    <div
-                      className={`${
-                        project.status === "Completed"
-                          ? "bg-blue-600"
-                          : project.status === "On Track"
-                          ? "bg-green-600"
-                          : project.status === "Approaching Deadline"
-                          ? "bg-orange-500"
-                          : project.status === "Overdue"
-                          ? "bg-red-500"
-                          : "bg-gray-400"
-                      } h-2.5 rounded-full`}
-                      style={{ width: `${project.progress}%` }}
-                    ></div>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    {new Date(project.startDate).toLocaleDateString()} to{" "}
-                    {new Date(
-                      project.deadline || project.handoverDate
-                    ).toLocaleDateString()}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-              className="text-center py-8"
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition backdrop-blur-sm ${
+              statusFilter === "all"
+                ? "bg-blue-600/80 text-white shadow-lg"
+                : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80 shadow-md"
+            }`}
+            onClick={() => setStatusFilter("all")}
+          >
+            All Status
+          </motion.button>
+          {uniqueStatuses.map((status) => (
+            <motion.button
+              key={status}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition backdrop-blur-sm ${
+                statusFilter === status
+                  ? "bg-blue-600/80 text-white shadow-lg"
+                  : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80 shadow-md"
+              }`}
+              onClick={() => setStatusFilter(status)}
             >
-              <p className="text-gray-500 dark:text-gray-400">No projects found matching your search.</p>
-            </motion.div>
-          )}
+              {status}
+            </motion.button>
+          ))}
         </motion.div>
+
+        {/* Loader or Project Cards */}
+        {loading ? (
+          <Loader message="Fetching projects..." />
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            {filteredProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProjects.map((project, index) => (
+                  <motion.div
+                    key={project._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.25 + index * 0.05 }}
+                    whileHover={{ scale: 1.02, y: -5 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => navigate(`/projects/add?id=${project._id}`)}
+                    className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-lg hover:shadow-xl border border-white/20 dark:border-gray-700/50 cursor-pointer transition-all duration-300 p-6"
+                  >
+                    <div className="flex flex-col h-full">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                          {project.projectName}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 text-xs font-semibold rounded-full shrink-0
+                            ${
+                              project.status === "Completed" || project.status === "Close"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                : project.status === "Progress" || project.status === "Active" || project.status === "Start"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                : project.status === "Hold" || project.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
+                            }`}
+                          >
+                            {project.status}
+                          </span>
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/projects/view/${project._id}`);
+                            }}
+                            className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                            title="View project details"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                            </svg>
+                          </motion.button>
+                          <button
+                            onClick={(e) => deleteProject(project._id, e)}
+                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                            title="Delete project"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Client Info */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                          <svg className="w-4 h-4 mr-2 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                          </svg>
+                          <span className="truncate">{project.clientName}</span>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                          <svg className="w-4 h-4 mr-2 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                          </svg>
+                          <span className="truncate">{project.clientContact}</span>
+                        </div>
+                      </div>
+
+                      {/* Project Type */}
+                      <div className="mb-4">
+                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full
+                          ${project.projectType === 'ONE_TIME' 
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" 
+                            : "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400"
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full mr-1 ${project.projectType === 'ONE_TIME' ? "bg-purple-500" : "bg-indigo-500"}`}></div>
+                          {project.projectType === 'ONE_TIME' ? 'One-Time Project' : 'Recurring Service'}
+                        </span>
+                      </div>
+
+                      {/* Financial/Timeline Info */}
+                      <div className="mt-auto space-y-2 pt-4 border-t border-gray-200 dark:border-gray-600">
+                        {project.projectType === 'ONE_TIME' ? (
+                          <>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex justify-between items-center">
+                                <span>Total Amount:</span>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">
+                                  ₹{project.oneTimeProject?.totalAmount ? parseFloat(project.oneTimeProject.totalAmount).toLocaleString('en-IN') : '0'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center mt-1">
+                                <span>Paid:</span>
+                                <span className="font-medium text-green-600">
+                                  ₹{project.oneTimeProject?.paidAmount ? parseFloat(project.oneTimeProject.paidAmount).toLocaleString('en-IN') : '0'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex justify-between items-center">
+                                <span>Timeline:</span>
+                                <span className="font-medium">
+                                  {project.oneTimeProject?.startDate ? new Date(project.oneTimeProject.startDate).toLocaleDateString() : 'TBD'} - {project.oneTimeProject?.expectedDeliveryDate ? new Date(project.oneTimeProject.expectedDeliveryDate).toLocaleDateString() : 'TBD'}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex justify-between items-center">
+                                <span>Billing:</span>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">
+                                  {project.recurringProject?.billingCycle || 'Monthly'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center mt-1">
+                                <span>Amount:</span>
+                                <span className="font-medium text-green-600">
+                                  ₹{project.recurringProject?.recurringAmount ? parseFloat(project.recurringProject.recurringAmount).toLocaleString('en-IN') : '0'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <div className="flex justify-between items-center">
+                                <span>Service:</span>
+                                <span className="font-medium">
+                                  {project.recurringProject?.serviceType || 'Not specified'}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.25 }}
+                className="text-center py-12 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 dark:border-gray-700/50"
+              >
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <p className="text-gray-500 dark:text-gray-400 text-lg">No projects found matching your search.</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">Try adjusting your search criteria or add a new project.</p>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
 
         {/* Pagination */}
         {!loading && pagination.pages > 1 && (
@@ -329,195 +392,7 @@ function ProjectManagement() {
           </div>
         )}
 
-        {/* Project Details Section - Shows when a project is selected */}
-        <AnimatePresence>
-          {selectedProject !== null && (
-            <motion.div 
-              initial={{ opacity: 0, y: 30, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -30, scale: 0.95 }}
-              transition={{ duration: 0.3, type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-xl p-6 mb-6 border border-white/20 dark:border-gray-700/50"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Project Details</h3>
-                <div className="flex space-x-2">
-                  <motion.button
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => {
-                      const project = projectsWithProgress.find(
-                        (p) => p._id === selectedProject
-                      );
-                      navigate("/projects/add", {
-                        state: { project, isEditing: true },
-                      });
-                    }}
-                    className="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50/50 dark:hover:bg-blue-900/20 backdrop-blur-sm"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-6 w-6"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </motion.button>
-                </div>
-              </div>
 
-              {projectsWithProgress
-                .filter((p) => p._id === selectedProject)
-                .map((project) => (
-                  <div
-                    key={project._id}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4"
-                  >
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Project Info
-                      </p>
-                      <p className="font-medium">{project.projectName}</p>
-                      <p className="text-sm">{project.projectType}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Client
-                      </p>
-                      <p className="font-medium">{project.clientName}</p>
-                      <p className="text-sm">{project.clientContact}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Project Amount
-                      </p>
-                      <p className="font-medium">₹{parseFloat(project.projectAmount || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-sm">Advance: ₹{parseFloat(project.advanceAmount || 0).toLocaleString('en-IN')}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Timeline
-                      </p>
-                      <p className="text-sm">
-                        Start: {new Date(project.startDate).toLocaleDateString()}
-                      </p>
-                      <p className="text-sm">
-                        Deadline:{" "}
-                        {project.deadline
-                          ? new Date(project.deadline).toLocaleDateString()
-                          : "Not set"}
-                      </p>
-                      <p className="text-sm">
-                        Handover:{" "}
-                        {project.handoverDate
-                          ? new Date(project.handoverDate).toLocaleDateString()
-                          : "Not set"}
-                      </p>
-                      <p className="text-sm font-medium mt-1">
-                        Progress: {project.progress}% ({project.status})
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Commission
-                      </p>
-                      <p className="font-medium">
-                        {project.commissionTo || "Not specified"}
-                      </p>
-                      <p className="text-sm">₹{parseFloat(project.commissionAmount || 0).toLocaleString('en-IN')}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Domain Details
-                      </p>
-                      <p className="font-medium">
-                        {project.domain || "Not specified"}
-                      </p>
-                      {project.domainPurchaseDate && (
-                        <p className="text-sm">
-                          Purchase:{" "}
-                          {new Date(
-                            project.domainPurchaseDate
-                          ).toLocaleDateString()}
-                        </p>
-                      )}
-                      {project.domainCost && (
-                        <p className="text-sm">Cost: ₹{parseFloat(project.domainCost || 0).toLocaleString('en-IN')}</p>
-                      )}
-                      {project.domainExpiryDate && (
-                        <p className="text-sm">
-                          Expires:{" "}
-                          {new Date(project.domainExpiryDate).toLocaleDateString()}
-                        </p>
-                      )}
-                      {project.renewalDate && (
-                        <p className="text-sm">
-                          Renewal:{" "}
-                          {new Date(project.renewalDate).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Access
-                      </p>
-                      <p className="text-sm">
-                        Email: {project.email || "Not specified"}
-                      </p>
-                      <p className="text-sm">
-                        Password: {project.password ? "••••••••" : "Not specified"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Links
-                      </p>
-                      <div className="mt-1">
-                        {project.projectLink ? (
-                          <a
-                            href={project.projectLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline block"
-                          >
-                            Live Site
-                          </a>
-                        ) : (
-                          <p className="text-sm">Live Site: Not specified</p>
-                        )}
-                        {project.sourceCodeLink ? (
-                          <a
-                            href={project.sourceCodeLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline block"
-                          >
-                            Source Code
-                          </a>
-                        ) : (
-                          <p className="text-sm">Source Code: Not specified</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     </div>
   );

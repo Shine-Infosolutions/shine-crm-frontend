@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
 import { useLocation } from "react-router-dom";
-
+import DateTimeTracker from "../components/DateTimeTracker";
 import api from '../utils/axiosConfig';
+
 const AddLead = () => {
   const { API_URL, navigate } = useAppContext();
   const [loading, setLoading] = useState(false);
@@ -20,8 +21,8 @@ const AddLead = () => {
     followUpDate: "",
     followUpStatus: "Not Started",
     isInterested: false,
-    meetingDate: "",
-    clientRequestedCallDate: "",
+    meetingDates: [],
+    clientCallDates: [],
     notes: "",
     reference: "",
   });
@@ -49,23 +50,100 @@ const AddLead = () => {
         throw new Error(response.data?.message || "Failed to fetch lead data");
       }
 
-      // Format dates for form inputs
+      // Handle backward compatibility and format dates
       const formattedData = {
         ...data,
         followUpDate: data.followUpDate
           ? new Date(data.followUpDate).toISOString().split("T")[0]
           : "",
-        meetingDate: data.meetingDate
-          ? new Date(data.meetingDate).toISOString().split("T")[0]
-          : "",
-        clientRequestedCallDate: data.clientRequestedCallDate
-          ? new Date(data.clientRequestedCallDate).toISOString().split("T")[0]
-          : "",
+        meetingDates: data.meetingDates?.length > 0 
+          ? data.meetingDates 
+          : data.meetingDate 
+            ? [{ dateTime: data.meetingDate, addedAt: new Date() }] 
+            : [],
+        clientCallDates: data.clientCallDates?.length > 0 
+          ? data.clientCallDates 
+          : data.clientRequestedCallDate 
+            ? [{ dateTime: data.clientRequestedCallDate, addedAt: new Date() }] 
+            : [],
       };
 
       setFormData(formattedData);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDateTimeAdd = (field) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: [...prev[field], { dateTime: '', addedAt: new Date() }]
+    }));
+  };
+
+  const handleDateTimeUpdate = (field, value) => {
+    setFormData(prev => {
+      const dates = [...prev[field]];
+      if (dates.length === 0) {
+        dates.push({ dateTime: value, addedAt: new Date() });
+      } else {
+        dates[dates.length - 1] = { ...dates[dates.length - 1], dateTime: value };
+      }
+      return { ...prev, [field]: dates };
+    });
+  };
+
+  const validateDateTime = (field) => {
+    const dates = formData[field];
+    if (dates.length === 0) return '';
+    
+    const latestDate = dates[dates.length - 1]?.dateTime;
+    if (!latestDate) return 'Date and time is required';
+    
+    if (dates.length > 1) {
+      const previousDate = dates[dates.length - 2]?.dateTime;
+      if (new Date(latestDate) <= new Date(previousDate)) {
+        return 'New date must be later than the previous date';
+      }
+    }
+    
+    return '';
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    // Validate DateTime fields
+    const meetingError = validateDateTime('meetingDates');
+    const callError = validateDateTime('clientCallDates');
+    
+    if (meetingError || callError) {
+      setError(meetingError || callError);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Clean up data before sending
+      const submitData = {
+        ...formData,
+        meetingDates: formData.meetingDates.filter(d => d.dateTime),
+        clientCallDates: formData.clientCallDates.filter(d => d.dateTime)
+      };
+
+      if (isEditMode) {
+        await api.put(`/api/leads/${leadId}`, submitData);
+      } else {
+        await api.post('/api/leads', submitData);
+      }
+
+      navigate("/leads");
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} lead`);
     } finally {
       setLoading(false);
     }
@@ -77,26 +155,6 @@ const AddLead = () => {
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      if (isEditMode) {
-        await api.put(`/api/leads/${leadId}`, formData);
-      } else {
-        await api.post('/api/leads', formData);
-      }
-
-      navigate("/leads");
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || `Failed to ${isEditMode ? "update" : "add"} lead`);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -171,6 +229,7 @@ const AddLead = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
+                placeholder="Enter client's full name"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                 required
               />
@@ -189,6 +248,7 @@ const AddLead = () => {
                 name="number"
                 value={formData.number}
                 onChange={handleChange}
+                placeholder="10-digit mobile number (e.g., 9876543210)"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                 required
               />
@@ -207,6 +267,7 @@ const AddLead = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                placeholder="client@company.com"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                 required
               />
@@ -247,6 +308,7 @@ const AddLead = () => {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
+                placeholder="Complete business/residential address"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
               />
             </motion.div>
@@ -264,6 +326,7 @@ const AddLead = () => {
                 name="followUpDate"
                 value={formData.followUpDate}
                 onChange={handleChange}
+                placeholder="Select next contact date"
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
               />
             </motion.div>
@@ -293,16 +356,14 @@ const AddLead = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.5 }}
+              className="md:col-span-2"
             >
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Meeting Date
-              </label>
-              <input
-                type="date"
-                name="meetingDate"
-                value={formData.meetingDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+              <DateTimeTracker
+                label="Meeting Dates"
+                dates={formData.meetingDates}
+                onAddDate={() => handleDateTimeAdd('meetingDates')}
+                onUpdateLatest={(value) => handleDateTimeUpdate('meetingDates', value)}
+                error={validateDateTime('meetingDates')}
               />
             </motion.div>
 
@@ -329,16 +390,14 @@ const AddLead = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.6 }}
+              className="md:col-span-2"
             >
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Client Requested Call Date
-              </label>
-              <input
-                type="date"
-                name="clientRequestedCallDate"
-                value={formData.clientRequestedCallDate}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+              <DateTimeTracker
+                label="Client Requested Call Dates"
+                dates={formData.clientCallDates}
+                onAddDate={() => handleDateTimeAdd('clientCallDates')}
+                onUpdateLatest={(value) => handleDateTimeUpdate('clientCallDates', value)}
+                error={validateDateTime('clientCallDates')}
               />
             </motion.div>
 
@@ -356,7 +415,7 @@ const AddLead = () => {
                 value={formData.reference}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
-                placeholder="How did they hear about us?"
+                placeholder="How did they hear about us? (e.g., Google, referral)"
               />
             </motion.div>
 
@@ -375,7 +434,7 @@ const AddLead = () => {
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md resize-vertical"
-                placeholder="Add any additional notes about this lead..."
+                placeholder="Additional details about client requirements, budget, timeline"
               />
             </motion.div>
           </div>

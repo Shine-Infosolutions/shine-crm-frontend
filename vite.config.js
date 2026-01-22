@@ -11,11 +11,23 @@ export default defineConfig({
     open: true,
   },
   build: {
+    minify: "esbuild",
+    cssCodeSplit: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
       },
-    },
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          icons: ['react-icons'],
+          utils: ['axios', 'react-toastify']
+        }
+      }
+    }
   },
   publicDir: "public",
 });

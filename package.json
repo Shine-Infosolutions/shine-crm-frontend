@@ -12,7 +12,12 @@
     "preview": "vite preview",
     "start": "vite preview"
   },
-  "keywords": ["crm", "react", "vite", "tailwindcss"],
+  "keywords": [
+    "crm",
+    "react",
+    "vite",
+    "tailwindcss"
+  ],
   "author": "Shine Infosolutions",
   "dependencies": {
     "@tailwindcss/vite": "^4.1.8",
@@ -23,7 +28,6 @@
     "number-to-words": "^1.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "react-router-dom": "^6.30.1",
     "react-signature-canvas": "^1.1.0-alpha.2",
@@ -32,8 +36,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.25.0",
@@ -42,6 +44,7 @@
     "globals": "^16.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.11",
+    "terser": "^5.46.0",
     "vite": "^6.3.5"
   },
   "engines": {
