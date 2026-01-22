@@ -101,7 +101,7 @@ const Dashboard = memo(function Dashboard() {
     sessionStorage.setItem('dashSeen', 'true');
   }, []);
 
-  // Memoized calculations using analytics data (single source of truth)
+  // Memoized calculations using new API data structure
   const memoizedMetrics = useMemo(() => {
     const analytics = dashboardData.analytics;
     if (!analytics) return {
@@ -111,17 +111,23 @@ const Dashboard = memo(function Dashboard() {
       monthlyGrowthRate: 0
     };
 
-    const leadToProjectRate = analytics.leadsFunnel.totalLeads > 0
-      ? Math.round((analytics.projectsMetrics.totalProjects / analytics.leadsFunnel.totalLeads) * 100)
+    const totalLeads = analytics.leads?.total || 0;
+    const totalProjects = analytics.projects?.total || 0;
+    const completedProjects = analytics.projects?.completed || 0;
+    const expectedRevenue = analytics.revenue?.expected || 0;
+    const thisMonthRevenue = analytics.revenue?.thisMonth || 0;
+
+    const leadToProjectRate = totalLeads > 0
+      ? Math.round((totalProjects / totalLeads) * 100)
       : 0;
-    const completionRate = analytics.projectsMetrics.totalProjects > 0
-      ? Math.round((analytics.projectsMetrics.completedProjects / analytics.projectsMetrics.totalProjects) * 100)
+    const completionRate = totalProjects > 0
+      ? Math.round((completedProjects / totalProjects) * 100)
       : 0;
-    const averageProjectValue = analytics.projectsMetrics.totalProjects > 0
-      ? Math.round(analytics.money.expectedRevenue / analytics.projectsMetrics.totalProjects)
+    const averageProjectValue = totalProjects > 0
+      ? Math.round(expectedRevenue / totalProjects)
       : 0;
-    const monthlyGrowthRate = analytics.money.expectedRevenue > 0
-      ? Math.round((analytics.money.thisMonthRevenue / analytics.money.expectedRevenue) * 100)
+    const monthlyGrowthRate = expectedRevenue > 0
+      ? Math.round((thisMonthRevenue / expectedRevenue) * 100)
       : 0;
 
     return { leadToProjectRate, completionRate, averageProjectValue, monthlyGrowthRate };
@@ -129,25 +135,25 @@ const Dashboard = memo(function Dashboard() {
 
   // Memoized growth rate calculation
   const growthRate = useMemo(() => {
-    const current = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
-    const previous = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
-    if (previous === 0 && current > 0) return '+100%';
-    if (previous === 0 && current === 0) return '0%';
-    const growth = ((current - previous) / previous * 100).toFixed(1);
+    const thisMonth = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
+    const lastMonth = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
+    if (lastMonth === 0 && thisMonth > 0) return '+100%';
+    if (lastMonth === 0 && thisMonth === 0) return '0%';
+    const growth = ((thisMonth - lastMonth) / lastMonth * 100).toFixed(1);
     return `${growth > 0 ? '+' : ''}${growth}%`;
   }, [dashboardData.analytics]);
 
   // Project status counts
   const projectStatusCounts = useMemo(() => {
-    const analytics = dashboardData.analytics;
-    if (!analytics?.revenueBreakdown?.projectStatusWise) {
+    const projects = dashboardData.analytics?.projects;
+    if (!projects) {
       return { active: 0, pending: 0, completed: 0, onHold: 0, cancelled: 0 };
     }
     return {
-      active: analytics.revenueBreakdown.projectStatusWise.active || 0,
+      active: projects.active || 0,
       pending: 0,
-      completed: analytics.revenueBreakdown.projectStatusWise.completed || 0,
-      onHold: analytics.revenueBreakdown.projectStatusWise.onHold || 0,
+      completed: projects.completed || 0,
+      onHold: projects.onHold || 0,
       cancelled: 0
     };
   }, [dashboardData.analytics]);
@@ -185,26 +191,43 @@ const Dashboard = memo(function Dashboard() {
 
     dashboardCache.promise = (async () => {
       try {
-        // Single analytics endpoint call
-        const analyticsRes = await api.get('/api/dashboard/analytics');
-        const analytics = analyticsRes.data.data;
+        // Call the 3 new optimized APIs in parallel
+        const [businessRes, alertsRes, activityRes] = await Promise.all([
+          api.get('/api/dashboard/business-metrics'),
+          api.get('/api/dashboard/alerts'),
+          api.get('/api/dashboard/recent-activity')
+        ]);
 
-        // Get upcoming auto-renewals
-        const autoRenewalsRes = await api.get('/api/dashboard/upcoming-auto-renewals');
-        const upcomingAutoRenewals = autoRenewalsRes.data.data || [];
+        const businessData = businessRes.data.data;
+        const alertsData = alertsRes.data.data;
+        const activityData = activityRes.data.data;
 
         const newDashboardData = {
-          totalLeads: analytics.leadsFunnel?.totalLeads || 0,
-          activeProjects: analytics.projectsMetrics?.activeProjects || 0,
-          completedProjects: analytics.projectsMetrics?.completedProjects || 0,
-          totalEmployees: analytics.summary?.totalEmployees || 0,
-          totalRevenue: analytics.money?.expectedRevenue || 0,
-          employees: analytics.recentData?.employees || [],
-          leads: analytics.recentData?.leads || [],
-          recentTasks: analytics.recentData?.tasks || [],
-          projects: analytics.recentData?.projects || [],
-          upcomingAutoRenewals: upcomingAutoRenewals,
-          analytics: analytics
+          totalLeads: businessData.leads?.total || 0,
+          activeProjects: businessData.projects?.active || 0,
+          completedProjects: businessData.projects?.completed || 0,
+          totalEmployees: activityData.totalEmployees || 0,
+          totalRevenue: businessData.revenue?.expected || 0,
+          employees: activityData.recentEmployees || [],
+          leads: activityData.recentLeads || [],
+          recentTasks: activityData.recentTasks || [],
+          projects: businessData.projects || {},
+          upcomingAutoRenewals: alertsData.upcomingBilling || [],
+          analytics: {
+            revenue: businessData.revenue,
+            projects: businessData.projects,
+            leads: businessData.leads,
+            invoices: businessData.invoices,
+            alerts: alertsData,
+            recentData: activityData,
+            // Add compatibility data for existing frontend
+            monthlyEarnings: businessData.monthlyEarnings,
+            revenueBreakdown: businessData.revenueBreakdown,
+            money: {
+              expectedRevenue: businessData.revenue?.expected || 0,
+              totalInvoiceValue: businessData.invoices?.amount || 0
+            }
+          }
         };
 
         // Cache the data
@@ -214,18 +237,7 @@ const Dashboard = memo(function Dashboard() {
         setDashboardData(newDashboardData);
 
       } catch (error) {
-
-        // Try to get auto-renewals separately if main call fails
-        try {
-          const autoRenewalsRes = await api.get('/api/dashboard/upcoming-auto-renewals');
-          setDashboardData(prev => ({
-            ...prev,
-            upcomingAutoRenewals: autoRenewalsRes.data.data || []
-          }));
-        } catch (autoRenewalError) {
-          // Ignore auto-renewal errors
-        }
-
+        console.error('Dashboard data fetch error:', error);
         // Keep existing data on error
       } finally {
         setLoading(false);
@@ -324,7 +336,7 @@ const Dashboard = memo(function Dashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
-                <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">₹{(dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || dashboardData.totalRevenue || 0).toLocaleString()}</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">₹{(dashboardData.analytics?.revenue?.thisMonth || dashboardData.totalRevenue || 0).toLocaleString()}</p>
                 <p className="text-xs text-gray-500 mt-1">This month</p>
               </div>
               <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
@@ -415,8 +427,13 @@ const Dashboard = memo(function Dashboard() {
                   <span className="text-xs text-yellow-700 dark:text-yellow-400">Outstanding Due</span>
                   <span className="text-sm font-bold text-yellow-800 dark:text-yellow-300">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.dueAmount || 0).toLocaleString()}</span>
                 </div>
-                <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                  Auto-renewal: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.autoRenewalRevenue || 0).toLocaleString()}
+                <div className="grid grid-cols-2 gap-2 text-xs mt-1">
+                  <div className="text-yellow-600 dark:text-yellow-400">
+                    One-time: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.oneTimeDue || 0).toLocaleString()}
+                  </div>
+                  <div className="text-yellow-600 dark:text-yellow-400">
+                    Auto-renewal: ₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.autoRenewalRevenue || 0).toLocaleString()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -440,7 +457,7 @@ const Dashboard = memo(function Dashboard() {
                     One-time: ₹{(dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.ONE_TIME?.paid || 0).toLocaleString()}
                   </div>
                   <div className="text-green-600 dark:text-green-400">
-                    Recurring: ₹{((dashboardData.analytics?.monthlyEarnings?.actualPayments?.totalPaid || 0) - (dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.ONE_TIME?.paid || 0)).toLocaleString()}
+                    Recurring: ₹{(dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.RECURRING?.paid || 0).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -486,14 +503,14 @@ const Dashboard = memo(function Dashboard() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs sm:text-sm text-green-600">Next Month</span>
-                <span className="text-xs sm:text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.nextMonthExpected?.total || 0).toLocaleString()}</span>
+                <span className="text-xs sm:text-sm font-bold">₹{(dashboardData.analytics?.monthlyEarnings?.actualPayments?.recurringDue || 0).toLocaleString()}</span>
               </div>
               <div className="bg-orange-50 dark:bg-orange-900/20 rounded p-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-orange-600 font-medium">This Year (All)</span>
                   <span className="text-xs sm:text-sm font-bold">₹{(() => {
                     const oneTime = dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.ONE_TIME?.total || 0;
-                    const recurring = dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0;
+                    const recurring = dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.RECURRING?.monthly || 0;
                     return (oneTime + (recurring * 12)).toLocaleString();
                   })()}</span>
                 </div>
@@ -502,7 +519,7 @@ const Dashboard = memo(function Dashboard() {
               <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm text-purple-600 font-medium">Recurring Only</span>
-                  <span className="text-xs sm:text-sm font-bold">₹{((dashboardData.analytics?.monthlyEarnings?.currentMonth?.recurring || 0) * 12).toLocaleString()}</span>
+                  <span className="text-xs sm:text-sm font-bold">₹{((dashboardData.analytics?.revenueBreakdown?.projectTypeWise?.RECURRING?.monthly || 0) * 12).toLocaleString()}</span>
                 </div>
                 <div className="text-xs text-purple-600 mt-1">Sustainable income</div>
               </div>
@@ -555,11 +572,14 @@ const Dashboard = memo(function Dashboard() {
                   <h5 className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">Invoices</h5>
                   <div className="bg-green-50 dark:bg-green-900/20 rounded p-2">
                     <div className="text-center">
-                      <span className="text-lg font-bold text-green-600">{dashboardData.analytics?.invoiceMetrics?.totalInvoices || 0}</span>
-                      <p className="text-xs text-green-600">Sent</p>
+                      <span className="text-lg font-bold text-green-600">{dashboardData.analytics?.invoices?.total || 0}</span>
+                      <p className="text-xs text-green-600">Total</p>
                     </div>
                     <div className="text-xs text-green-600 text-center mt-1">
-                      ₹{(dashboardData.analytics?.invoiceMetrics?.totalInvoiceAmount || dashboardData.analytics?.money?.totalInvoiceValue || dashboardData.analytics?.summary?.totalInvoiceAmount || 0).toLocaleString()}
+                      ₹{(dashboardData.analytics?.invoices?.amount || 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-red-600 text-center mt-1">
+                      {dashboardData.analytics?.invoices?.overdue || 0} overdue
                     </div>
                   </div>
                 </div>
@@ -623,8 +643,11 @@ const Dashboard = memo(function Dashboard() {
               </div>
               <div className="space-y-2">
                 <h5 className="text-xs font-medium text-orange-700 dark:text-orange-400 mb-2">Auto Renewals</h5>
-                {dashboardData.upcomingAutoRenewals.slice(0, 2).map((renewal, index) => {
-                  const isUrgent = renewal.daysUntilRenewal <= 7;
+                {(dashboardData.analytics?.alerts?.upcomingBilling || []).slice(0, 2).map((renewal, index) => {
+                  const billingDate = new Date(renewal.billingDate);
+                  const today = new Date();
+                  const daysUntilRenewal = Math.ceil((billingDate - today) / (1000 * 60 * 60 * 24));
+                  const isUrgent = daysUntilRenewal <= 7;
                   return (
                     <div key={index} className="space-y-1">
                       <div className="flex justify-between items-center">
@@ -632,14 +655,14 @@ const Dashboard = memo(function Dashboard() {
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                           isUrgent ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
                         }`}>
-                          {renewal.daysUntilRenewal}d
+                          {daysUntilRenewal}d
                         </span>
                       </div>
                       <div className="text-xs text-gray-500">₹{renewal.amount?.toLocaleString()}</div>
                     </div>
                   );
                 })}
-                {dashboardData.upcomingAutoRenewals.length === 0 && (
+                {(dashboardData.analytics?.alerts?.upcomingBilling || []).length === 0 && (
                   <p className="text-sm text-gray-500">No auto renewals</p>
                 )}
               </div>
