@@ -22,7 +22,51 @@ const STATUS_COLORS = {
   'assigned': 'bg-purple-500'
 };
 
-const AVATAR_COLORS = ['from-blue-400 to-purple-500', 'from-green-400 to-blue-500', 'from-purple-400 to-pink-500', 'from-yellow-400 to-red-500'];
+const AVATAR_COLORS = [
+  'from-blue-500 to-purple-600',
+  'from-green-500 to-teal-600',
+  'from-orange-500 to-red-600',
+  'from-purple-500 to-pink-600',
+  'from-indigo-500 to-blue-600',
+  'from-yellow-500 to-orange-600',
+  'from-pink-500 to-rose-600',
+  'from-teal-500 to-cyan-600'
+];
+
+// Memoized EmployeeAvatar component
+const EmployeeAvatar = memo(({ employee, index, onClick }) => {
+  const initials = employee.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
+  return (
+    <motion.div
+      key={employee._id || index}
+      whileHover={{ scale: 1.1, y: -1 }}
+      onClick={() => onClick(employee)}
+      className={`w-10 h-10 rounded-full bg-gradient-to-br ${AVATAR_COLORS[index % AVATAR_COLORS.length]} border-2 border-white/50 backdrop-blur-sm shadow-lg flex items-center justify-center text-white text-sm font-medium cursor-pointer`}
+    >
+      {initials}
+    </motion.div>
+  );
+});
+
+// Standardized animation variants
+const rowVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
+};
 
 // Loading skeleton component
 const LoadingSkeleton = ({ className }) => (
@@ -50,6 +94,13 @@ const Dashboard = memo(function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
+  // First-visit animation control
+  const shouldAnimate = useMemo(() => !sessionStorage.getItem('dashSeen'), []);
+
+  useEffect(() => {
+    sessionStorage.setItem('dashSeen', 'true');
+  }, []);
+
   // Memoized calculations using analytics data (single source of truth)
   const memoizedMetrics = useMemo(() => {
     const analytics = dashboardData.analytics;
@@ -76,6 +127,16 @@ const Dashboard = memo(function Dashboard() {
     return { leadToProjectRate, completionRate, averageProjectValue, monthlyGrowthRate };
   }, [dashboardData.analytics]);
 
+  // Memoized growth rate calculation
+  const growthRate = useMemo(() => {
+    const current = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
+    const previous = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
+    if (previous === 0 && current > 0) return '+100%';
+    if (previous === 0 && current === 0) return '0%';
+    const growth = ((current - previous) / previous * 100).toFixed(1);
+    return `${growth > 0 ? '+' : ''}${growth}%`;
+  }, [dashboardData.analytics]);
+
   // Project status counts
   const projectStatusCounts = useMemo(() => {
     const analytics = dashboardData.analytics;
@@ -84,39 +145,25 @@ const Dashboard = memo(function Dashboard() {
     }
     return {
       active: analytics.revenueBreakdown.projectStatusWise.active || 0,
-      pending: 0, // Not in API response
+      pending: 0,
       completed: analytics.revenueBreakdown.projectStatusWise.completed || 0,
       onHold: analytics.revenueBreakdown.projectStatusWise.onHold || 0,
-      cancelled: 0 // Not in API response
+      cancelled: 0
     };
   }, [dashboardData.analytics]);
 
-  // Task status counts
+  // Optimized task status counts - single loop instead of multiple filters
   const taskStatusCounts = useMemo(() => {
-    const tasks = dashboardData.recentTasks || [];
-    console.log('Tasks data:', tasks); // Debug log
-    
-    return {
-      completed: tasks.filter(task => 
-        task.status?.toLowerCase() === 'completed' || 
-        task.status?.toLowerCase() === 'complete' ||
-        task.status?.toLowerCase() === 'done'
-      ).length,
-      inProgress: tasks.filter(task => 
-        task.status?.toLowerCase() === 'in_progress' || 
-        task.status?.toLowerCase() === 'in progress' ||
-        task.status?.toLowerCase() === 'progress' ||
-        task.status?.toLowerCase() === 'active'
-      ).length,
-      pending: tasks.filter(task => 
-        task.status?.toLowerCase() === 'pending' ||
-        task.status?.toLowerCase() === 'assigned'
-      ).length,
-      overdue: tasks.filter(task => 
-        task.status?.toLowerCase() === 'overdue' ||
-        task.status?.toLowerCase() === 'delayed'
-      ).length
-    };
+    const counts = { completed: 0, inProgress: 0, pending: 0, overdue: 0 };
+    (dashboardData.recentTasks || []).forEach(task => {
+      const status = task.status?.toLowerCase();
+      if (!status) return;
+      if (['completed', 'complete', 'done'].includes(status)) counts.completed++;
+      else if (['in_progress', 'in progress', 'progress', 'active'].includes(status)) counts.inProgress++;
+      else if (['pending', 'assigned'].includes(status)) counts.pending++;
+      else if (['overdue', 'delayed'].includes(status)) counts.overdue++;
+    });
+    return counts;
   }, [dashboardData.recentTasks]);
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
@@ -203,37 +250,22 @@ const Dashboard = memo(function Dashboard() {
       >
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
+          initial={shouldAnimate ? { opacity: 0, x: -20 } : { opacity: 1, x: 0 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.05 }}
+          transition={shouldAnimate ? { duration: 0.3 } : { duration: 0 }}
           className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4"
         >
           <div>
-            <motion.h1
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="text-2xl font-bold text-gray-900 dark:text-white"
-            >
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               Dashboard Overview
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, delay: 0.15 }}
-              className="text-gray-600 dark:text-gray-400 mt-1"
-            >
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
               Monitor your business performance and key metrics
-            </motion.p>
+            </p>
           </div>
 
           {/* Team Avatars */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4"
-          >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             {/* Refresh Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -249,44 +281,31 @@ const Dashboard = memo(function Dashboard() {
             </motion.button>
 
             <div className="flex -space-x-2">
-              {dashboardData.employees.slice(0, 4).map((employee, index) => {
-                const initials = employee.name ? employee.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-                return (
-                  <motion.div
-                    key={employee._id || index}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2, delay: 0.1 + index * 0.03 }}
-                    whileHover={{ scale: 1.1, y: -1 }}
-                    onClick={() => setSelectedEmployee(employee)}
-                    className={`w-10 h-10 rounded-full bg-gradient-to-br ${AVATAR_COLORS[index]} border-2 border-white/50 backdrop-blur-sm shadow-lg flex items-center justify-center text-white text-sm font-medium cursor-pointer`}
-                  >
-                    {initials}
-                  </motion.div>
-                );
-              })}
+              {dashboardData.employees.slice(0, 4).map((employee, index) => (
+                <EmployeeAvatar
+                  key={employee._id || index}
+                  employee={employee}
+                  index={index}
+                  onClick={setSelectedEmployee}
+                />
+              ))}
               {dashboardData.totalEmployees > 4 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.2, delay: 0.2 }}
-                  className="w-10 h-10 rounded-full bg-gray-500/80 backdrop-blur-sm border-2 border-white/50 shadow-lg flex items-center justify-center text-white text-xs font-medium"
-                >
+                <div className="w-10 h-10 rounded-full bg-gray-500/80 backdrop-blur-sm border-2 border-white/50 shadow-lg flex items-center justify-center text-white text-xs font-medium">
                   +{dashboardData.totalEmployees - 4}
-                </motion.div>
+                </div>
               )}
             </div>
-          </motion.div>
+          </div>
         </motion.div>
 
         {/* Row 1: First 4 cards */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+          variants={rowVariants}
+          initial={shouldAnimate ? "hidden" : "show"}
+          animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Projects</p>
@@ -301,7 +320,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Revenue</p>
@@ -316,7 +335,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Team</p>
@@ -331,7 +350,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Clients</p>
@@ -349,13 +368,13 @@ const Dashboard = memo(function Dashboard() {
 
         {/* Row 2: Next 4 cards */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.2 }}
+          variants={rowVariants}
+          initial={shouldAnimate ? "hidden" : "show"}
+          animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           {/* Monthly Earnings & Revenue Trend - Merged Card */}
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-emerald-50/80 to-blue-50/80 dark:from-emerald-900/20 dark:to-blue-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-emerald-200/50">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-emerald-50/80 to-blue-50/80 dark:from-emerald-900/20 dark:to-blue-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-emerald-200/50">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
               <svg className="w-4 h-4 text-emerald-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -387,15 +406,7 @@ const Dashboard = memo(function Dashboard() {
                 <div className="bg-purple-100/50 dark:bg-purple-900/30 rounded p-2">
                   <span className="text-xs text-purple-700 dark:text-purple-400 block">Growth Rate</span>
                   <span className="text-sm font-bold text-purple-800 dark:text-purple-300">
-                    {(() => {
-                      const current = dashboardData.analytics?.monthlyEarnings?.currentMonth?.total || 0;
-                      const previous = dashboardData.analytics?.monthlyEarnings?.previousMonth?.total || 0;
-                      if (previous === 0 && current > 0) return '+100%';
-                      if (previous === 0 && current === 0) return '0%';
-                      const growth = ((current - previous) / previous * 100).toFixed(1);
-                      return `${growth > 0 ? '+' : ''}${growth}%`;
-                    })()
-                    }
+                    {growthRate}
                   </span>
                 </div>
               </div>
@@ -411,7 +422,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
               <svg className="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -460,13 +471,13 @@ const Dashboard = memo(function Dashboard() {
                       </span>
                     </div>
                   ));
-                })()
-                }
+                })(
+                )}
               </div>
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-yellow-50/80 to-orange-50/80 dark:from-yellow-900/20 dark:to-orange-900/20 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-yellow-200/50">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-gradient-to-br from-yellow-50/80 to-orange-50/80 dark:from-yellow-900/20 dark:to-orange-900/20 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-yellow-200/50">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Expected</h4>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
@@ -499,7 +510,7 @@ const Dashboard = memo(function Dashboard() {
           </motion.div>
 
           {/* Business Overview - Redesigned */}
-          <motion.div whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
               <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -559,12 +570,12 @@ const Dashboard = memo(function Dashboard() {
 
         {/* Row 3: Last 3 cards */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.8 }}
+          variants={rowVariants}
+          initial={shouldAnimate ? "hidden" : "show"}
+          animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
         >
-          <motion.div whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
+          <motion.div variants={cardVariants} whileHover={{ y: -2 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-5 shadow-lg border border-white/20">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Performance</h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center">
@@ -582,7 +593,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-orange-50/80 to-red-50/80 dark:from-orange-900/20 dark:to-red-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-orange-200/50">
+          <motion.div variants={cardVariants} whileHover={{ y: -2 }} className="bg-gradient-to-br from-orange-50/80 to-red-50/80 dark:from-orange-900/20 dark:to-red-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-orange-200/50">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
               <svg className="w-4 h-4 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -635,7 +646,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
           </motion.div>
 
-          <motion.div whileHover={{ y: -2 }} className="bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-purple-200/50">
+          <motion.div variants={cardVariants} whileHover={{ y: -2 }} className="bg-gradient-to-br from-purple-50/80 to-pink-50/80 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-md rounded-lg p-5 shadow-lg border border-purple-200/50">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
               <svg className="w-4 h-4 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 515 0z" />
