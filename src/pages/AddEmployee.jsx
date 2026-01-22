@@ -551,16 +551,32 @@ const AddEmployee = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Designation
+                    Designation *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="designation"
-                    value={formData.designation}
+                    value={formData.designation || ""}
                     onChange={handleChange}
-                    placeholder="Job title or role"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
-                  />
+                    required
+                  >
+                    <option value="">Select Designation</option>
+                    <option value="Full Stack Developer">Full Stack Developer</option>
+                    <option value="Senior Full Stack Developer">Senior Full Stack Developer</option>
+                    <option value="Frontend Developer">Frontend Developer</option>
+                    <option value="Backend Developer">Backend Developer</option>
+                    <option value="UI/UX">UI/UX</option>
+                    <option value="Editor">Editor</option>
+                    <option value="Designer">Designer</option>
+                    <option value="Intern">Intern</option>
+                    <option value="HR">HR</option>
+                    <option value="Sales">Sales</option>
+                  </select>
+                  {isEditMode && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Current: {formData.designation || "None selected"}
+                    </p>
+                  )}
                 </div>
 
                 <div>
