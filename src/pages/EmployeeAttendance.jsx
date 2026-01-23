@@ -44,14 +44,172 @@ function EmployeeAttendance() {
   useEffect(() => {
     if (isAdmin) {
       loadEmployees();
+      loadGoogleSheetsData();
     }
   }, [isAdmin]);
 
   const [employees, setEmployees] = useState([]);
+  const [googleSheetsData, setGoogleSheetsData] = useState([]);
+  const [loadingGoogleSheets, setLoadingGoogleSheets] = useState(false);
+  const [attendanceByDate, setAttendanceByDate] = useState({});
+  const [selectedCalendarEmployee, setSelectedCalendarEmployee] = useState('');
+  const [employeeCalendarData, setEmployeeCalendarData] = useState({});
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState('');
+
+  const loadEmployeeCalendarData = async (employeeName, month) => {
+    if (!employeeName || !month) return;
+    setLoadingGoogleSheets(true);
+    try {
+      const year = month.getFullYear();
+      const monthNum = month.getMonth() + 1;
+      const monthStr = `${year}-${String(monthNum).padStart(2, '0')}`;
+      
+      // Try monthly summary first
+      const response = await fetch(`${import.meta.env.VITE_ATTENDANCE_API_URL}?summary_month=${monthStr}`);
+      const data = await response.json();
+      
+      let employeeData = data.data?.find(emp => emp.Name === employeeName) || {};
+      
+      // If no data in monthly summary, try to build from daily records
+      if (Object.keys(employeeData).length <= 2) {
+        console.log(`No monthly data for ${employeeName}, trying daily records...`);
+        employeeData = { Name: employeeName };
+        
+        // Get all days in the month
+        const daysInMonth = new Date(year, monthNum, 0).getDate();
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dateStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          try {
+            const dailyResponse = await fetch(`${import.meta.env.VITE_ATTENDANCE_API_URL}?date=${dateStr}`);
+            const dailyData = await dailyResponse.json();
+            
+            const employeeRecord = dailyData.data?.find(record => record.Name === employeeName);
+            if (employeeRecord) {
+              // Check if employee has check-in data for this day
+              const hasCheckIn = Object.keys(employeeRecord).some(key => 
+                key.startsWith('Check-in') && employeeRecord[key] && employeeRecord[key] !== '-'
+              );
+              if (hasCheckIn) {
+                employeeData[dateStr] = 'P'; // Mark as Present
+              }
+            }
+          } catch (dailyError) {
+            // Skip this day if error
+            continue;
+          }
+        }
+      }
+      
+      console.log(`Final employee data for ${employeeName}:`, employeeData);
+      setEmployeeCalendarData(prev => ({ ...prev, [`${employeeName}-${monthStr}`]: employeeData }));
+    } catch (error) {
+      console.error('Error loading employee calendar data:', error);
+    } finally {
+      setLoadingGoogleSheets(false);
+    }
+  };
+
+  const getAttendanceStatus = (date, employeeData) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const status = employeeData[dateStr];
+    if (status === 'P' || status === 'Present') return { status: 'P', class: 'bg-green-500 text-white' };
+    if (status === 'A' || status === 'Absent') return { status: 'A', class: 'bg-red-500 text-white' };
+    if (status === 'L' || status === 'Leave') return { status: 'L', class: 'bg-yellow-500 text-white' };
+    if (status === 'WFH' || status === 'Work From Home') return { status: 'W', class: 'bg-blue-500 text-white' };
+    if (status === 'H' || status === 'Holiday') return { status: 'H', class: 'bg-gray-400 text-white' };
+    if (status === 'HD' || status === 'Half Day') return { status: 'HD', class: 'bg-orange-500 text-white' };
+    return { status: '', class: 'bg-gray-100 text-gray-400' };
+  };
 
   const formatTime = (dateString) => {
     if (!dateString) return '--';
     return new Date(dateString).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  };
+
+  const calculateAttendanceStatus = (checkInTimes, checkOutTimes) => {
+    if (checkInTimes.length === 0) return { status: 'No Data', class: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' };
+    
+    // Extract just the time part and parse it correctly
+    const timeStr = checkInTimes[0].includes(',') ? checkInTimes[0].split(', ')[1] : checkInTimes[0];
+    const firstCheckIn = new Date(`2000-01-01 ${timeStr}`);
+    
+    let lastCheckOut = null;
+    if (checkOutTimes.length > 0) {
+      const outTimeStr = checkOutTimes[checkOutTimes.length - 1].includes(',') ? 
+                        checkOutTimes[checkOutTimes.length - 1].split(', ')[1] : 
+                        checkOutTimes[checkOutTimes.length - 1];
+      lastCheckOut = new Date(`2000-01-01 ${outTimeStr}`);
+    }
+    
+    const lateTime_1035 = new Date('2000-01-01 10:35:00 AM');
+    const earlyOutTime = new Date('2000-01-01 05:30:00 PM');
+    
+    let totalHours = 0;
+    if (lastCheckOut) {
+      totalHours = (lastCheckOut - firstCheckIn) / (1000 * 60 * 60);
+    }
+    
+    if (!lastCheckOut) {
+      if (firstCheckIn > lateTime_1035) {
+        return { status: 'Late (After 10:35)', class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' };
+      } else {
+        return { status: 'Checked In', class: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
+      }
+    }
+    
+    if (totalHours >= 7) {
+      return { status: 'Completed', class: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' };
+    } else if (firstCheckIn > lateTime_1035) {
+      return { status: 'Late (After 10:35)', class: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' };
+    } else if (lastCheckOut < earlyOutTime) {
+      return { status: 'Early Out (Before 17:30)', class: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' };
+    } else if (totalHours > 0) {
+      return { status: 'Under 7 Hours', class: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' };
+    } else {
+      return { status: 'No Work Recorded', class: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' };
+    }
+  };
+
+  const formatGoogleSheetsTime = (timeStr) => {
+    if (!timeStr || timeStr === '-' || timeStr === '') return '--';
+    try {
+      const dateObj = new Date(timeStr);
+      if (isNaN(dateObj.getTime())) return timeStr;
+      
+      // If it's a 1899 date (Google Sheets time-only format), use today's date with that time
+      if (dateObj.getFullYear() === 1899) {
+        const today = new Date();
+        const timeOnlyDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 
+                                     dateObj.getHours(), dateObj.getMinutes(), dateObj.getSeconds());
+        
+        return timeOnlyDate.toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          day: '2-digit',
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      }
+      
+      // For normal dates, format as is
+      return dateObj.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return timeStr;
+    }
   };
 
   const loadAttendanceRecords = async () => {
@@ -288,6 +446,44 @@ function EmployeeAttendance() {
       const data = response.data;
       setEmployees(data.data || data || []);
     } catch (error) {
+    }
+  };
+
+  const loadGoogleSheetsData = async () => {
+    setLoadingGoogleSheets(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_ATTENDANCE_API_URL}?sheet=Summary`);
+      const data = await response.json();
+      setGoogleSheetsData(data.data || []);
+    } catch (error) {
+      console.error('Error loading Google Sheets data:', error);
+      setGoogleSheetsData([]);
+    } finally {
+      setLoadingGoogleSheets(false);
+    }
+  };
+
+  const loadAttendanceByDate = async (date) => {
+    if (!date) return;
+    
+    setLoadingGoogleSheets(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_ATTENDANCE_API_URL}?date=${date}`);
+      const data = await response.json();
+      
+      setAttendanceByDate(prev => ({
+        ...prev,
+        [date]: data.data || []
+      }));
+      
+    } catch (error) {
+      console.error('Error loading attendance data for date:', error);
+      setAttendanceByDate(prev => ({
+        ...prev,
+        [date]: []
+      }));
+    } finally {
+      setLoadingGoogleSheets(false);
     }
   };
 
@@ -735,6 +931,305 @@ function EmployeeAttendance() {
           )}
         </div>
       </div>
+
+      {/* Google Sheets Attendance Data */}
+      {isAdmin && (
+        <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md mb-6 border border-white/20 dark:border-gray-700/50">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              RFID Employee Records
+            </h3>
+            <button
+              onClick={loadGoogleSheetsData}
+              disabled={loadingGoogleSheets}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 text-sm"
+            >
+              {loadingGoogleSheets ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            {googleSheetsData.length > 0 ? (
+              <table className="min-w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Employee Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      RFID UID
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                  {googleSheetsData.map((employee, index) => (
+                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {employee.Name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
+                        {employee.UID}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  {loadingGoogleSheets ? 'Loading RFID data...' : 'No RFID employee records found.'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Google Sheets Daily Attendance */}
+      {isAdmin && (
+        <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md mb-6 border border-white/20 dark:border-gray-700/50">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Daily RFID Attendance Records
+              </h3>
+            </div>
+            <div className="flex gap-3 items-center">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Date:</label>
+              <input
+                type="date"
+                value={selectedAttendanceDate}
+                onChange={(e) => {
+                  setSelectedAttendanceDate(e.target.value);
+                  if (e.target.value) {
+                    loadAttendanceByDate(e.target.value);
+                  }
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            {selectedAttendanceDate && attendanceByDate[selectedAttendanceDate] ? (
+              attendanceByDate[selectedAttendanceDate].length > 0 ? (
+                <table className="min-w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Employee Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Check-in Date & Time
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Check-out Date & Time
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                    {attendanceByDate[selectedAttendanceDate].map((record, index) => {
+                      // Extract check-in and check-out times
+                      const checkInTimes = [];
+                      const checkOutTimes = [];
+                      
+                      // Look for Check-in 1, Check-in 2, etc.
+                      for (let i = 1; i <= 10; i++) {
+                        const checkIn = record[`Check-in ${i}`];
+                        const checkOut = record[`Check-out ${i}`];
+                        
+                        if (checkIn && checkIn !== '-' && checkIn !== '') {
+                          checkInTimes.push(formatGoogleSheetsTime(checkIn));
+                        }
+                        if (checkOut && checkOut !== '-' && checkOut !== '') {
+                          checkOutTimes.push(formatGoogleSheetsTime(checkOut));
+                        }
+                      }
+                      
+                      return (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            {record.Name || record.name || '--'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                            {checkInTimes.length > 0 ? (
+                              <div className="space-y-1">
+                                {checkInTimes.map((time, idx) => (
+                                  <div key={idx} className="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded font-mono">
+                                    {time}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">--</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                            {checkOutTimes.length > 0 ? (
+                              <div className="space-y-1">
+                                {checkOutTimes.map((time, idx) => (
+                                  <div key={idx} className="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded font-mono">
+                                    {time}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500">--</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {(() => {
+                              const statusInfo = calculateAttendanceStatus(checkInTimes, checkOutTimes);
+                              return (
+                                <span className={`px-3 py-1 text-xs rounded-full font-medium ${statusInfo.class}`}>
+                                  {statusInfo.status}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No attendance records found for {selectedAttendanceDate}
+                  </p>
+                </div>
+              )
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">
+                  {loadingGoogleSheets ? 'Loading attendance data...' : 'Select a date to view attendance records'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Employee Calendar Section */}
+      {isAdmin && (
+        <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md mb-6 border border-white/20 dark:border-gray-700/50">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              Employee Calendar View
+            </h3>
+            <div className="flex gap-4 items-center mb-4">
+              <select
+                value={selectedCalendarEmployee}
+                onChange={(e) => {
+                  setSelectedCalendarEmployee(e.target.value);
+                  if (e.target.value) {
+                    loadEmployeeCalendarData(e.target.value, currentMonth);
+                  }
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="">Choose Employee</option>
+                {googleSheetsData.map((employee, index) => (
+                  <option key={index} value={employee.Name}>
+                    {employee.Name}
+                  </option>
+                ))}
+              </select>
+              
+              {selectedCalendarEmployee && (
+                <div className="flex gap-2 items-center">
+                  <button
+                    onClick={() => {
+                      const newMonth = new Date(currentMonth);
+                      newMonth.setMonth(newMonth.getMonth() - 1);
+                      setCurrentMonth(newMonth);
+                      loadEmployeeCalendarData(selectedCalendarEmployee, newMonth);
+                    }}
+                    className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                  >
+                    ←
+                  </button>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[120px] text-center">
+                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const newMonth = new Date(currentMonth);
+                      newMonth.setMonth(newMonth.getMonth() + 1);
+                      setCurrentMonth(newMonth);
+                      loadEmployeeCalendarData(selectedCalendarEmployee, newMonth);
+                    }}
+                    className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="p-6">
+            {selectedCalendarEmployee ? (
+              loadingGoogleSheets ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">Loading calendar...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-7 gap-1">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} className="p-2 text-center font-medium text-gray-500 dark:text-gray-400 text-sm">
+                      {day}
+                    </div>
+                  ))}
+                  {(() => {
+                    const year = currentMonth.getFullYear();
+                    const month = currentMonth.getMonth();
+                    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+                    const employeeData = employeeCalendarData[`${selectedCalendarEmployee}-${monthStr}`] || {};
+                    const firstDay = new Date(year, month, 1);
+                    const lastDay = new Date(year, month + 1, 0);
+                    const startDate = new Date(firstDay);
+                    startDate.setDate(startDate.getDate() - firstDay.getDay());
+                    const days = [];
+                    const current = new Date(startDate);
+                    while (current <= lastDay || days.length < 42) {
+                      days.push(new Date(current));
+                      current.setDate(current.getDate() + 1);
+                      if (days.length >= 42) break;
+                    }
+                    return days.map((date, index) => {
+                      const isCurrentMonth = date.getMonth() === month;
+                      const attendanceInfo = getAttendanceStatus(date, employeeData);
+                      return (
+                        <div
+                          key={index}
+                          className={`p-2 text-center text-sm border border-gray-200 dark:border-gray-600 ${
+                            isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400'
+                          }`}
+                        >
+                          <div className="font-medium mb-1">{date.getDate()}</div>
+                          {isCurrentMonth && attendanceInfo.status && (
+                            <div className={`w-6 h-6 rounded-full mx-auto flex items-center justify-center text-xs font-bold ${attendanceInfo.class}`}>
+                              {attendanceInfo.status}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">Select an employee to view their attendance calendar</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Timeout Records Table */}
       <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md border border-white/20 dark:border-gray-700/50">
