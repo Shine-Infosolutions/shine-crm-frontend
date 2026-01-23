@@ -12,6 +12,12 @@ function ProjectManagement() {
   const [error, setError] = useState("");
   const [projects, setProjects] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [projectTypeFilter, setProjectTypeFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [managerFilter, setManagerFilter] = useState("all");
+  const [dateRangeFilter, setDateRangeFilter] = useState("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
+  const [employees, setEmployees] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, pages: 0, limit: 10 });
   const navigate = useNavigate();
@@ -19,16 +25,22 @@ function ProjectManagement() {
 
   const fetchProjects = useCallback(async () => {
     try {
-      const response = await api.get(`/api/projects?page=${currentPage}&limit=10`);
-      if (response.data.success) {
-        setProjects(response.data.data || []);
-        setPagination(response.data.pagination || { total: 0, pages: 0, limit: 10 });
+      const [projectsResponse, employeesResponse] = await Promise.all([
+        api.get(`/api/projects?page=${currentPage}&limit=10`),
+        api.get('/api/employees')
+      ]);
+      
+      if (projectsResponse.data.success) {
+        setProjects(projectsResponse.data.data || []);
+        setPagination(projectsResponse.data.pagination || { total: 0, pages: 0, limit: 10 });
       } else {
-        const sortedProjects = (response.data || []).sort((a, b) => 
+        const sortedProjects = (projectsResponse.data || []).sort((a, b) => 
           new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
         );
         setProjects(sortedProjects);
       }
+      
+      setEmployees(employeesResponse.data.data || []);
       setLoading(false);
     } catch (err) {
       setError("Failed to load projects. Please try again.");
@@ -92,9 +104,89 @@ function ProjectManagement() {
         project.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (project.clientContact && project.clientContact.includes(searchTerm));
+      
       const matchesStatus = statusFilter === "all" || project.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    }), [projectsWithMetrics, searchTerm, statusFilter]
+      const matchesProjectType = projectTypeFilter === "all" || project.projectType === projectTypeFilter;
+      const matchesPriority = priorityFilter === "all" || project.priority === priorityFilter;
+      const matchesManager = managerFilter === "all" || project.assignedManager === managerFilter;
+      
+      let matchesPaymentStatus = true;
+      if (paymentStatusFilter !== "all") {
+        if (project.projectType === 'ONE_TIME') {
+          const totalAmount = parseFloat(project.oneTimeProject?.totalAmount || 0);
+          const paidAmount = parseFloat(project.oneTimeProject?.paidAmount || 0);
+          
+          switch (paymentStatusFilter) {
+            case "fully_paid":
+              matchesPaymentStatus = paidAmount >= totalAmount && totalAmount > 0;
+              break;
+            case "partially_paid":
+              matchesPaymentStatus = paidAmount > 0 && paidAmount < totalAmount && totalAmount > 0;
+              break;
+            case "unpaid":
+              matchesPaymentStatus = paidAmount === 0 && totalAmount > 0;
+              break;
+            case "overpaid":
+              matchesPaymentStatus = paidAmount > totalAmount && totalAmount > 0;
+              break;
+            case "pending_payment":
+              const today = new Date();
+              const expectedDate = project.oneTimeProject?.expectedDeliveryDate ? new Date(project.oneTimeProject.expectedDeliveryDate) : null;
+              matchesPaymentStatus = paidAmount < totalAmount && totalAmount > 0 && expectedDate && !isNaN(expectedDate.getTime()) && today > expectedDate;
+              break;
+            default:
+              matchesPaymentStatus = false;
+          }
+        } else if (project.projectType === 'RECURRING') {
+          const billingStatus = project.recurringProject?.billingStatus;
+          
+          switch (paymentStatusFilter) {
+            case "active_billing":
+              matchesPaymentStatus = billingStatus === 'Active';
+              break;
+            case "paused_billing":
+              matchesPaymentStatus = billingStatus === 'Paused';
+              break;
+            case "stopped_billing":
+              matchesPaymentStatus = billingStatus === 'Stopped';
+              break;
+            case "overdue_billing":
+              const today = new Date();
+              const nextBillingDate = project.recurringProject?.nextBillingDate ? new Date(project.recurringProject.nextBillingDate) : null;
+              matchesPaymentStatus = billingStatus === 'Active' && nextBillingDate && !isNaN(nextBillingDate.getTime()) && today > nextBillingDate;
+              break;
+            default:
+              matchesPaymentStatus = false;
+          }
+        } else {
+          matchesPaymentStatus = false;
+        }
+      }
+      
+      let matchesDateRange = true;
+      if (dateRangeFilter !== "all") {
+        const today = new Date();
+        const projectDate = new Date(project.createdAt);
+        const daysDiff = Math.floor((today - projectDate) / (1000 * 60 * 60 * 24));
+        
+        switch (dateRangeFilter) {
+          case "today":
+            matchesDateRange = daysDiff === 0;
+            break;
+          case "week":
+            matchesDateRange = daysDiff <= 7;
+            break;
+          case "month":
+            matchesDateRange = daysDiff <= 30;
+            break;
+          case "quarter":
+            matchesDateRange = daysDiff <= 90;
+            break;
+        }
+      }
+      
+      return matchesSearch && matchesStatus && matchesProjectType && matchesPriority && matchesManager && matchesPaymentStatus && matchesDateRange;
+    }), [projectsWithMetrics, searchTerm, statusFilter, projectTypeFilter, priorityFilter, managerFilter, paymentStatusFilter, dateRangeFilter]
   );
 
   const deleteProject = async (projectId, e) => {
@@ -169,6 +261,94 @@ function ProjectManagement() {
           </motion.button>
         </motion.div>
 
+        {/* Advanced Filters */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6"
+        >
+          <select
+            value={projectTypeFilter}
+            onChange={(e) => setProjectTypeFilter(e.target.value)}
+            className="px-3 py-2 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg text-sm"
+          >
+            <option value="all">All Types</option>
+            <option value="ONE_TIME">One-Time</option>
+            <option value="RECURRING">Recurring</option>
+          </select>
+          
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="px-3 py-2 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg text-sm"
+          >
+            <option value="all">All Priorities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+          
+          <select
+            value={managerFilter}
+            onChange={(e) => setManagerFilter(e.target.value)}
+            className="px-3 py-2 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg text-sm"
+          >
+            <option value="all">All Managers</option>
+            {employees.map(emp => (
+              <option key={emp._id} value={emp._id}>{emp.name}</option>
+            ))}
+          </select>
+          
+          <select
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            className="px-3 py-2 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg text-sm"
+          >
+            <option value="all">Payment Status</option>
+            <optgroup label="One-Time Projects">
+              <option value="fully_paid">Fully Paid</option>
+              <option value="partially_paid">Partially Paid</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="overpaid">Overpaid</option>
+              <option value="pending_payment">Payment Overdue</option>
+            </optgroup>
+            <optgroup label="Recurring Projects">
+              <option value="active_billing">Active Billing</option>
+              <option value="paused_billing">Paused Billing</option>
+              <option value="stopped_billing">Stopped Billing</option>
+              <option value="overdue_billing">Overdue Billing</option>
+            </optgroup>
+          </select>
+          
+          <select
+            value={dateRangeFilter}
+            onChange={(e) => setDateRangeFilter(e.target.value)}
+            className="px-3 py-2 bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-lg text-sm"
+          >
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+          </select>
+          
+          <button
+            onClick={() => {
+              setStatusFilter("all");
+              setProjectTypeFilter("all");
+              setPriorityFilter("all");
+              setManagerFilter("all");
+              setPaymentStatusFilter("all");
+              setDateRangeFilter("all");
+              setSearchTerm("");
+            }}
+            className="px-3 py-2 bg-red-500/80 hover:bg-red-600/80 text-white rounded-lg backdrop-blur-xl border border-white/20 shadow-lg text-sm transition-colors"
+          >
+            Clear All
+          </button>
+        </motion.div>
         {/* Status Filter Buttons */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
