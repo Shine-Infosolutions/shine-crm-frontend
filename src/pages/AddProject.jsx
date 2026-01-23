@@ -78,10 +78,10 @@ const ClientSection = React.memo(({ formData, handleChange, clients, setFormData
     
     {/* Additional Client Details for Better Invoice Generation */}
     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-700">
-      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-3">Additional Client Details (Required for Invoice Generation)</h4>
+      <h4 className="text-sm font-medium text-blue-800 dark:text-blue-400 mb-3">Additional Client Details (Optional for Invoice Generation)</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email *</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client Email</label>
           <input 
             type="email" 
             name="clientEmail" 
@@ -89,7 +89,6 @@ const ClientSection = React.memo(({ formData, handleChange, clients, setFormData
             onChange={handleChange} 
             placeholder="client@example.com" 
             className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 text-sm" 
-            required
           />
         </div>
         <div>
@@ -104,7 +103,7 @@ const ClientSection = React.memo(({ formData, handleChange, clients, setFormData
           />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client Address *</label>
+          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Client Address</label>
           <textarea 
             name="clientAddress" 
             value={formData.clientAddress || ""} 
@@ -112,11 +111,10 @@ const ClientSection = React.memo(({ formData, handleChange, clients, setFormData
             rows={2}
             placeholder="Complete address for invoice" 
             className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 text-sm" 
-            required
           />
         </div>
       </div>
-      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">These details are required for proper invoice generation</p>
+      <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">These details are optional but recommended for proper invoice generation</p>
     </div>
   </div>
 ));
@@ -372,18 +370,7 @@ function AddProject() {
         ...(formData.clientId && { clientId: formData.clientId })
       };
 
-      // Additional validation for auto-invoice projects
-      if ((formData.projectType === 'ONE_TIME' && formData.oneTimeProject.autoInvoice) ||
-          (formData.projectType === 'RECURRING' && formData.recurringProject.autoInvoice)) {
-        if (!formData.clientEmail || formData.clientEmail.trim() === '') {
-          setError("Client email is required when auto-invoice is enabled");
-          return;
-        }
-        if (!formData.clientAddress || formData.clientAddress.trim() === '') {
-          setError("Client address is required when auto-invoice is enabled");
-          return;
-        }
-      }
+      // Additional validation for auto-invoice projects - removed email and address requirements
       
       if (formData.projectType === 'ONE_TIME') {
         if (!formData.oneTimeProject.totalAmount) {
