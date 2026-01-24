@@ -8,12 +8,15 @@ const AddEmployee = () => {
   const { API_URL, navigate } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rfidEmployees, setRfidEmployees] = useState([]);
+  const [loadingRfid, setLoadingRfid] = useState(false);
   const location = useLocation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [employeeId, setEmployeeId] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
+    rfid_attendance_name: "",
     profile_image: null,
     password: "",
     contact1: "",
@@ -60,7 +63,23 @@ const AddEmployee = () => {
       setEmployeeId(id);
       fetchEmployeeData(id);
     }
+    loadRfidEmployees();
   }, [location]);
+
+  const loadRfidEmployees = async () => {
+    setLoadingRfid(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_ATTENDANCE_API_URL}?sheet=Summary`);
+      const data = await response.json();
+      console.log('RFID employees data:', data); // Debug log
+      setRfidEmployees(data.data || []);
+    } catch (error) {
+      console.error('Error loading RFID employees:', error);
+      setRfidEmployees([]);
+    } finally {
+      setLoadingRfid(false);
+    }
+  };
 
   const fetchEmployeeData = async (id) => {
     setLoading(true);
@@ -70,6 +89,7 @@ const AddEmployee = () => {
       const data = resp.data.data;
       setFormData({
         name: data.name || "",
+        rfid_attendance_name: data.rfid_attendance_name || "",
         work_start_date: data.work_start_date?.slice(0,10) || "",
         profile_image: data.profile_image || null,
         password: "",
@@ -362,6 +382,29 @@ const AddEmployee = () => {
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    RFID Attendance Name
+                  </label>
+                  <select
+                    name="rfid_attendance_name"
+                    value={formData.rfid_attendance_name}
+                    onChange={handleChange}
+                    disabled={loadingRfid}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-white/20 dark:border-gray-600/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md disabled:opacity-50"
+                  >
+                    <option value="">{loadingRfid ? 'Loading...' : 'Select Name'}</option>
+                    {rfidEmployees.map((employee, index) => (
+                      <option key={index} value={employee.Name}>
+                        {employee.Name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Name as it appears in RFID attendance system - This should match exactly with the name in your RFID attendance records
+                  </p>
                 </div>
 
                 <div>

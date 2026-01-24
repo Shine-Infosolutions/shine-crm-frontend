@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, memo, Suspense, lazy 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import api from '../utils/axiosConfig';
+import EmployeeAttendanceWidget from './EmployeeAttendanceWidget';
 
 // Lazy load heavy components
 const EmployeeModal = lazy(() => import('./EmployeeModal'));
@@ -78,7 +79,7 @@ const LoadingSkeleton = ({ className }) => (
 );
 
 const Dashboard = memo(function Dashboard() {
-  const { navigate } = useAppContext();
+  const { navigate, currentUser } = useAppContext();
   const [dashboardData, setDashboardData] = useState({
     totalLeads: 0,
     activeProjects: 0,
@@ -317,6 +318,13 @@ const Dashboard = memo(function Dashboard() {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
+          {/* Show attendance widget for employees */}
+          {currentUser?.role === 'employee' && (
+            <motion.div variants={cardVariants} className="lg:col-span-2">
+              <EmployeeAttendanceWidget />
+            </motion.div>
+          )}
+          
           <motion.div variants={cardVariants} whileHover={{ y: -2, scale: 1.02 }} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-lg p-4 sm:p-5 shadow-lg border border-white/20">
             <div className="flex items-center justify-between">
               <div>
