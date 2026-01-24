@@ -4,17 +4,18 @@ import { useAppContext } from "../context/AppContext";
 import api from '../utils/axiosConfig';
 function EmployeeAttendance() {
   const { currentUser, API_URL, getAuthHeaders } = useAppContext();
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
+  // Manual check-in/out state variables - COMMENTED OUT (Using RFID-based attendance)
+  // const [isCheckedIn, setIsCheckedIn] = useState(false);
+  // const [isCompleted, setIsCompleted] = useState(false);
+  // const [isManualCheckout, setIsManualCheckout] = useState(false);
+  // const [customCheckoutTime, setCustomCheckoutTime] = useState('');
+  // const [autoCheckoutTimer, setAutoCheckoutTimer] = useState(null);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [autoCheckoutTimer, setAutoCheckoutTimer] = useState(null);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [isManualCheckout, setIsManualCheckout] = useState(false);
-  const [customCheckoutTime, setCustomCheckoutTime] = useState('');
   const dateInputRef = useRef(null);
 
   const isAdmin = currentUser?.role === "admin";
@@ -24,14 +25,14 @@ function EmployeeAttendance() {
     return () => clearInterval(timer);
   }, []);
 
-  // Auto checkout after 9 hours
-  useEffect(() => {
-    if (!isAdmin && isCheckedIn && !isCompleted) {
-      checkAutoCheckout();
-      const interval = setInterval(checkAutoCheckout, 60000); // Check every minute
-      return () => clearInterval(interval);
-    }
-  }, [isCheckedIn, isCompleted, attendanceRecords, isAdmin]);
+  // Auto checkout logic - COMMENTED OUT (Using RFID-based attendance)
+  // useEffect(() => {
+  //   if (!isAdmin && isCheckedIn && !isCompleted) {
+  //     checkAutoCheckout();
+  //     const interval = setInterval(checkAutoCheckout, 60000); // Check every minute
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [isCheckedIn, isCompleted, attendanceRecords, isAdmin]);
 
   useEffect(() => {
     loadAttendanceRecords();
@@ -45,6 +46,9 @@ function EmployeeAttendance() {
     if (isAdmin) {
       loadEmployees();
       loadGoogleSheetsData();
+      // Load today's attendance data by default
+      const today = new Date().toISOString().split('T')[0];
+      loadAttendanceByDate(today);
     }
   }, [isAdmin]);
 
@@ -55,7 +59,7 @@ function EmployeeAttendance() {
   const [selectedCalendarEmployee, setSelectedCalendarEmployee] = useState('');
   const [employeeCalendarData, setEmployeeCalendarData] = useState({});
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState('');
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
   const loadEmployeeCalendarData = async (employeeName, month) => {
     if (!employeeName || !month) return;
@@ -235,38 +239,65 @@ function EmployeeAttendance() {
 
         setAttendanceRecords(recordsWithNames);
       } else {
-        // For employee: use their own attendance endpoint
-        const response = await api.get('/api/attendance/my-attendance');
-
-        if (response.status === 200) {
-          const data = response.data;
-          const records = data.data || [];
+        // For employee: load RFID attendance data
+        const today = new Date();
+        const rfidRecords = [];
+        const userName = currentUser?.name.toLowerCase();
+        
+        for (let i = 0; i < 3; i++) {
+          const date = new Date(today.getTime() - (i * 24 * 60 * 60 * 1000));
+          const dateStr = date.toISOString().split('T')[0];
           
-          setAttendanceRecords(records);
-
-          // Check attendance status for today
-          const today = new Date().toDateString();
-          const todayRecord = records.find((record) => {
-            if (!record.date) return false;
-            const recordDate = new Date(record.date).toDateString();
-            return recordDate === today;
-          });
-          
-          
-          // Simple logic: show checkout if checked in but not checked out
-          const hasCheckedIn = todayRecord && todayRecord.time_in;
-          const hasCheckedOut = todayRecord && (todayRecord.checkout_time || todayRecord.time_out);
-          
-          setIsCheckedIn(hasCheckedIn && !hasCheckedOut);
-          setIsCompleted(hasCheckedOut);
+          try {
+            const response = await fetch(`${import.meta.env.VITE_ATTENDANCE_API_URL}?date=${dateStr}`);
+            const data = await response.json();
+            
+            if (data.data && data.data.length > 0) {
+              // Find only the current user's record
+              const userRecord = data.data.find(emp => emp.Name.toLowerCase() === userName);
+              
+              if (userRecord) {
+                const checkInTimes = [];
+                const checkOutTimes = [];
+                
+                for (let j = 1; j <= 10; j++) {
+                  const checkIn = userRecord[`Check-in ${j}`];
+                  const checkOut = userRecord[`Check-out ${j}`];
+                  
+                  if (checkIn && checkIn !== '-' && checkIn !== '') {
+                    checkInTimes.push(checkIn);
+                  }
+                  if (checkOut && checkOut !== '-' && checkOut !== '') {
+                    checkOutTimes.push(checkOut);
+                  }
+                }
+                
+                if (checkInTimes.length > 0) {
+                  rfidRecords.push({
+                    date: date,
+                    time_in: checkInTimes[0],
+                    time_out: checkOutTimes[checkOutTimes.length - 1] || null,
+                    employee_name: userRecord.Name,
+                    source: 'rfid'
+                  });
+                }
+              }
+            }
+          } catch (dailyError) {
+            // Skip this day if error
+          }
         }
+        
+        setAttendanceRecords(rfidRecords);
       }
     } catch (error) {
+      console.error('Error in loadAttendanceRecords:', error);
       setAttendanceRecords([]);
     } finally {
       setLoading(false);
     }
   };
+
 
   const getCurrentLocation = () => {
     return new Promise((resolve, reject) => {
@@ -288,111 +319,97 @@ function EmployeeAttendance() {
     });
   };
 
-  const handleCheckIn = async () => {
-    // Frontend validation: prevent multiple check-ins
-    const today = new Date().toDateString();
-    const todayRecord = attendanceRecords.find((record) => {
-      if (!record.date) return false;
-      const recordDate = new Date(record.date).toDateString();
-      return recordDate === today;
-    });
+  // Manual check-in/out functions - COMMENTED OUT (Using RFID-based attendance)
+  // const handleCheckIn = async () => {
+  //   const today = new Date().toDateString();
+  //   const todayRecord = attendanceRecords.find((record) => {
+  //     if (!record.date) return false;
+  //     const recordDate = new Date(record.date).toDateString();
+  //     return recordDate === today;
+  //   });
     
-    if (todayRecord && todayRecord.time_in) {
-      if (todayRecord.checkout_time) {
-        alert("You have already completed attendance for today!");
-      } else {
-        alert("You are already checked in! Please check out first.");
-      }
-      return;
-    }
+  //   if (todayRecord && todayRecord.time_in) {
+  //     if (todayRecord.checkout_time) {
+  //       alert("You have already completed attendance for today!");
+  //     } else {
+  //       alert("You are already checked in! Please check out first.");
+  //     }
+  //     return;
+  //   }
 
-    setLoading(true);
-    try {
-      const employeeId = currentUser?._id || currentUser?.id;
-      const attendanceData = {
-        employee_id: employeeId
-      };
+  //   setLoading(true);
+  //   try {
+  //     const employeeId = currentUser?._id || currentUser?.id;
+  //     const attendanceData = {
+  //       employee_id: employeeId
+  //     };
 
-      const response = await api.post('/api/attendance/time-in', attendanceData);
+  //     const response = await api.post('/api/attendance/time-in', attendanceData);
 
-      const data = response.data;
+  //     const data = response.data;
       
-      await loadAttendanceRecords();
-      alert("Checked in successfully!");
-    } catch (error) {
-      alert("Error checking in: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     await loadAttendanceRecords();
+  //     alert("Checked in successfully!");
+  //   } catch (error) {
+  //     alert("Error checking in: " + error.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const validateCheckoutTime = (checkoutTime, checkinTime) => {
-    const checkout = new Date(checkoutTime);
-    const checkin = new Date(checkinTime);
-    const now = new Date();
-    
-    if (checkout <= checkin) {
-      return "Checkout time must be after check-in time";
-    }
-    if (checkout > now) {
-      return "Checkout time cannot be in the future";
-    }
-    return null;
-  };
+  // const handleCheckOut = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const today = new Date().toDateString();
+  //     const todayRecord = attendanceRecords.find((record) => {
+  //       if (!record.date) return false;
+  //       const recordDate = new Date(record.date).toDateString();
+  //       return recordDate === today;
+  //     });
 
-  const handleCheckOut = async () => {
-    setLoading(true);
-    try {
-      const today = new Date().toDateString();
-      const todayRecord = attendanceRecords.find((record) => {
-        if (!record.date) return false;
-        const recordDate = new Date(record.date).toDateString();
-        return recordDate === today;
-      });
+  //     const employeeId = currentUser?._id || currentUser?.id;
+  //     const requestBody = {
+  //       employee_id: employeeId
+  //     };
 
-      const employeeId = currentUser?._id || currentUser?.id;
-      const requestBody = {
-        employee_id: employeeId
-      };
-
-      if (isManualCheckout && customCheckoutTime) {
-        const checkoutDateTime = new Date(`${new Date().toDateString()} ${customCheckoutTime}`).toISOString();
+  //     if (isManualCheckout && customCheckoutTime) {
+  //       const checkoutDateTime = new Date(`${new Date().toDateString()} ${customCheckoutTime}`).toISOString();
         
-        if (todayRecord?.time_in) {
-          const validationError = validateCheckoutTime(checkoutDateTime, todayRecord.time_in);
-          if (validationError) {
-            alert(validationError);
-            setLoading(false);
-            return;
-          }
-        }
+  //       if (todayRecord?.time_in) {
+  //         const validationError = validateCheckoutTime(checkoutDateTime, todayRecord.time_in);
+  //         if (validationError) {
+  //           alert(validationError);
+  //           setLoading(false);
+  //           return;
+  //         }
+  //       }
         
-        requestBody.checkout_time = checkoutDateTime;
-      }
+  //       requestBody.checkout_time = checkoutDateTime;
+  //     }
 
-      const response = await api.post('/api/attendance/checkout', requestBody);
+  //     const response = await api.post('/api/attendance/checkout', requestBody);
 
-      const data = response.data;
+  //     const data = response.data;
       
-      if (data.success) {
-        setIsCheckedIn(false);
-        setIsCompleted(true);
-        await loadAttendanceRecords();
+  //     if (data.success) {
+  //       setIsCheckedIn(false);
+  //       setIsCompleted(true);
+  //       await loadAttendanceRecords();
         
-        const checkoutType = data.data?.is_manual_checkout ? "manual" : "automatic";
-        alert(`Checked out successfully! (${checkoutType} checkout)`);
+  //       const checkoutType = data.data?.is_manual_checkout ? "manual" : "automatic";
+  //       alert(`Checked out successfully! (${checkoutType} checkout)`);
         
-        setIsManualCheckout(false);
-        setCustomCheckoutTime('');
-      } else {
-        alert(data.message || "Failed to check out");
-      }
-    } catch (error) {
-      alert("Error checking out: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //       setIsManualCheckout(false);
+  //       setCustomCheckoutTime('');
+  //     } else {
+  //       alert(data.message || "Failed to check out");
+  //     }
+  //   } catch (error) {
+  //     alert("Error checking out: " + error.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const calculateWorkingHours = (record) => {
     return record.hours_worked || record.total_hours || "--";
@@ -411,34 +428,35 @@ function EmployeeAttendance() {
     return (now - new Date(record.time_in)) / (1000 * 60 * 60);
   };
 
-  const checkAutoCheckout = async () => {
-    const employeeId = currentUser?._id || currentUser?.id;
-    if (!employeeId || isCompleted) return;
+  // Auto checkout function - COMMENTED OUT (Using RFID-based attendance)
+  // const checkAutoCheckout = async () => {
+  //   const employeeId = currentUser?._id || currentUser?.id;
+  //   if (!employeeId || isCompleted) return;
     
-    const today = new Date().toDateString();
-    const todayRecord = attendanceRecords.find((record) => {
-      if (!record.date) return false;
-      const recordDate = new Date(record.date).toDateString();
-      return recordDate === today && record.employee_id === employeeId;
-    });
+  //   const today = new Date().toDateString();
+  //   const todayRecord = attendanceRecords.find((record) => {
+  //     if (!record.date) return false;
+  //     const recordDate = new Date(record.date).toDateString();
+  //     return recordDate === today && record.employee_id === employeeId;
+  //   });
     
-    if (todayRecord && todayRecord.time_in && !(todayRecord.checkout_time || todayRecord.time_out)) {
-      const currentHours = getCurrentWorkingHours(todayRecord);
+  //   if (todayRecord && todayRecord.time_in && !(todayRecord.checkout_time || todayRecord.time_out)) {
+  //     const currentHours = getCurrentWorkingHours(todayRecord);
       
-      if (currentHours >= 9) {
-        try {
-          const response = await api.post('/api/attendance/checkout', { employee_id: employeeId });
+  //     if (currentHours >= 9) {
+  //       try {
+  //         const response = await api.post('/api/attendance/checkout', { employee_id: employeeId });
           
-          const data = response.data;
-          setIsCheckedIn(false);
-          setIsCompleted(true);
-          await loadAttendanceRecords();
-          alert("You have been automatically checked out after 9 hours of work!");
-        } catch (error) {
-        }
-      }
-    }
-  };
+  //         const data = response.data;
+  //         setIsCheckedIn(false);
+  //         setIsCompleted(true);
+  //         await loadAttendanceRecords();
+  //         alert("You have been automatically checked out after 9 hours of work!");
+  //       } catch (error) {
+  //       }
+  //     }
+  //   }
+  // };
 
   const loadEmployees = async () => {
     try {
@@ -511,11 +529,7 @@ function EmployeeAttendance() {
   const hasWorked7Hours = (record) => {
     if (!record.time_in) return false;
     const endTime = record.checkout_time || record.time_out;
-    if (!endTime) {
-      // For active sessions, check current working hours
-      const currentHours = getCurrentWorkingHours(record);
-      return currentHours >= 7;
-    }
+    if (!endTime) return false; // If no checkout time, it's not a completed 7+ hour session
     return getWorkingHoursNumber(record) >= 7;
   };
 
@@ -562,11 +576,33 @@ function EmployeeAttendance() {
             </div>
           )}
           
-          {(selectedDate || selectedEmployee) && (
+          {isAdmin && (
+            <div className="flex gap-3 items-center">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Name as it appears in RFID attendance system:</label>
+              <select
+                value={selectedCalendarEmployee}
+                onChange={(e) => setSelectedCalendarEmployee(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/50 dark:bg-gray-700/50 text-gray-900 dark:text-white text-sm"
+              >
+                <option value="">All Employees</option>
+                {[...employees.map(emp => emp.name), ...googleSheetsData.map(emp => emp.Name)]
+                  .filter((name, index, arr) => arr.indexOf(name) === index)
+                  .sort()
+                  .map((name, index) => (
+                    <option key={index} value={name}>
+                      {name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+          
+          {(selectedDate || selectedEmployee || selectedCalendarEmployee) && (
             <button
               onClick={() => {
                 setSelectedDate('');
                 setSelectedEmployee('');
+                setSelectedCalendarEmployee('');
               }}
               className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm"
             >
@@ -576,11 +612,10 @@ function EmployeeAttendance() {
         </div>
       </div>
 
-      {/* Check In/Out Card - Only for Employees */}
-      {!isAdmin && (
+      {/* Check In/Out Card - COMMENTED OUT (Using RFID-based attendance) */}
+      {/* {!isAdmin && (
         <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 dark:border-gray-700/50 p-8 mb-6">
           <div className="text-center">
-            {/* Clock Icon */}
             <div className="mb-6">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4">
                 <svg
@@ -599,7 +634,6 @@ function EmployeeAttendance() {
               </div>
             </div>
 
-            {/* Date and Time */}
             <div className="mb-8">
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                 Today
@@ -620,7 +654,6 @@ function EmployeeAttendance() {
               </div>
             </div>
 
-            {/* Status Badge */}
             <div className="mb-8">
               <div
                 className={`inline-flex items-center px-6 py-3 rounded-full text-base font-medium border-2 ${
@@ -644,7 +677,6 @@ function EmployeeAttendance() {
               </div>
             </div>
 
-            {/* Manual Checkout Controls - Only show when checked in */}
             {isCheckedIn && !isCompleted && (
               <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
                 <div className="flex items-center justify-center mb-4">
@@ -683,7 +715,6 @@ function EmployeeAttendance() {
               </div>
             )}
 
-            {/* Action Button */}
             <button
               onClick={isCompleted ? null : (isCheckedIn ? handleCheckOut : handleCheckIn)}
               disabled={loading || isCompleted || (isCheckedIn && isManualCheckout && !customCheckoutTime)}
@@ -740,7 +771,6 @@ function EmployeeAttendance() {
               )}
             </button>
 
-            {/* Additional Info */}
             <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
               <div className="flex items-center justify-center space-x-4">
                 <div className="flex items-center">
@@ -785,18 +815,23 @@ function EmployeeAttendance() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
-      {/* Check In/Out Records Table */}
+      {/* Employee Time In/Out Status */}
       <div className="bg-blue-gray-200/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-lg shadow-md mb-6 border border-white/20 dark:border-gray-700/50">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-            Check In/Out Records
+            Employee Time In/Out Status
           </h3>
         </div>
 
         <div className="overflow-x-auto">
-          {filteredRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).length > 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Loading attendance records...</p>
+            </div>
+          ) : filteredRecords.filter(record => (record.time_in || record.time_out) && !hasWorked7Hours(record)).length > 0 ? (
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
@@ -912,9 +947,13 @@ function EmployeeAttendance() {
                             );
                           }
                         })()
-                      ) : (
+                      ) : record.time_in ? (
                         <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
                           In Progress
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 rounded-full">
+                          Absent
                         </span>
                       )}
                     </td>
@@ -1240,7 +1279,12 @@ function EmployeeAttendance() {
         </div>
 
         <div className="overflow-x-auto">
-          {filteredRecords.filter(record => hasWorked7Hours(record)).length > 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="text-gray-500 dark:text-gray-400 mt-2">Loading timeout records...</p>
+            </div>
+          ) : filteredRecords.filter(record => hasWorked7Hours(record)).length > 0 ? (
             <table className="min-w-full">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
