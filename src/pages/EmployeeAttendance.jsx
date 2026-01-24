@@ -46,6 +46,9 @@ function EmployeeAttendance() {
     if (isAdmin) {
       loadEmployees();
       loadGoogleSheetsData();
+      // Load today's attendance data by default
+      const today = new Date().toISOString().split('T')[0];
+      loadAttendanceByDate(today);
     }
   }, [isAdmin]);
 
@@ -56,7 +59,7 @@ function EmployeeAttendance() {
   const [selectedCalendarEmployee, setSelectedCalendarEmployee] = useState('');
   const [employeeCalendarData, setEmployeeCalendarData] = useState({});
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState('');
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
 
   const loadEmployeeCalendarData = async (employeeName, month) => {
     if (!employeeName || !month) return;
