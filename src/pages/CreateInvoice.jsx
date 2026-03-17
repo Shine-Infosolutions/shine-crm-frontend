@@ -19,6 +19,7 @@ const CreateInvoice = () => {
   const [showNotesInInvoice, setShowNotesInInvoice] = useState(false);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showHSN, setShowHSN] = useState(true);
 
   const componentRef = useRef(null);
 
@@ -119,6 +120,14 @@ const CreateInvoice = () => {
             onClick={() => setShowNotesInInvoice(!showNotesInInvoice)}
           >
             📝 {showNotesInInvoice ? 'Hide Notes' : 'Show Notes'}
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            className="no-print bg-orange-600/90 text-white px-4 py-2 rounded-lg text-xs sm:text-sm backdrop-blur-xl hover:bg-orange-700/90 transition-all duration-0.3"
+            onClick={() => setShowHSN(!showHSN)}
+          >
+            🔢 {showHSN ? 'Hide HSN/SAC' : 'Show HSN/SAC'}
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
@@ -232,7 +241,7 @@ const CreateInvoice = () => {
                 <tr>
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">#</th>
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Item</th>
-                  <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">HSN/SAC</th>
+                  {showHSN && <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">HSN/SAC</th>}
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Rate/Item</th>
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">Qty</th>
                   <th className="border-b-2 border-r-2 border-black px-1 py-2 text-center font-semibold">{isGSTInvoice ? 'Taxable Value' : 'Value'}</th>
@@ -259,7 +268,7 @@ const CreateInvoice = () => {
                     >
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{i + 1}</td>
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{p.description}</td>
-                      <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{p.unit}</td>
+                      {showHSN && <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{p.unit}</td>}
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{price.toFixed(2)}</td>
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">{qty}</td>
                       <td className="border-b-2 border-r-2 border-black px-1 py-2 text-center">₹{taxableValue.toFixed(2)}</td>
