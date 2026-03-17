@@ -192,7 +192,7 @@ const AddInvoice = () => {
   
     const requiredFields = [
       "customerName", "invoiceDate", "dueDate", "invoiceNumber",
-      "customerAddress", "customerPhone", "customerEmail"
+      "customerAddress", "customerPhone"
     ];
     
     if (formData.isGSTInvoice) {
