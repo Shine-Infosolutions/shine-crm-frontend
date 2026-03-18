@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { isTokenExpired, clearAuthData } from "../utils/tokenUtils";
 
 const AppContext = createContext();
-const API_URL = import.meta.env.VITE_API_URL || "https://shine-crm-backend-eight.vercel.app";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function AppProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);

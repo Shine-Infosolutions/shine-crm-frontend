@@ -37,7 +37,7 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !error.config?.url?.includes('/auth/login')) {
       handleAuthError();
       return Promise.reject(new Error('Unauthorized - redirecting to login'));
     }
