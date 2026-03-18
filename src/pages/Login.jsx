@@ -31,7 +31,9 @@ function Login() {
         navigate("/");
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Login failed');
+      console.error('Login error:', error);
+      console.error('Response:', error.response);
+      setError(error.response?.data?.message || error.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
