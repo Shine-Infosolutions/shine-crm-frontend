@@ -76,6 +76,7 @@ const CreateInvoice = () => {
         .no-print { display:none!important; }
         * { page-break-inside: avoid; }
         .page-break { page-break-before: always; }
+        .invoice-watermark::before { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }
       }
     `,
   });
@@ -158,7 +159,25 @@ const CreateInvoice = () => {
           id="print-root" 
           className="overflow-x-auto"
         >
-        <div className="border-2 border-black max-w-full mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white print:bg-white" style={{maxWidth: '210mm', minHeight: 'auto'}}>
+        <div className="border-2 border-black max-w-full mx-auto text-[0.65rem] sm:text-xs md:text-sm text-gray-800 bg-white print:bg-white" style={{maxWidth: '210mm', minHeight: 'auto', position: 'relative'}}>
+          {/* Watermark */}
+          <img
+            src="/icon.png"
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '60%',
+              opacity: 0.08,
+              pointerEvents: 'none',
+              zIndex: 999,
+              userSelect: 'none',
+            }}
+          />
+          <div style={{position: 'relative', zIndex: 1}}>
           {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -349,6 +368,7 @@ const CreateInvoice = () => {
               <p className="text-xs">Authorised Signatory</p>
             </div>
           </motion.div>
+          </div>
         </div>
         </motion.div>
 
