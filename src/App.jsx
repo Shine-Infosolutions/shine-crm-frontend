@@ -26,6 +26,9 @@ const AddContract = lazy(() => import("./pages/AddContract"));
 const InvoiceManagement = lazy(() => import("./pages/InvoiceManagement"));
 const AddInvoice = lazy(() => import("./pages/AddInvoice"));
 const CreateInvoice = lazy(() => import("./pages/CreateInvoice"));
+const QuotationManagement = lazy(() => import("./pages/QuotationManagement"));
+const AddQuotation = lazy(() => import("./pages/AddQuotation"));
+const ViewQuotation = lazy(() => import("./pages/ViewQuotation"));
 const EmployeeAttendance = lazy(() => import("./pages/EmployeeAttendance"));
 const EmployeeTimesheet = lazy(() => import("./pages/EmployeeTimesheet"));
 const WorkHistory = lazy(() => import("./pages/WorkHistory"));
@@ -78,6 +81,11 @@ const AppRoutes = () => (
         <Route path="invoices/add" element={<AddInvoice />} />
         <Route path="invoices/edit/:id" element={<AddInvoice />} />
         <Route path="invoices/view/:id" element={<CreateInvoice />} />
+        
+        <Route path="quotations" element={<QuotationManagement />} />
+        <Route path="quotations/add" element={<AddQuotation />} />
+        <Route path="quotations/edit/:id" element={<AddQuotation />} />
+        <Route path="quotations/view/:id" element={<ViewQuotation />} />
         
         <Route path="attendance" element={<EmployeeAttendance />} />
         <Route path="timesheet" element={<EmployeeTimesheet />} />
