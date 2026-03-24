@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { Link } from "react-router-dom";
-import { FaChevronDown, FaTachometerAlt, FaUsers, FaProjectDiagram, FaFileInvoiceDollar, FaTasks, FaClock, FaCalendarCheck, FaClipboardList, FaFileContract, FaHistory, FaChartBar, FaUserTie, FaCog, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaChevronDown, FaTachometerAlt, FaUsers, FaProjectDiagram, FaFileInvoiceDollar, FaTasks, FaClock, FaCalendarCheck, FaClipboardList, FaFileContract, FaHistory, FaChartBar, FaUserTie, FaCog, FaChevronLeft, FaChevronRight, FaQuoteLeft } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from "../assets/Shine Infosolutions Logo Blue Black.png";
 function Sidebar() {
@@ -124,6 +124,26 @@ function Sidebar() {
                   >
                     <FaFileInvoiceDollar className="text-lg" />
                     {sidebarOpen && <span>Invoice Management</span>}
+                  </Link>
+                </motion.div>
+              </li>
+            )}
+            {!isEmployee && (
+              <li>
+                <motion.div
+                  whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.2)" }}
+                  whileTap={{ scale: 0.98 }}
+                  className="rounded-lg"
+                >
+                  <Link
+                    to="/quotations"
+                    className={`flex items-center py-2 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 ${
+                      sidebarOpen ? "px-4 gap-3" : "justify-center"
+                    }`}
+                    title="Quotation Management"
+                  >
+                    <FaQuoteLeft className="text-lg" />
+                    {sidebarOpen && <span>Quotation Management</span>}
                   </Link>
                 </motion.div>
               </li>
