@@ -39,7 +39,7 @@ const AddInvoice = () => {
   const [rows, setRows] = useState([
     {
       description: "",
-      unit: "Unit",
+      unit: "",
       quantity: "",
       price: "",
       discountPercentage: "",
@@ -169,7 +169,7 @@ const AddInvoice = () => {
       ...rows,
       {
         description: "",
-        unit: "Unit",
+        unit: "",
         quantity: "",
         price: "",
         discountPercentage: "",
@@ -202,22 +202,12 @@ const AddInvoice = () => {
       if (!formData[field]?.trim()) errors[field] = true;
     });
   
-    let hasRowError = false;
-  
-    rows.forEach((row, i) => {
-      const rowError = {};
-      if (!row.description?.trim()) rowError.description = true;
-      if (!row.quantity || parseFloat(row.quantity) <= 0) rowError.quantity = true;
-      if (!row.price || parseFloat(row.price) <= 0) rowError.price = true;
-  
-      if (Object.keys(rowError).length > 0) hasRowError = true;
-      rowErrs.push(rowError);
-    });
+    rows.forEach(() => rowErrs.push({}));
   
     setFormErrors(errors);
     setRowErrors(rowErrs);
   
-    if (Object.keys(errors).length > 0 || hasRowError) return;
+    if (Object.keys(errors).length > 0) return;
   
     const payload = {
       ...formData,
@@ -416,24 +406,24 @@ const AddInvoice = () => {
                     />
                   </td>
                   <td className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2">
-                    <motion.select
+                    <motion.input
                       whileFocus={{ scale: 1.02 }}
+                      type="text"
+                      list={`units-list-${i}`}
                       value={row.unit}
                       onChange={(e) => handleRowChange(i, "unit", e.target.value)}
+                      placeholder="Select or type custom unit"
                       className="w-full px-2 py-1 border-2 border-white/20 dark:border-gray-700/50 rounded-md bg-white dark:bg-gray-700 dark:text-white transition-all duration-0.3"
-                      style={{ maxHeight: '50px', overflowY: 'auto' }}
-
-                    >
+                    />
+                    <datalist id={`units-list-${i}`}>
                       {units.length > 0 ? (
                         units.map((unit) => (
-                          <option key={unit._id} value={unit.name}>
-                            {unit.name}
-                          </option>
+                          <option key={unit._id} value={unit.name} />
                         ))
                       ) : (
-                        <option value="Unit">Unit</option>
+                        <option value="Unit" />
                       )}
-                    </motion.select>
+                    </datalist>
                   </td>
                   {["quantity", "price", "discountPercentage"].map((field) => (
                     <td key={field} className="border-2 border-white/20 dark:border-gray-700/50 px-3 py-2">
