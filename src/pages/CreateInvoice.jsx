@@ -55,9 +55,11 @@ const CreateInvoice = () => {
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
-  const isGSTInvoice = invoice?.isGSTInvoice !== false; // Default to true for backward compatibility
+  const isGSTInvoice = invoice?.isGSTInvoice !== false;
   const gstRate = isGSTInvoice ? Number(invoice?.amountDetails?.gstPercentage || 0) : 0;
   const totalAmount = Math.round(Number(invoice?.amountDetails?.totalAmount || 0));
+  const advancePayment = Number(invoice?.amountDetails?.advancePayment || 0);
+  const dueAmount = Number(invoice?.amountDetails?.dueAmount ?? (totalAmount - advancePayment));
   const baseAmount = isGSTInvoice ? Math.round((totalAmount / (1 + gstRate / 100)) * 100) / 100 : totalAmount;
   const cgstAmount = isGSTInvoice ? (Math.round((baseAmount * (gstRate / 2 / 100)) * 100) / 100).toFixed(2) : '0.00';
   const sgstAmount = isGSTInvoice ? (Math.round((baseAmount * (gstRate / 2 / 100)) * 100) / 100).toFixed(2) : '0.00';
@@ -215,7 +217,7 @@ const CreateInvoice = () => {
                 <p className="text-xs">Email: info@shineinfosolutions.in</p>
               </div>
             </div>
-            <div className="grid grid-cols-2">
+            <div className="grid grid-cols-2 grid-rows-3">
               <div className="border-r-2 border-b-2 border-black p-2">
                 <p className="text-xs font-semibold">Invoice #:</p>
                 <p className="text-xs font-bold">{invoice.invoiceNumber}</p>
@@ -224,13 +226,21 @@ const CreateInvoice = () => {
                 <p className="text-xs font-semibold">Invoice Date:</p>
                 <p className="text-xs font-bold">{new Date(invoice.invoiceDate).toLocaleDateString('en-GB')}</p>
               </div>
-              <div className="border-r-2 border-black p-2">
+              <div className="border-r-2 border-b-2 border-black p-2">
                 <p className="text-xs font-semibold">Place of Supply:</p>
                 <p className="text-xs font-bold">{invoice.customerAddress}</p>
               </div>
-              <div className="p-2">
+              <div className="border-b-2 border-black p-2">
                 <p className="text-xs font-semibold">Due Date:</p>
                 <p className="text-xs font-bold">{new Date(invoice.dueDate).toLocaleDateString('en-GB')}</p>
+              </div>
+              <div className="border-r-2 border-black p-2 col-span-1">
+                <p className="text-xs font-semibold">Mode of Payment:</p>
+                <p className="text-xs font-bold">{invoice.paymentMode || 'Cash'}</p>
+              </div>
+              <div className="p-2 col-span-1">
+                <p className="text-xs font-semibold">Payment Status:</p>
+                <p className="text-xs font-bold">{invoice.amountDetails?.dueAmount > 0 ? 'Partially Paid' : 'Paid'}</p>
               </div>
             </div>
           </motion.div>
@@ -320,6 +330,12 @@ const CreateInvoice = () => {
                 <p className="text-sm font-bold mt-1"><strong>Total: ₹{totalAmount}</strong></p>
               </>
             )}
+            {advancePayment > 0 && (
+              <>
+                <p className="text-xs text-green-700"><strong>Advance Paid: ₹{advancePayment.toFixed(2)}</strong> ({invoice.amountDetails?.advancePaymentMode || 'Cash'})</p>
+                <p className="text-xs text-red-700"><strong>Due Amount: ₹{dueAmount.toFixed(2)}</strong></p>
+              </>
+            )}
           </motion.div>
 
           {/* Amount in Words */}
@@ -358,6 +374,9 @@ const CreateInvoice = () => {
               <p className="text-xs"><strong>Account #:</strong> 50200068337918</p>
               <p className="text-xs"><strong>IFSC Code:</strong> HDFC0004331</p>
               <p className="text-xs"><strong>Branch:</strong> GEETA PRESS</p>
+              {invoice.paymentMode && (
+                <p className="text-xs mt-2"><strong>Mode of Payment:</strong> {invoice.paymentMode}</p>
+              )}
             </div>
             <div className="p-3 text-right">
               <p className="text-xs mb-8"><strong>Amount Payable:</strong></p>
