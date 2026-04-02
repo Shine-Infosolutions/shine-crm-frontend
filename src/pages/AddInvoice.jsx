@@ -74,6 +74,14 @@ const AddInvoice = () => {
             invoiceDate: formatDate(data.invoiceDate),
             dueDate: formatDate(data.dueDate),
             notes: data.notes || "",
+            paymentMode: data.paymentMode || "Cash",
+            amountDetails: {
+              ...prev.amountDetails,
+              ...data.amountDetails,
+              advancePayment: data.amountDetails?.advancePayment ?? 0,
+              advancePaymentMode: data.amountDetails?.advancePaymentMode || "Cash",
+              dueAmount: data.amountDetails?.dueAmount ?? 0,
+            },
           }));
           setRows(data.productDetails || []);
         } else {
