@@ -27,12 +27,16 @@ const AddInvoice = () => {
     dispatchThrough: "",
     customerAadhar: "",
     notes: "",
+    paymentMode: "Cash",
     isGSTInvoice: true,
     productDetails: [],
     amountDetails: {
       gstPercentage: 18,
       discountOnTotal: 0,
       totalAmount: 0,
+      advancePayment: 0,
+      advancePaymentMode: 'Cash',
+      dueAmount: 0,
     },
   });
 
@@ -112,18 +116,22 @@ const AddInvoice = () => {
       (discountedBase * (gstPct / 100)) * 100
     ) / 100;
     const total = Math.round(discountedBase + gstAmount);
+    const advance = parseFloat(formData.amountDetails.advancePayment || 0);
+    const due = Math.max(0, total - advance);
 
     setFormData((prev) => ({
       ...prev,
       amountDetails: {
         ...prev.amountDetails,
         totalAmount: total,
+        dueAmount: due,
       },
     }));
   }, [
     rows,
     formData.amountDetails.gstPercentage,
     formData.amountDetails.discountOnTotal,
+    formData.amountDetails.advancePayment,
     formData.isGSTInvoice,
   ]);
 
@@ -496,10 +504,76 @@ const AddInvoice = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 1.3 }}
-          className="mt-6 text-right text-lg font-semibold dark:text-white"
+          transition={{ duration: 0.3, delay: 1.25 }}
+          className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6"
         >
-          Total Amount: ₹{Math.round(totalAmount)}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Advance Payment (Optional)</label>
+            <motion.input
+              whileFocus={{ scale: 1.02 }}
+              type="number"
+              min="0"
+              value={formData.amountDetails.advancePayment}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  amountDetails: { ...formData.amountDetails, advancePayment: e.target.value },
+                })
+              }
+              placeholder="Amount paid in advance (₹)"
+              className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+            />
+            <p className="text-xs mt-1 text-gray-500">Enter any advance amount already received from customer</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Advance Payment Mode</label>
+            <motion.select
+              whileFocus={{ scale: 1.02 }}
+              value={formData.amountDetails.advancePaymentMode}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  amountDetails: { ...formData.amountDetails, advancePaymentMode: e.target.value },
+                })
+              }
+              className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+            >
+              {['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Card', 'Other'].map((mode) => (
+                <option key={mode} value={mode}>{mode}</option>
+              ))}
+            </motion.select>
+            <p className="text-xs mt-1 text-gray-500">How was the advance received?</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mode of Payment</label>
+            <motion.select
+              whileFocus={{ scale: 1.02 }}
+              name="paymentMode"
+              value={formData.paymentMode}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-white/20 dark:border-gray-700/50 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500/50 transition-all duration-0.3"
+            >
+              {['Cash', 'UPI', 'Bank Transfer', 'Cheque', 'Card', 'Other'].map((mode) => (
+                <option key={mode} value={mode}>{mode}</option>
+              ))}
+            </motion.select>
+            <p className="text-xs mt-1 text-gray-500">Select how the payment was or will be received</p>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 1.3 }}
+          className="mt-6 text-right text-lg font-semibold dark:text-white space-y-1"
+        >
+          <p>Total Amount: ₹{Math.round(totalAmount)}</p>
+          {parseFloat(formData.amountDetails.advancePayment) > 0 && (
+            <>
+              <p className="text-sm text-green-600 dark:text-green-400">Advance Paid: ₹{Math.round(parseFloat(formData.amountDetails.advancePayment))}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">Due Amount: ₹{Math.round(formData.amountDetails.dueAmount)}</p>
+            </>
+          )}
         </motion.div>
 
         <motion.div 
